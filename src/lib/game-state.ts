@@ -129,6 +129,29 @@ export type LeaderboardEntry = {
   joinedAt: number;
 };
 
+export type QuizAnswerRowStatus = "correct" | "wrong" | "pending" | "unanswered";
+
+export type QuizAnswerBreakdownRow = {
+  teamId: string;
+  teamName: string;
+  selectedOptionId: AnswerId | null;
+  status: QuizAnswerRowStatus;
+  questionScore: number;
+  totalScore: number;
+  joinedAt: number;
+};
+
+export type QuizAnswerBreakdown = {
+  totalTeams: number;
+  answeredTeams: number;
+  unansweredTeams: number;
+  correctAnswers: number;
+  wrongAnswers: number;
+  optionCounts: Record<AnswerId, number>;
+  totalAnswers: number;
+  rows: QuizAnswerBreakdownRow[];
+};
+
 export const leaderboardRevealQuizNumbers = [3, 6, 8] as const;
 
 export const DEFAULT_SETTINGS: GameSettings = {
@@ -479,6 +502,92 @@ export function getQuizAnswerDistribution(state: GameState, item: QuizFlowItem) 
   };
 }
 
+export function getTeamTotalScore(state: GameState, teamId: string) {
+  const responses = getTeamResponses(state, teamId);
+  const quizScore = getQuizItems(state).reduce((sum, item) => sum + (responses.answers[item.id]?.score ?? 0), 0);
+  const forkliftScore = Object.values(responses.forkliftRuns).reduce((sum, run) => sum + run.score, 0);
+
+  return quizScore + forkliftScore;
+}
+
+export function getQuizAnswerStatusLabel(status: QuizAnswerRowStatus) {
+  if (status === "correct") {
+    return "Doğru";
+  }
+
+  if (status === "wrong") {
+    return "Yanlış";
+  }
+
+  if (status === "pending") {
+    return "Bekliyor";
+  }
+
+  return "Cevapsız";
+}
+
+export function getQuizAnswerBreakdown(
+  state: GameState,
+  item: QuizFlowItem,
+  showCorrectAnswer = state.showCorrectAnswer,
+): QuizAnswerBreakdown {
+  const optionCounts: Record<AnswerId, number> = {
+    A: 0,
+    B: 0,
+    C: 0,
+    D: 0,
+  };
+  let correctAnswers = 0;
+  let wrongAnswers = 0;
+
+  const rows = state.teams
+    .map((team) => {
+      const answer = getTeamResponses(state, team.id).answers[item.id];
+
+      if (answer) {
+        optionCounts[answer.optionId] += 1;
+
+        if (answer.isCorrect) {
+          correctAnswers += 1;
+        } else {
+          wrongAnswers += 1;
+        }
+      }
+
+      const status: QuizAnswerRowStatus = !answer
+        ? "unanswered"
+        : showCorrectAnswer
+          ? answer.isCorrect
+            ? "correct"
+            : "wrong"
+          : "pending";
+
+      return {
+        teamId: team.id,
+        teamName: team.name,
+        selectedOptionId: answer?.optionId ?? null,
+        status,
+        questionScore: answer?.score ?? 0,
+        totalScore: getTeamTotalScore(state, team.id),
+        joinedAt: team.joinedAt,
+      };
+    })
+    .sort((a, b) => a.joinedAt - b.joinedAt);
+
+  const totalAnswers = Object.values(optionCounts).reduce((sum, count) => sum + count, 0);
+
+  return {
+    totalTeams: state.teams.length,
+    answeredTeams: totalAnswers,
+    unansweredTeams: Math.max(0, state.teams.length - totalAnswers),
+    correctAnswers,
+    wrongAnswers,
+    optionCounts,
+    totalAnswers,
+    rows,
+  };
+}
+
 export function deriveLeaderboard(state: GameState): LeaderboardEntry[] {
   const quizItems = getQuizItems(state);
 
@@ -515,6 +624,10 @@ function csvEscape(value: string | number) {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
+function formatSecondsFromMs(valueMs: number) {
+  return (valueMs / 1000).toFixed(2);
+}
+
 export function buildResultsCsv(state: GameState) {
   const quizItems = getQuizItems(state);
   const leaderboard = deriveLeaderboard(state);
@@ -522,18 +635,47 @@ export function buildResultsCsv(state: GameState) {
     "sira",
     "takim_adi",
     "toplam_puan",
-    "dogru_cevap",
-    "yanlis_cevap",
-    "cevaplanmayan_soru",
-    ...quizItems.flatMap((_, index) => [`soru_${index + 1}_cevap`, `soru_${index + 1}_puan`]),
+    "dogru_cevap_sayisi",
+    "yanlis_cevap_sayisi",
+    "cevapsiz_quiz_sayisi",
+    "ortalama_cevap_suresi_sn",
+    ...quizItems.flatMap((_, index) => [
+      `quiz_${index + 1}_soru_basligi`,
+      `quiz_${index + 1}_dogru_cevap`,
+      `quiz_${index + 1}_dogru_cevap_metni`,
+      `quiz_${index + 1}_verilen_cevap`,
+      `quiz_${index + 1}_verilen_cevap_metni`,
+      `quiz_${index + 1}_cevap_suresi_sn`,
+      `quiz_${index + 1}_durum`,
+      `quiz_${index + 1}_puan`,
+    ]),
     "forklift_puan",
   ];
 
   const rows = leaderboard.map((entry, index) => {
     const responses = getTeamResponses(state, entry.id);
+    const answeredQuizTimes = quizItems
+      .map((item) => responses.answers[item.id]?.answerTimeMs)
+      .filter((answerTimeMs): answerTimeMs is number => typeof answerTimeMs === "number");
+    const averageAnswerTimeMs = answeredQuizTimes.length
+      ? answeredQuizTimes.reduce((sum, answerTimeMs) => sum + answerTimeMs, 0) / answeredQuizTimes.length
+      : 0;
     const questionColumns = quizItems.flatMap((item) => {
       const answer = responses.answers[item.id];
-      return [answer?.optionId ?? "-", answer?.score ?? 0];
+      const answerStatus = answer ? (answer.isCorrect ? "dogru" : "yanlis") : "cevapsiz";
+      const correctOption = item.options.find((option) => option.id === item.correctOptionId);
+      const selectedOption = answer ? item.options.find((option) => option.id === answer.optionId) : undefined;
+
+      return [
+        item.title,
+        item.correctOptionId,
+        correctOption?.text ?? "",
+        answer?.optionId ?? "Cevap yok",
+        selectedOption?.text ?? "Cevap yok",
+        answer ? formatSecondsFromMs(answer.answerTimeMs) : "",
+        answerStatus,
+        answer?.score ?? 0,
+      ];
     });
 
     return [
@@ -543,6 +685,7 @@ export function buildResultsCsv(state: GameState) {
       entry.correctAnswers,
       entry.wrongAnswers,
       entry.missedQuestions,
+      formatSecondsFromMs(averageAnswerTimeMs),
       ...questionColumns,
       entry.forkliftScore,
     ];

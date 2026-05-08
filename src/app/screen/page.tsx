@@ -1,11 +1,11 @@
 "use client";
 
 import { Countdown } from "@/components/Countdown";
+import { AnswerDistributionChart } from "@/components/AnswerDistributionChart";
 import { Leaderboard } from "@/components/Leaderboard";
 import { Podium } from "@/components/Podium";
 import { ProjectionFrame } from "@/components/ProjectionFrame";
 import { QuestionCard } from "@/components/QuestionCard";
-import { QuizResultDistribution } from "@/components/QuizResultDistribution";
 import { StageBadge } from "@/components/StageBadge";
 import { useGameState } from "@/hooks/useGameState";
 import { calculateRemainingSeconds, getAnsweredCount, getQuizPosition, getYoutubeEmbedUrl } from "@/lib/game-state";
@@ -15,6 +15,8 @@ export default function ScreenPage() {
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
   const answeredCount = getAnsweredCount(state, activeItem);
   const activeQuizPosition = getQuizPosition(state, activeItem);
+  const quizTimeExpired = activeItem.type === "quiz" && remainingSeconds !== null && remainingSeconds <= 0;
+  const shouldShowQuizDistribution = activeItem.type === "quiz" && (quizTimeExpired || state.showCorrectAnswer);
 
   return (
     <ProjectionFrame eyebrow="Projeksiyon Ekranı" title="Canlı Yarışma Sahnesi">
@@ -56,20 +58,36 @@ export default function ScreenPage() {
       ) : null}
 
       {state.phase === "quiz" && activeItem.type === "quiz" ? (
-        <div className={`grid gap-6 ${state.showCorrectAnswer ? "xl:grid-cols-[0.95fr_1.05fr]" : "xl:grid-cols-[1fr_380px]"}`}>
-          <div className="space-y-6">
-            <QuestionCard
-              question={activeItem}
-              compact
-              showCorrectAnswer={state.showCorrectAnswer}
-              quizNumber={activeQuizPosition?.current}
-              quizTotal={activeQuizPosition?.total}
-            />
-            {!state.showCorrectAnswer ? <Countdown seconds={remainingSeconds ?? activeItem.timeLimitSeconds} totalSeconds={activeItem.timeLimitSeconds} /> : null}
-          </div>
-          {state.showCorrectAnswer ? (
-            <QuizResultDistribution state={state} question={activeItem} />
-          ) : (
+        shouldShowQuizDistribution ? (
+          <section className="space-y-5">
+            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.94),rgba(2,6,23,0.86))] p-6 shadow-2xl shadow-black/35 md:p-8">
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
+              <div className="relative flex flex-wrap items-start justify-between gap-5">
+                <div className="min-w-0 flex-1">
+                  <StageBadge label={`Soru ${activeQuizPosition?.current ?? activeItem.quizNumber} / ${activeQuizPosition?.total ?? activeItem.quizNumber}`} />
+                  <p className="mt-5 text-sm font-black uppercase tracking-[0.28em] text-amber-100">{activeItem.stage}</p>
+                  <h2 className="mt-3 text-4xl font-black leading-tight text-white md:text-6xl">{activeItem.title}</h2>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-4 text-right shadow-xl">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Konu</p>
+                  <p className="mt-1 text-2xl font-black text-white">{activeItem.topic}</p>
+                </div>
+              </div>
+            </div>
+            <AnswerDistributionChart state={state} question={activeItem} />
+          </section>
+        ) : (
+          <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+            <div className="space-y-6">
+              <QuestionCard
+                question={activeItem}
+                compact
+                showCorrectAnswer={state.showCorrectAnswer}
+                quizNumber={activeQuizPosition?.current}
+                quizTotal={activeQuizPosition?.total}
+              />
+              <Countdown seconds={remainingSeconds ?? activeItem.timeLimitSeconds} totalSeconds={activeItem.timeLimitSeconds} />
+            </div>
             <aside className="space-y-6">
               <div className="rounded-[2.5rem] border border-emerald-300/30 bg-emerald-400/10 p-6 text-center shadow-2xl">
                 <p className="text-sm font-black uppercase tracking-[0.3em] text-emerald-100">Cevap Sayısı</p>
@@ -78,8 +96,8 @@ export default function ScreenPage() {
               </div>
               <Leaderboard teams={leaderboard} title="Anlık Skor" limit={3} />
             </aside>
-          )}
-        </div>
+          </div>
+        )
       ) : null}
 
       {state.phase === "infoSlide" && activeItem.type === "infoSlide" ? (

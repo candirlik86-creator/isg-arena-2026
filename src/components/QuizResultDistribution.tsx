@@ -33,7 +33,7 @@ export function QuizResultDistribution({ state, question }: QuizResultDistributi
         {question.options.map((option) => {
           const count = counts[option.id];
           const percent = totalAnswers ? Math.round((count / totalAnswers) * 100) : 0;
-          const barWidth = Math.max(4, (count / maxCount) * 100);
+          const barWidth = count > 0 ? Math.max(4, (count / maxCount) * 100) : 0;
           const isCorrect = option.id === question.correctOptionId;
 
           return (

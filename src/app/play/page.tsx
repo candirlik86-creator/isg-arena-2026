@@ -8,7 +8,13 @@ import { Leaderboard } from "@/components/Leaderboard";
 import { StageBadge } from "@/components/StageBadge";
 import { TeamJoinPanel } from "@/components/TeamJoinPanel";
 import { useGameState } from "@/hooks/useGameState";
-import { calculateRemainingSeconds, getQuizPosition, getTeamResponses, type AnswerId } from "@/lib/game-state";
+import {
+  calculateRemainingSeconds,
+  getQuizPosition,
+  getTeamResponses,
+  getTeamTotalScore,
+  type AnswerId,
+} from "@/lib/game-state";
 
 export default function PlayPage() {
   const {
@@ -33,8 +39,11 @@ export default function PlayPage() {
   const currentForkliftRun = activeItem.type === "forkliftChallenge" ? responses?.forkliftRuns[activeItem.id] : undefined;
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
   const ownRank = currentTeam ? leaderboard.findIndex((entry) => entry.id === currentTeam.id) + 1 : 0;
+  const currentTeamTotalScore = currentTeam ? getTeamTotalScore(state, currentTeam.id) : 0;
   const correctOption = activeItem.type === "quiz" ? activeItem.options.find((option) => option.id === activeItem.correctOptionId) : undefined;
   const activeQuizPosition = getQuizPosition(state, activeItem);
+  const quizTimeExpired = activeItem.type === "quiz" && remainingSeconds !== null && remainingSeconds <= 0;
+  const shouldShowQuizResult = activeItem.type === "quiz" && (quizTimeExpired || state.showCorrectAnswer);
 
   if (!currentTeam) {
     return (
@@ -44,13 +53,25 @@ export default function PlayPage() {
     );
   }
 
-  const submitAnswer = () => {
-    if (!selectedOptionId) {
+  const answerDisabled =
+    Boolean(currentAnswer) ||
+    Boolean(selectedOptionId) ||
+    state.answersLocked ||
+    (remainingSeconds !== null && remainingSeconds <= 0);
+
+  const submitAnswer = (optionId: AnswerId) => {
+    if (answerDisabled) {
       return;
     }
 
-    const result = submitQuizAnswer(selectedOptionId);
-    setMessage(result.ok ? "Cevabın alındı." : result.message ?? "Cevap gönderilemedi.");
+    setSelectedOptionId(optionId);
+    const result = submitQuizAnswer(optionId);
+
+    if (!result.ok) {
+      setSelectedOptionId(undefined);
+    }
+
+    setMessage(result.ok ? "Cevabın alındı. Sonuç bekleniyor." : result.message ?? "Cevap gönderilemedi.");
   };
 
   return (
@@ -96,20 +117,11 @@ export default function PlayPage() {
               options={activeItem.options}
               selectedOptionId={currentAnswer?.optionId ?? selectedOptionId}
               correctOptionId={state.showCorrectAnswer ? activeItem.correctOptionId : undefined}
-              onSelect={setSelectedOptionId}
-              disabled={Boolean(currentAnswer) || state.answersLocked || (remainingSeconds !== null && remainingSeconds <= 0)}
+              onSelect={submitAnswer}
+              disabled={answerDisabled}
             />
 
-            <button
-              type="button"
-              disabled={!selectedOptionId || Boolean(currentAnswer) || state.answersLocked || (remainingSeconds !== null && remainingSeconds <= 0)}
-              onClick={submitAnswer}
-              className="w-full rounded-2xl bg-amber-300 px-6 py-5 text-2xl font-black text-slate-950 shadow-xl shadow-amber-500/20 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-            >
-              {currentAnswer ? "Cevap Gönderildi" : "Cevabı Gönder"}
-            </button>
-
-            {state.showCorrectAnswer && currentAnswer ? (
+            {shouldShowQuizResult && currentAnswer ? (
               <div
                 className={`rounded-[2rem] border p-6 text-center shadow-2xl ${
                   currentAnswer.isCorrect ? "border-emerald-300/40 bg-emerald-400/15" : "border-red-300/40 bg-red-400/15"
@@ -126,7 +138,8 @@ export default function PlayPage() {
                   {currentAnswer.isCorrect ? "Doğru" : "Yanlış"}
                 </p>
                 <p className="mt-4 text-2xl font-black text-white">Kazanılan puan: {currentAnswer.score.toLocaleString("tr-TR")}</p>
-                {!currentAnswer.isCorrect && correctOption ? (
+                <p className="mt-2 text-xl font-black text-slate-100">Toplam puan: {currentTeamTotalScore.toLocaleString("tr-TR")}</p>
+                {correctOption ? (
                   <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950/70 p-4 text-lg font-bold text-slate-100">
                     Doğru cevap: {correctOption.id} - {correctOption.text}
                   </p>
@@ -137,16 +150,18 @@ export default function PlayPage() {
               </div>
             ) : message || currentAnswer ? (
               <div className="rounded-[2rem] border border-emerald-300/30 bg-emerald-400/15 p-5 text-center">
-                <p className="text-2xl font-black text-emerald-100">{message || "Cevabın alındı."}</p>
-                {currentAnswer ? <p className="mt-2 text-sm font-semibold text-slate-300">Kayıtlı puan: {currentAnswer.score.toLocaleString("tr-TR")}</p> : null}
+                <p className="text-2xl font-black text-emerald-100">
+                  {message || "Cevabın alındı. Sonuç bekleniyor."}
+                </p>
               </div>
             ) : null}
 
-            {state.showCorrectAnswer && !currentAnswer ? (
+            {shouldShowQuizResult && !currentAnswer ? (
               <div className="rounded-[2rem] border border-red-300/40 bg-red-400/15 p-6 text-center shadow-2xl">
                 <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-red-400 text-5xl font-black text-white">!</div>
                 <p className="mt-5 text-4xl font-black text-red-100">Cevap verilmedi</p>
                 <p className="mt-3 text-2xl font-black text-white">Kazanılan puan: 0</p>
+                <p className="mt-2 text-xl font-black text-slate-100">Toplam puan: {currentTeamTotalScore.toLocaleString("tr-TR")}</p>
                 {correctOption ? (
                   <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950/70 p-4 text-lg font-bold text-slate-100">
                     Doğru cevap: {correctOption.id} - {correctOption.text}
