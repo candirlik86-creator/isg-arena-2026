@@ -1,15 +1,16 @@
 # İSG Arena 2026
 
-İSG Arena 2026; Next.js, TypeScript, Tailwind CSS ve App Router ile hazırlanmış Kahoot benzeri bir iş sağlığı ve güvenliği yarışması frontend prototipidir.
+İSG Arena 2026; Next.js, TypeScript, Tailwind CSS ve App Router ile hazırlanmış PIN katılımlı bir iş sağlığı ve güvenliği yarışması frontend prototipidir.
 
 ## Demo kapsamı
 
-- 30 takımlı QR katılım akışı için statik demo ekranları
-- Admin kontrol paneli taslağı
-- Projeksiyon/sahne ekranı
-- Mobil cevaplama ekranı
+- 50 takıma kadar PIN ile katılım ve takım adı oturumu
+- LocalStorage tabanlı admin kontrol paneli
+- Faz bazlı projeksiyon/sahne ekranı
+- Quiz cevaplama ve final forklift parkuru
 - Final ödül ve sonuç ekranı
-- Local state, mock data ve statik yarışma akışı
+- CSV sonuç çıktısı
+- Local state ve oynanabilir demo yarışma akışı
 - Backend, Firebase veya Supabase entegrasyonu yoktur
 
 ## Komutlar

@@ -1,13 +1,14 @@
-import type { Team } from "@/data/questions";
+import type { LeaderboardEntry } from "@/lib/game-state";
 import { TeamCard } from "./TeamCard";
 
 type LeaderboardProps = {
-  teams: Team[];
+  teams: LeaderboardEntry[];
   title?: string;
   limit?: number;
+  emptyMessage?: string;
 };
 
-export function Leaderboard({ teams, title = "Lider Tablosu", limit = 5 }: LeaderboardProps) {
+export function Leaderboard({ teams, title = "Lider Tablosu", limit = 5, emptyMessage = "Henüz takım yok." }: LeaderboardProps) {
   const rankedTeams = [...teams].sort((a, b) => b.score - a.score).slice(0, limit);
 
   return (
@@ -19,9 +20,13 @@ export function Leaderboard({ teams, title = "Lider Tablosu", limit = 5 }: Leade
         </div>
         <div className="rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-right text-sm font-bold text-amber-100">Maks. 1000 puan<br />her soru</div>
       </div>
-      <div className="space-y-4">
-        {rankedTeams.map((team, index) => <TeamCard key={team.id} team={team} rank={index + 1} />)}
-      </div>
+      {rankedTeams.length ? (
+        <div className="space-y-4">
+          {rankedTeams.map((team, index) => <TeamCard key={team.id} team={team} rank={index + 1} />)}
+        </div>
+      ) : (
+        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-center text-lg font-bold text-slate-400">{emptyMessage}</div>
+      )}
     </section>
   );
 }

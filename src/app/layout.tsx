@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "İSG Arena 2026",
-  description: "Kahoot benzeri İSG bilgi yarışması frontend prototipi",
+  description: "PIN ile katılımlı İSG yarışması ve forklift güvenli sürüş finali",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
