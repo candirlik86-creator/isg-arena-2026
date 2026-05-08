@@ -108,6 +108,7 @@ export type TeamResponses = {
 export type GameState = {
   version: 2;
   settings: GameSettings;
+  flowItems: ContentFlowItem[];
   phase: GamePhase;
   activeItemIndex: number;
   activeItemStartedAt: number | null;
@@ -340,6 +341,21 @@ export const DEFAULT_FLOW: ContentFlowItem[] = [
   },
 ];
 
+function cloneFlowItem<T extends ContentFlowItem>(item: T): T {
+  if (item.type === "quiz") {
+    return {
+      ...item,
+      options: item.options.map((option) => ({ ...option })),
+    };
+  }
+
+  return { ...item };
+}
+
+export function createInitialFlowItems() {
+  return DEFAULT_FLOW.map(cloneFlowItem);
+}
+
 export function generatePin() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
@@ -352,6 +368,7 @@ export function createInitialGameState(settings: Partial<GameSettings> = {}): Ga
       ...settings,
       gamePin: settings.gamePin ?? generatePin(),
     },
+    flowItems: createInitialFlowItems(),
     phase: "lobby",
     activeItemIndex: 0,
     activeItemStartedAt: null,
@@ -362,17 +379,37 @@ export function createInitialGameState(settings: Partial<GameSettings> = {}): Ga
   };
 }
 
+export function getFlowItems(state: Pick<GameState, "flowItems">) {
+  return state.flowItems.length ? state.flowItems : DEFAULT_FLOW;
+}
+
 export function getActiveItem(state: GameState) {
-  return DEFAULT_FLOW[state.activeItemIndex] ?? DEFAULT_FLOW[0];
+  const flowItems = getFlowItems(state);
+  return flowItems[state.activeItemIndex] ?? flowItems[0] ?? DEFAULT_FLOW[0];
 }
 
-export function getQuizItems() {
-  return DEFAULT_FLOW.filter((item): item is QuizFlowItem => item.type === "quiz");
+export function getQuizItems(state: Pick<GameState, "flowItems">) {
+  return getFlowItems(state).filter((item): item is QuizFlowItem => item.type === "quiz");
 }
 
-export function getQuestionLabel(item: ContentFlowItem) {
+export function getQuizPosition(state: Pick<GameState, "flowItems">, item: ContentFlowItem) {
+  if (item.type !== "quiz") {
+    return null;
+  }
+
+  const quizItems = getQuizItems(state);
+  const quizIndex = quizItems.findIndex((quizItem) => quizItem.id === item.id);
+
+  return {
+    current: quizIndex >= 0 ? quizIndex + 1 : item.quizNumber,
+    total: quizItems.length,
+  };
+}
+
+export function getQuestionLabel(item: ContentFlowItem, state?: Pick<GameState, "flowItems">) {
   if (item.type === "quiz") {
-    return `Soru ${item.quizNumber}`;
+    const position = state ? getQuizPosition(state, item) : null;
+    return `Soru ${position?.current ?? item.quizNumber}`;
   }
 
   if (item.type === "infoSlide") {
@@ -390,8 +427,9 @@ export function getItemPhase(item: ContentFlowItem): GamePhase {
   return item.type;
 }
 
-export function shouldRevealLeaderboardAfter(item: ContentFlowItem) {
-  return item.type === "quiz" && leaderboardRevealQuizNumbers.includes(item.quizNumber as 3 | 6 | 8);
+export function shouldRevealLeaderboardAfter(state: Pick<GameState, "flowItems">, item: ContentFlowItem) {
+  const position = getQuizPosition(state, item);
+  return Boolean(position && leaderboardRevealQuizNumbers.includes(position.current as 3 | 6 | 8));
 }
 
 export function getTeamResponses(state: GameState, teamId: string): TeamResponses {
@@ -442,7 +480,7 @@ export function getQuizAnswerDistribution(state: GameState, item: QuizFlowItem) 
 }
 
 export function deriveLeaderboard(state: GameState): LeaderboardEntry[] {
-  const quizItems = getQuizItems();
+  const quizItems = getQuizItems(state);
 
   return state.teams
     .map((team) => {
@@ -478,7 +516,7 @@ function csvEscape(value: string | number) {
 }
 
 export function buildResultsCsv(state: GameState) {
-  const quizItems = getQuizItems();
+  const quizItems = getQuizItems(state);
   const leaderboard = deriveLeaderboard(state);
   const headers = [
     "sira",
@@ -487,7 +525,7 @@ export function buildResultsCsv(state: GameState) {
     "dogru_cevap",
     "yanlis_cevap",
     "cevaplanmayan_soru",
-    ...quizItems.flatMap((item) => [`soru_${item.quizNumber}_cevap`, `soru_${item.quizNumber}_puan`]),
+    ...quizItems.flatMap((_, index) => [`soru_${index + 1}_cevap`, `soru_${index + 1}_puan`]),
     "forklift_puan",
   ];
 

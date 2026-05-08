@@ -1,6 +1,13 @@
 "use client";
 
-import { buildResultsCsv, createInitialGameState, DEFAULT_SETTINGS, type GameState } from "./game-state";
+import {
+  buildResultsCsv,
+  createInitialFlowItems,
+  createInitialGameState,
+  DEFAULT_SETTINGS,
+  type ContentFlowItem,
+  type GameState,
+} from "./game-state";
 
 export type TeamSession = {
   teamId: string;
@@ -21,8 +28,14 @@ function normalizeGameState(value: unknown): GameState {
   }
 
   const candidate = value as Partial<GameState>;
+  const flowItems =
+    Array.isArray(candidate.flowItems) && candidate.flowItems.length
+      ? (candidate.flowItems as ContentFlowItem[])
+      : createInitialFlowItems();
   const activeItemIndex =
-    typeof candidate.activeItemIndex === "number" && candidate.activeItemIndex >= 0 ? candidate.activeItemIndex : 0;
+    typeof candidate.activeItemIndex === "number" && candidate.activeItemIndex >= 0
+      ? Math.min(candidate.activeItemIndex, flowItems.length - 1)
+      : 0;
 
   return {
     version: 2,
@@ -35,6 +48,7 @@ function normalizeGameState(value: unknown): GameState {
       prizeThird: Number(candidate.settings?.prizeThird ?? DEFAULT_SETTINGS.prizeThird),
       teamSize: Number(candidate.settings?.teamSize ?? DEFAULT_SETTINGS.teamSize),
     },
+    flowItems,
     phase: candidate.phase ?? "lobby",
     activeItemIndex,
     activeItemStartedAt: candidate.activeItemStartedAt ?? null,
@@ -63,7 +77,9 @@ export function loadGameState(): GameState {
   }
 
   try {
-    return normalizeGameState(JSON.parse(rawState));
+    const normalizedState = normalizeGameState(JSON.parse(rawState));
+    window.localStorage.setItem(GAME_STATE_KEY, JSON.stringify(normalizedState));
+    return normalizedState;
   } catch {
     const initialState = createInitialGameState();
     window.localStorage.setItem(GAME_STATE_KEY, JSON.stringify(initialState));

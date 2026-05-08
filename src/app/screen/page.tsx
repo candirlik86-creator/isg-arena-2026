@@ -8,12 +8,13 @@ import { QuestionCard } from "@/components/QuestionCard";
 import { QuizResultDistribution } from "@/components/QuizResultDistribution";
 import { StageBadge } from "@/components/StageBadge";
 import { useGameState } from "@/hooks/useGameState";
-import { calculateRemainingSeconds, getAnsweredCount, getYoutubeEmbedUrl } from "@/lib/game-state";
+import { calculateRemainingSeconds, getAnsweredCount, getQuizPosition, getYoutubeEmbedUrl } from "@/lib/game-state";
 
 export default function ScreenPage() {
   const { state, now, activeItem, leaderboard } = useGameState();
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
   const answeredCount = getAnsweredCount(state, activeItem);
+  const activeQuizPosition = getQuizPosition(state, activeItem);
 
   return (
     <ProjectionFrame eyebrow="Projeksiyon Ekranı" title="Canlı Yarışma Sahnesi">
@@ -57,7 +58,13 @@ export default function ScreenPage() {
       {state.phase === "quiz" && activeItem.type === "quiz" ? (
         <div className={`grid gap-6 ${state.showCorrectAnswer ? "xl:grid-cols-[0.95fr_1.05fr]" : "xl:grid-cols-[1fr_380px]"}`}>
           <div className="space-y-6">
-            <QuestionCard question={activeItem} compact showCorrectAnswer={state.showCorrectAnswer} />
+            <QuestionCard
+              question={activeItem}
+              compact
+              showCorrectAnswer={state.showCorrectAnswer}
+              quizNumber={activeQuizPosition?.current}
+              quizTotal={activeQuizPosition?.total}
+            />
             {!state.showCorrectAnswer ? <Countdown seconds={remainingSeconds ?? activeItem.timeLimitSeconds} totalSeconds={activeItem.timeLimitSeconds} /> : null}
           </div>
           {state.showCorrectAnswer ? (

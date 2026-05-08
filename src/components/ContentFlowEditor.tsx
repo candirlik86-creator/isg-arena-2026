@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  DEFAULT_FLOW,
   getQuestionLabel,
   shouldRevealLeaderboardAfter,
   type ContentFlowItem,
@@ -34,9 +33,9 @@ export function ContentFlowEditor({ state, onSelectItem }: ContentFlowEditorProp
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {DEFAULT_FLOW.map((item, index) => {
+        {state.flowItems.map((item, index) => {
           const isActive = index === state.activeItemIndex;
-          const reveal = shouldRevealLeaderboardAfter(item);
+          const reveal = shouldRevealLeaderboardAfter(state, item);
 
           return (
             <button
@@ -53,7 +52,7 @@ export function ContentFlowEditor({ state, onSelectItem }: ContentFlowEditorProp
                 <span className="rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-200">
                   {typeLabels[item.type]}
                 </span>
-                <span className="text-sm font-black text-amber-200">{getQuestionLabel(item)}</span>
+                <span className="text-sm font-black text-amber-200">{getQuestionLabel(item, state)}</span>
               </div>
               <h3 className="mt-3 line-clamp-2 text-lg font-black leading-tight text-white">{item.title}</h3>
               {reveal ? <p className="mt-3 text-xs font-bold uppercase tracking-widest text-emerald-200">Sonrasında lider tablosu</p> : null}

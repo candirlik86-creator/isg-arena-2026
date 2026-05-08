@@ -8,7 +8,7 @@ import { Leaderboard } from "@/components/Leaderboard";
 import { StageBadge } from "@/components/StageBadge";
 import { TeamJoinPanel } from "@/components/TeamJoinPanel";
 import { useGameState } from "@/hooks/useGameState";
-import { calculateRemainingSeconds, getTeamResponses, type AnswerId } from "@/lib/game-state";
+import { calculateRemainingSeconds, getQuizPosition, getTeamResponses, type AnswerId } from "@/lib/game-state";
 
 export default function PlayPage() {
   const {
@@ -34,6 +34,7 @@ export default function PlayPage() {
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
   const ownRank = currentTeam ? leaderboard.findIndex((entry) => entry.id === currentTeam.id) + 1 : 0;
   const correctOption = activeItem.type === "quiz" ? activeItem.options.find((option) => option.id === activeItem.correctOptionId) : undefined;
+  const activeQuizPosition = getQuizPosition(state, activeItem);
 
   if (!currentTeam) {
     return (
@@ -81,7 +82,9 @@ export default function PlayPage() {
           <>
             <section className="rounded-[2rem] border border-white/10 bg-slate-950/80 p-5 shadow-2xl">
               <div className="flex items-center justify-between gap-4">
-                <p className="text-sm font-bold uppercase tracking-[0.25em] text-amber-200">Soru {activeItem.quizNumber}/10</p>
+                <p className="text-sm font-bold uppercase tracking-[0.25em] text-amber-200">
+                  Soru {activeQuizPosition?.current ?? activeItem.quizNumber}/{activeQuizPosition?.total ?? activeItem.quizNumber}
+                </p>
                 <p className="rounded-full bg-emerald-400/15 px-4 py-2 text-sm font-black text-emerald-100">{activeItem.topic}</p>
               </div>
               <h2 className="mt-5 text-3xl font-black leading-tight">{activeItem.title}</h2>

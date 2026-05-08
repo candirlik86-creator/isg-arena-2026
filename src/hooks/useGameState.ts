@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { calculateQuestionScore } from "@/lib/scoring";
 import {
   createInitialGameState,
-  DEFAULT_FLOW,
   DEFAULT_SETTINGS,
   deriveLeaderboard,
   getActiveItem,
+  getFlowItems,
   getAnsweredCount,
   getItemPhase,
   getTeamResponses,
@@ -180,8 +180,9 @@ export function useGameState() {
   const goToItem = useCallback(
     (index: number) => {
       commit((currentState) => {
-        const safeIndex = Math.max(0, Math.min(DEFAULT_FLOW.length - 1, index));
-        const nextItem = DEFAULT_FLOW[safeIndex];
+        const flowItems = getFlowItems(currentState);
+        const safeIndex = Math.max(0, Math.min(flowItems.length - 1, index));
+        const nextItem = flowItems[safeIndex];
 
         return {
           ...currentState,
@@ -200,7 +201,7 @@ export function useGameState() {
     commit((currentState) => {
       const currentItem = getActiveItem(currentState);
 
-      if (currentState.phase !== "leaderboard" && shouldRevealLeaderboardAfter(currentItem)) {
+      if (currentState.phase !== "leaderboard" && shouldRevealLeaderboardAfter(currentState, currentItem)) {
         return {
           ...currentState,
           phase: "leaderboard",
@@ -211,8 +212,9 @@ export function useGameState() {
       }
 
       const nextIndex = currentState.activeItemIndex + 1;
+      const flowItems = getFlowItems(currentState);
 
-      if (nextIndex >= DEFAULT_FLOW.length) {
+      if (nextIndex >= flowItems.length) {
         return {
           ...currentState,
           phase: "finished",
@@ -222,7 +224,7 @@ export function useGameState() {
         };
       }
 
-      const nextFlowItem = DEFAULT_FLOW[nextIndex];
+      const nextFlowItem = flowItems[nextIndex];
       return {
         ...currentState,
         phase: getItemPhase(nextFlowItem),

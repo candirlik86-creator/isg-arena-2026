@@ -6,7 +6,7 @@ import { ProjectionFrame } from "@/components/ProjectionFrame";
 import { QuestionCard } from "@/components/QuestionCard";
 import { StageBadge } from "@/components/StageBadge";
 import { useGameState } from "@/hooks/useGameState";
-import { calculateRemainingSeconds, DEFAULT_FLOW, getQuestionLabel } from "@/lib/game-state";
+import { calculateRemainingSeconds, getQuestionLabel, getQuizPosition } from "@/lib/game-state";
 import { downloadResultsCsv } from "@/lib/game-store";
 
 const controlButton = "rounded-2xl px-5 py-4 text-base font-black shadow-xl transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40";
@@ -36,7 +36,8 @@ export default function AdminPage() {
   } = useGameState();
 
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
-  const activeIndexLabel = `${state.activeItemIndex + 1}/${DEFAULT_FLOW.length}`;
+  const activeIndexLabel = `${state.activeItemIndex + 1}/${state.flowItems.length}`;
+  const activeQuizPosition = getQuizPosition(state, activeItem);
 
   return (
     <ProjectionFrame eyebrow="Admin Paneli" title="Yarışma Kontrol Merkezi">
@@ -46,7 +47,7 @@ export default function AdminPage() {
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div>
                 <StageBadge label="Aktif akış öğesi" tone="green" />
-                <h2 className="mt-4 text-4xl font-black text-white">{getQuestionLabel(activeItem)}: {activeItem.title}</h2>
+                <h2 className="mt-4 text-4xl font-black text-white">{getQuestionLabel(activeItem, state)}: {activeItem.title}</h2>
                 <p className="mt-2 text-lg font-semibold text-slate-300">
                   Durum: {state.phase} · Akış: {activeIndexLabel}
                   {remainingSeconds !== null ? ` · Kalan süre: ${remainingSeconds} sn` : ""}
@@ -91,10 +92,16 @@ export default function AdminPage() {
           </div>
 
           {activeItem.type === "quiz" ? (
-            <QuestionCard question={activeItem} compact showCorrectAnswer={state.showCorrectAnswer} />
+            <QuestionCard
+              question={activeItem}
+              compact
+              showCorrectAnswer={state.showCorrectAnswer}
+              quizNumber={activeQuizPosition?.current}
+              quizTotal={activeQuizPosition?.total}
+            />
           ) : (
             <div className="rounded-[2.5rem] border border-white/10 bg-slate-950/80 p-8 shadow-2xl">
-              <StageBadge label={getQuestionLabel(activeItem)} tone={activeItem.type === "forkliftChallenge" ? "red" : "blue"} />
+              <StageBadge label={getQuestionLabel(activeItem, state)} tone={activeItem.type === "forkliftChallenge" ? "red" : "blue"} />
               <h2 className="mt-5 text-5xl font-black text-white">{activeItem.title}</h2>
               <p className="mt-4 text-2xl font-semibold leading-relaxed text-slate-300">
                 {"description" in activeItem ? activeItem.description : "Final etap hazır."}
