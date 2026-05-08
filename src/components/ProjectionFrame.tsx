@@ -15,7 +15,7 @@ export function ProjectionFrame({ children, eyebrow = "İSG Arena 2026", title =
             <p className="text-sm font-bold uppercase tracking-[0.36em] text-amber-200">{eyebrow}</p>
             <h1 className="mt-2 text-3xl font-black md:text-6xl">{title}</h1>
           </div>
-          <div className="rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-5 py-3 text-right font-bold text-emerald-100">Canlı Demo<br /><span className="text-xs uppercase tracking-widest text-slate-300">Local State</span></div>
+          <div className="rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-5 py-3 text-right font-bold text-emerald-100">İSG Arena 2026<br /><span className="text-xs uppercase tracking-widest text-slate-300">Projeksiyon Hazır</span></div>
         </header>
         <div className="flex-1">{children}</div>
       </div>
