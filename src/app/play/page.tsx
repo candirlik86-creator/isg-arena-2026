@@ -173,10 +173,15 @@ export default function PlayPage() {
           </>
         ) : null}
 
-        {(state.phase === "infoSlide" || state.phase === "mediaSlide") ? (
+        {(state.phase === "infoSlide" || state.phase === "mediaSlide") && (activeItem.type === "infoSlide" || activeItem.type === "mediaSlide") ? (
           <section className="rounded-[2rem] border border-white/10 bg-slate-950/80 p-6 text-center shadow-2xl">
             <p className="text-sm font-bold uppercase tracking-[0.3em] text-sky-200">Bekleme</p>
-            <h2 className="mt-4 text-3xl font-black text-white">Bilgilendirme ekranı gösteriliyor, sonraki soruyu bekleyin.</h2>
+            <h2 className="mt-4 text-3xl font-black text-white">{activeItem.title}</h2>
+            {"description" in activeItem ? <p className="mt-3 text-lg font-semibold text-slate-300">{activeItem.description}</p> : null}
+            {activeItem.type === "mediaSlide" && activeItem.mediaUrl ? (
+              <p className="mt-3 break-all text-sm font-bold text-sky-100">{activeItem.mediaUrl}</p>
+            ) : null}
+            <p className="mt-4 text-lg font-black text-slate-200">Projeksiyon ekranını takip edin.</p>
           </section>
         ) : null}
 

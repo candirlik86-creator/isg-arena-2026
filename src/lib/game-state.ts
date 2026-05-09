@@ -8,6 +8,7 @@ export type AnswerOption = {
 type BaseFlowItem = {
   id: string;
   title: string;
+  category?: string;
 };
 
 export type QuizFlowItem = BaseFlowItem & {
@@ -26,6 +27,7 @@ export type InfoSlideFlowItem = BaseFlowItem & {
   type: "infoSlide";
   description: string;
   imageUrl?: string;
+  timeLimitSeconds?: number;
 };
 
 export type MediaSlideFlowItem = BaseFlowItem & {
@@ -33,6 +35,8 @@ export type MediaSlideFlowItem = BaseFlowItem & {
   mediaType: "image" | "youtube";
   mediaUrl: string;
   description: string;
+  timeLimitSeconds?: number;
+  uploadedImageDataUrl?: string;
 };
 
 export type ForkliftChallengeFlowItem = BaseFlowItem & {
@@ -153,6 +157,7 @@ export type QuizAnswerBreakdown = {
 };
 
 export const leaderboardRevealQuizNumbers = [3, 6, 8] as const;
+export const answerIds: AnswerId[] = ["A", "B", "C", "D"];
 
 export const DEFAULT_SETTINGS: GameSettings = {
   welcomeTitle: "Hoş geldiniz Beyzer Depo İSG Bilgi Yarışması",
@@ -364,7 +369,7 @@ export const DEFAULT_FLOW: ContentFlowItem[] = [
   },
 ];
 
-function cloneFlowItem<T extends ContentFlowItem>(item: T): T {
+export function cloneFlowItem<T extends ContentFlowItem>(item: T): T {
   if (item.type === "quiz") {
     return {
       ...item,
@@ -377,6 +382,17 @@ function cloneFlowItem<T extends ContentFlowItem>(item: T): T {
 
 export function createInitialFlowItems() {
   return DEFAULT_FLOW.map(cloneFlowItem);
+}
+
+export function createFlowItemId(type: ContentFlowItem["type"]) {
+  const prefixByType: Record<ContentFlowItem["type"], string> = {
+    quiz: "quiz",
+    infoSlide: "info",
+    mediaSlide: "media",
+    forkliftChallenge: "forklift",
+  };
+
+  return `${prefixByType[type]}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export function generatePin() {
@@ -403,7 +419,7 @@ export function createInitialGameState(settings: Partial<GameSettings> = {}): Ga
 }
 
 export function getFlowItems(state: Pick<GameState, "flowItems">) {
-  return state.flowItems.length ? state.flowItems : DEFAULT_FLOW;
+  return Array.isArray(state.flowItems) ? state.flowItems : DEFAULT_FLOW;
 }
 
 export function getActiveItem(state: GameState) {
@@ -446,6 +462,27 @@ export function getQuestionLabel(item: ContentFlowItem, state?: Pick<GameState, 
   return "Final";
 }
 
+export function getItemCategory(item: ContentFlowItem) {
+  if (item.type === "quiz") {
+    return item.topic;
+  }
+
+  return item.category ?? "";
+}
+
+export function getItemDurationSeconds(item: ContentFlowItem) {
+  return "timeLimitSeconds" in item && typeof item.timeLimitSeconds === "number" ? item.timeLimitSeconds : null;
+}
+
+export function inferMediaType(url: string): MediaSlideFlowItem["mediaType"] {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.hostname.includes("youtube.com") || parsedUrl.hostname.includes("youtu.be") ? "youtube" : "image";
+  } catch {
+    return url.includes("youtube.com") || url.includes("youtu.be") ? "youtube" : "image";
+  }
+}
+
 export function getItemPhase(item: ContentFlowItem): GamePhase {
   return item.type;
 }
@@ -459,8 +496,33 @@ export function getTeamResponses(state: GameState, teamId: string): TeamResponse
   return state.responses[teamId] ?? { answers: {}, forkliftRuns: {} };
 }
 
+export function pruneResponsesForFlowItems(
+  responses: Record<string, TeamResponses>,
+  flowItems: ContentFlowItem[],
+): Record<string, TeamResponses> {
+  const quizIds = new Set(flowItems.filter((item) => item.type === "quiz").map((item) => item.id));
+  const forkliftIds = new Set(flowItems.filter((item) => item.type === "forkliftChallenge").map((item) => item.id));
+
+  return Object.fromEntries(
+    Object.entries(responses).map(([teamId, teamResponses]) => {
+      const safeResponses =
+        teamResponses && typeof teamResponses === "object" ? teamResponses : { answers: {}, forkliftRuns: {} };
+
+      return [
+        teamId,
+        {
+          answers: Object.fromEntries(Object.entries(safeResponses.answers ?? {}).filter(([itemId]) => quizIds.has(itemId))),
+          forkliftRuns: Object.fromEntries(
+            Object.entries(safeResponses.forkliftRuns ?? {}).filter(([itemId]) => forkliftIds.has(itemId)),
+          ),
+        },
+      ];
+    }),
+  );
+}
+
 export function calculateRemainingSeconds(state: GameState, item: ContentFlowItem, now = Date.now()) {
-  if (!("timeLimitSeconds" in item) || !state.activeItemStartedAt) {
+  if (!("timeLimitSeconds" in item) || typeof item.timeLimitSeconds !== "number" || !state.activeItemStartedAt) {
     return null;
   }
 

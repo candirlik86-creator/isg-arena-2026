@@ -125,9 +125,21 @@ export default function ScreenPage() {
             <StageBadge label="Medya Slaytı" tone="blue" />
             <h2 className="mt-4 text-6xl font-black text-white">{activeItem.title}</h2>
             <p className="mt-3 text-2xl font-semibold text-slate-300">{activeItem.description}</p>
+            {!activeItem.uploadedImageDataUrl && activeItem.mediaUrl ? (
+              <a
+                href={activeItem.mediaUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 block break-all rounded-2xl border border-sky-300/25 bg-sky-400/10 p-4 text-xl font-black text-sky-100"
+              >
+                Medya URL: {activeItem.mediaUrl}
+              </a>
+            ) : null}
           </div>
           <div className="overflow-hidden rounded-[2.5rem] border border-white/10 bg-slate-950 shadow-2xl">
-            {activeItem.mediaType === "youtube" ? (
+            {activeItem.uploadedImageDataUrl ? (
+              <img src={activeItem.uploadedImageDataUrl} alt="" className="max-h-[68vh] w-full object-contain" />
+            ) : activeItem.mediaType === "youtube" ? (
               <iframe
                 title={activeItem.title}
                 src={getYoutubeEmbedUrl(activeItem.mediaUrl)}

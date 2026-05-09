@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { calculateQuestionScore } from "@/lib/scoring";
 import {
+  cloneFlowItem,
+  createFlowItemId,
   createInitialGameState,
+  createInitialFlowItems,
   DEFAULT_SETTINGS,
   deriveLeaderboard,
   getActiveItem,
@@ -11,8 +14,10 @@ import {
   getAnsweredCount,
   getItemPhase,
   getTeamResponses,
+  pruneResponsesForFlowItems,
   shouldRevealLeaderboardAfter,
   type AnswerId,
+  type ContentFlowItem,
   type ForkliftRun,
   type GameSettings,
   type GameState,
@@ -36,6 +41,49 @@ type SubmitResult = {
   ok: boolean;
   message?: string;
 };
+
+function reconcileFlowState(currentState: GameState, flowItems: ContentFlowItem[]): GameState {
+  const currentActiveItem = currentState.flowItems[currentState.activeItemIndex];
+  const nextActiveIndex = currentActiveItem ? flowItems.findIndex((item) => item.id === currentActiveItem.id) : -1;
+  const activeItemWasPreserved = nextActiveIndex >= 0;
+  const shouldPreservePhase = activeItemWasPreserved || currentState.phase === "lobby" || currentState.phase === "finished";
+  const safeActiveItemIndex = activeItemWasPreserved
+    ? nextActiveIndex
+    : flowItems.length
+      ? Math.min(currentState.activeItemIndex, flowItems.length - 1)
+      : 0;
+  const nextActiveItem = flowItems[safeActiveItemIndex];
+
+  return {
+    ...currentState,
+    flowItems,
+    activeItemIndex: safeActiveItemIndex,
+    responses: pruneResponsesForFlowItems(currentState.responses, flowItems),
+    phase: flowItems.length ? (shouldPreservePhase ? currentState.phase : getItemPhase(nextActiveItem)) : "lobby",
+    activeItemStartedAt: activeItemWasPreserved ? currentState.activeItemStartedAt : null,
+    answersLocked: activeItemWasPreserved ? currentState.answersLocked : false,
+    showCorrectAnswer: activeItemWasPreserved ? currentState.showCorrectAnswer : false,
+  };
+}
+
+function createDuplicatedFlowItem(item: ContentFlowItem): ContentFlowItem {
+  const duplicatedItem = cloneFlowItem(item);
+  const title = item.title.endsWith(" Kopya") ? item.title : `${item.title} Kopya`;
+
+  if (duplicatedItem.type === "quiz") {
+    return {
+      ...duplicatedItem,
+      id: createFlowItemId("quiz"),
+      title,
+    };
+  }
+
+  return {
+    ...duplicatedItem,
+    id: createFlowItemId(duplicatedItem.type),
+    title,
+  };
+}
 
 export function useGameState() {
   const [state, setState] = useState<GameState>(() => createInitialGameState({ gamePin: DEFAULT_SETTINGS.gamePin }));
@@ -166,6 +214,17 @@ export function useGameState() {
 
   const startActiveItem = useCallback(() => {
     commit((currentState) => {
+      if (!currentState.flowItems.length) {
+        return {
+          ...currentState,
+          phase: "lobby",
+          activeItemIndex: 0,
+          activeItemStartedAt: null,
+          answersLocked: false,
+          showCorrectAnswer: false,
+        };
+      }
+
       const currentItem = getActiveItem(currentState);
       return {
         ...currentState,
@@ -180,7 +239,18 @@ export function useGameState() {
   const goToItem = useCallback(
     (index: number) => {
       commit((currentState) => {
-        const flowItems = getFlowItems(currentState);
+        const flowItems = currentState.flowItems;
+        if (!flowItems.length) {
+          return {
+            ...currentState,
+            phase: "lobby",
+            activeItemIndex: 0,
+            activeItemStartedAt: null,
+            answersLocked: false,
+            showCorrectAnswer: false,
+          };
+        }
+
         const safeIndex = Math.max(0, Math.min(flowItems.length - 1, index));
         const nextItem = flowItems[safeIndex];
 
@@ -199,6 +269,17 @@ export function useGameState() {
 
   const nextItem = useCallback(() => {
     commit((currentState) => {
+      if (!currentState.flowItems.length) {
+        return {
+          ...currentState,
+          phase: "lobby",
+          activeItemIndex: 0,
+          activeItemStartedAt: null,
+          answersLocked: false,
+          showCorrectAnswer: false,
+        };
+      }
+
       const currentItem = getActiveItem(currentState);
 
       if (currentState.phase !== "leaderboard" && shouldRevealLeaderboardAfter(currentState, currentItem)) {
@@ -260,6 +341,85 @@ export function useGameState() {
       phase: "finished",
       activeItemStartedAt: null,
       answersLocked: true,
+      showCorrectAnswer: false,
+    }));
+  }, [commit]);
+
+  const addFlowItem = useCallback(
+    (item: ContentFlowItem) => {
+      commit((currentState) => reconcileFlowState(currentState, [...currentState.flowItems, item]));
+    },
+    [commit],
+  );
+
+  const updateFlowItem = useCallback(
+    (item: ContentFlowItem) => {
+      commit((currentState) =>
+        reconcileFlowState(
+          currentState,
+          currentState.flowItems.map((flowItem) => (flowItem.id === item.id ? item : flowItem)),
+        ),
+      );
+    },
+    [commit],
+  );
+
+  const deleteFlowItem = useCallback(
+    (itemId: string) => {
+      commit((currentState) => reconcileFlowState(currentState, currentState.flowItems.filter((item) => item.id !== itemId)));
+    },
+    [commit],
+  );
+
+  const duplicateFlowItem = useCallback(
+    (itemId: string) => {
+      commit((currentState) => {
+        const itemIndex = currentState.flowItems.findIndex((item) => item.id === itemId);
+
+        if (itemIndex < 0) {
+          return currentState;
+        }
+
+        const duplicatedItem = createDuplicatedFlowItem(currentState.flowItems[itemIndex]);
+        const nextFlowItems = [
+          ...currentState.flowItems.slice(0, itemIndex + 1),
+          duplicatedItem,
+          ...currentState.flowItems.slice(itemIndex + 1),
+        ];
+
+        return reconcileFlowState(currentState, nextFlowItems);
+      });
+    },
+    [commit],
+  );
+
+  const moveFlowItem = useCallback(
+    (itemId: string, direction: -1 | 1) => {
+      commit((currentState) => {
+        const itemIndex = currentState.flowItems.findIndex((item) => item.id === itemId);
+        const targetIndex = itemIndex + direction;
+
+        if (itemIndex < 0 || targetIndex < 0 || targetIndex >= currentState.flowItems.length) {
+          return currentState;
+        }
+
+        const nextFlowItems = [...currentState.flowItems];
+        const [movedItem] = nextFlowItems.splice(itemIndex, 1);
+        nextFlowItems.splice(targetIndex, 0, movedItem);
+
+        return reconcileFlowState(currentState, nextFlowItems);
+      });
+    },
+    [commit],
+  );
+
+  const restoreDefaultFlow = useCallback(() => {
+    commit((currentState) => ({
+      ...reconcileFlowState(currentState, createInitialFlowItems()),
+      phase: "lobby",
+      activeItemIndex: 0,
+      activeItemStartedAt: null,
+      answersLocked: false,
       showCorrectAnswer: false,
     }));
   }, [commit]);
@@ -392,6 +552,12 @@ export function useGameState() {
     revealCorrectAnswer,
     showLeaderboard,
     finishGame,
+    addFlowItem,
+    updateFlowItem,
+    deleteFlowItem,
+    duplicateFlowItem,
+    moveFlowItem,
+    restoreDefaultFlow,
     submitQuizAnswer,
     submitForkliftRun,
   };
