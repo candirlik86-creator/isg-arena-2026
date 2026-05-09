@@ -131,15 +131,22 @@ export default function AdminPage() {
     revealCorrectAnswer,
     showLeaderboard,
     finishGame,
+    addFlowItem,
+    updateFlowItem,
+    deleteFlowItem,
+    duplicateFlowItem,
+    moveFlowItem,
+    restoreDefaultFlow,
     goToItem,
   } = useGameState();
 
+  const hasFlowItems = state.flowItems.length > 0;
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
-  const activeIndexLabel = `${state.activeItemIndex + 1}/${state.flowItems.length}`;
+  const activeIndexLabel = hasFlowItems ? `${state.activeItemIndex + 1}/${state.flowItems.length}` : "Akış boş";
   const activeQuizPosition = getQuizPosition(state, activeItem);
-  const activeQuizBreakdown = activeItem.type === "quiz" ? getQuizAnswerBreakdown(state, activeItem) : null;
-  const displayedAnsweredCount = activeQuizBreakdown?.answeredTeams ?? answeredCount;
-  const displayedTeamCount = activeQuizBreakdown?.totalTeams ?? state.teams.length;
+  const activeQuizBreakdown = hasFlowItems && activeItem.type === "quiz" ? getQuizAnswerBreakdown(state, activeItem) : null;
+  const displayedAnsweredCount = hasFlowItems ? activeQuizBreakdown?.answeredTeams ?? answeredCount : 0;
+  const displayedTeamCount = hasFlowItems ? activeQuizBreakdown?.totalTeams ?? state.teams.length : state.teams.length;
 
   return (
     <ProjectionFrame eyebrow="Admin Paneli" title="Yarışma Kontrol Merkezi">
@@ -149,7 +156,9 @@ export default function AdminPage() {
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div>
                 <StageBadge label="Aktif akış öğesi" tone="green" />
-                <h2 className="mt-4 text-4xl font-black text-white">{getQuestionLabel(activeItem, state)}: {activeItem.title}</h2>
+                <h2 className="mt-4 text-4xl font-black text-white">
+                  {hasFlowItems ? `${getQuestionLabel(activeItem, state)}: ${activeItem.title}` : "Akışta öğe yok"}
+                </h2>
                 <p className="mt-2 text-lg font-semibold text-slate-300">
                   Durum: {state.phase} · Akış: {activeIndexLabel}
                   {remainingSeconds !== null ? ` · Kalan süre: ${remainingSeconds} sn` : ""}
@@ -181,10 +190,10 @@ export default function AdminPage() {
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <button type="button" onClick={openLobby} className={blueButton}>Lobiyi Aç</button>
-              <button type="button" onClick={startActiveItem} className={amberButton}>Soruyu/Slaytı Başlat</button>
-              <button type="button" onClick={nextItem} className={greenButton}>Sonraki Öğe</button>
-              <button type="button" onClick={lockAnswers} className={blueButton}>Cevapları Kilitle</button>
-              <button type="button" onClick={revealCorrectAnswer} disabled={activeItem.type !== "quiz"} className={greenButton}>Doğru Cevabı Göster</button>
+              <button type="button" onClick={startActiveItem} disabled={!hasFlowItems} className={amberButton}>Soruyu/Slaytı Başlat</button>
+              <button type="button" onClick={nextItem} disabled={!hasFlowItems} className={greenButton}>Sonraki Öğe</button>
+              <button type="button" onClick={lockAnswers} disabled={!hasFlowItems} className={blueButton}>Cevapları Kilitle</button>
+              <button type="button" onClick={revealCorrectAnswer} disabled={!hasFlowItems || activeItem.type !== "quiz"} className={greenButton}>Doğru Cevabı Göster</button>
               <button type="button" onClick={showLeaderboard} className={blueButton}>Lider Tablosu Göster</button>
               <button type="button" onClick={finishGame} className={amberButton}>Final Sonuçları</button>
               <button
@@ -201,7 +210,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {activeItem.type === "quiz" ? (
+          {hasFlowItems && activeItem.type === "quiz" ? (
             <QuestionCard
               question={activeItem}
               compact
@@ -209,7 +218,7 @@ export default function AdminPage() {
               quizNumber={activeQuizPosition?.current}
               quizTotal={activeQuizPosition?.total}
             />
-          ) : (
+          ) : hasFlowItems ? (
             <div className="rounded-[2.5rem] border border-white/10 bg-slate-950/80 p-8 shadow-2xl">
               <StageBadge label={getQuestionLabel(activeItem, state)} tone={activeItem.type === "forkliftChallenge" ? "red" : "blue"} />
               <h2 className="mt-5 text-5xl font-black text-white">{activeItem.title}</h2>
@@ -220,11 +229,26 @@ export default function AdminPage() {
                 <p className="mt-5 rounded-2xl border border-amber-300/30 bg-amber-300/10 p-5 text-2xl font-black text-amber-100">{activeItem.message}</p>
               ) : null}
             </div>
+          ) : (
+            <div className="rounded-[2.5rem] border border-red-300/30 bg-red-400/10 p-8 shadow-2xl">
+              <StageBadge label="Boş akış" tone="red" />
+              <h2 className="mt-5 text-4xl font-black text-white">Yarışma akışında içerik yok</h2>
+              <p className="mt-3 text-xl font-semibold text-slate-200">Akış Editörü üzerinden yeni içerik ekleyin veya varsayılan akışı geri yükleyin.</p>
+            </div>
           )}
 
           {activeQuizBreakdown ? <AdminAnswerBreakdown breakdown={activeQuizBreakdown} /> : null}
 
-          <ContentFlowEditor state={state} onSelectItem={goToItem} />
+          <ContentFlowEditor
+            state={state}
+            onSelectItem={goToItem}
+            onAddItem={addFlowItem}
+            onUpdateItem={updateFlowItem}
+            onDeleteItem={deleteFlowItem}
+            onDuplicateItem={duplicateFlowItem}
+            onMoveItem={moveFlowItem}
+            onRestoreDefaultFlow={restoreDefaultFlow}
+          />
         </section>
 
         <aside className="space-y-6">
