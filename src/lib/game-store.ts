@@ -172,6 +172,7 @@ function normalizeFlowItems(value: unknown, fallback: ContentFlowItem[]) {
 function isGamePhase(value: unknown): value is GamePhase {
   return (
     value === "lobby" ||
+    value === "quizIntro" ||
     value === "quiz" ||
     value === "infoSlide" ||
     value === "mediaSlide" ||

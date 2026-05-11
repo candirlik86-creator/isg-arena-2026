@@ -55,6 +55,7 @@ export type ContentFlowItem =
 
 export type GamePhase =
   | "lobby"
+  | "quizIntro"
   | "quiz"
   | "infoSlide"
   | "mediaSlide"
@@ -158,6 +159,7 @@ export type QuizAnswerBreakdown = {
 
 export const leaderboardRevealQuizNumbers = [3, 6, 8] as const;
 export const answerIds: AnswerId[] = ["A", "B", "C", "D"];
+export const QUIZ_INTRO_SECONDS = 5;
 
 export const DEFAULT_SETTINGS: GameSettings = {
   welcomeTitle: "Hoş geldiniz Beyzer Depo İSG Bilgi Yarışması",
@@ -487,6 +489,10 @@ export function getItemPhase(item: ContentFlowItem): GamePhase {
   return item.type;
 }
 
+export function getItemStartPhase(item: ContentFlowItem): GamePhase {
+  return item.type === "quiz" ? "quizIntro" : getItemPhase(item);
+}
+
 export function shouldRevealLeaderboardAfter(state: Pick<GameState, "flowItems">, item: ContentFlowItem) {
   const position = getQuizPosition(state, item);
   return Boolean(position && leaderboardRevealQuizNumbers.includes(position.current as 3 | 6 | 8));
@@ -522,12 +528,25 @@ export function pruneResponsesForFlowItems(
 }
 
 export function calculateRemainingSeconds(state: GameState, item: ContentFlowItem, now = Date.now()) {
+  if (state.phase === "quizIntro" && item.type === "quiz") {
+    return null;
+  }
+
   if (!("timeLimitSeconds" in item) || typeof item.timeLimitSeconds !== "number" || !state.activeItemStartedAt) {
     return null;
   }
 
   const elapsedSeconds = Math.floor((now - state.activeItemStartedAt) / 1000);
   return Math.max(0, item.timeLimitSeconds - elapsedSeconds);
+}
+
+export function calculateQuizIntroRemainingSeconds(state: GameState, item: ContentFlowItem, now = Date.now()) {
+  if (state.phase !== "quizIntro" || item.type !== "quiz" || !state.activeItemStartedAt) {
+    return null;
+  }
+
+  const remainingMs = QUIZ_INTRO_SECONDS * 1000 - (now - state.activeItemStartedAt);
+  return Math.min(QUIZ_INTRO_SECONDS, Math.max(1, Math.ceil(remainingMs / 1000)));
 }
 
 export function getAnsweredCount(state: GameState, item = getActiveItem(state)) {
@@ -650,8 +669,12 @@ export function getQuizAnswerBreakdown(
   };
 }
 
-export function deriveLeaderboard(state: GameState): LeaderboardEntry[] {
-  const quizItems = getQuizItems(state);
+type LeaderboardOptions = {
+  excludeQuizItemId?: string;
+};
+
+export function deriveLeaderboard(state: GameState, options: LeaderboardOptions = {}): LeaderboardEntry[] {
+  const quizItems = getQuizItems(state).filter((item) => item.id !== options.excludeQuizItemId);
 
   return state.teams
     .map((team) => {

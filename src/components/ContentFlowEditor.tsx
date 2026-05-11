@@ -10,7 +10,6 @@ import {
   getQuizItems,
   getQuizPosition,
   inferMediaType,
-  shouldRevealLeaderboardAfter,
   type AnswerId,
   type ContentFlowItem,
   type GameState,
@@ -407,7 +406,7 @@ export function ContentFlowEditor({
           </p>
         </div>
         <p className="rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm font-bold text-amber-100">
-          Tabela: 3, 6 ve 8. quiz sonrası
+          Lider tablosu: admin butonuyla
         </p>
       </div>
 
@@ -657,7 +656,6 @@ export function ContentFlowEditor({
       <div className="mt-5 grid gap-3">
         {state.flowItems.map((item, index) => {
           const isActive = index === state.activeItemIndex;
-          const reveal = shouldRevealLeaderboardAfter(state, item);
           const duration = getItemDurationSeconds(item);
           const category = getItemCategory(item) || "Kategori yok";
           const quizPosition = item.type === "quiz" ? getQuizPosition(state, item) : null;
@@ -708,7 +706,6 @@ export function ContentFlowEditor({
                       Medya URL: {item.mediaUrl || "Yok"}
                     </p>
                   ) : null}
-                  {reveal ? <p className="mt-3 text-xs font-bold uppercase tracking-widest text-emerald-200">Sonrasında lider tablosu</p> : null}
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-3 lg:w-[360px]">
