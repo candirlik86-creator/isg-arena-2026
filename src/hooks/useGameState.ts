@@ -311,8 +311,25 @@ export function useGameState() {
         };
       }
 
-      const nextIndex = currentState.activeItemIndex + 1;
       const flowItems = getFlowItems(currentState);
+      const currentItem = getActiveItem(currentState);
+      const shouldShowScoreboardBeforeNextItem =
+        currentState.phase === "quiz" &&
+        currentItem.type === "quiz" &&
+        Boolean(currentState.activeItemStartedAt) &&
+        Date.now() - (currentState.activeItemStartedAt ?? 0) >= currentItem.timeLimitSeconds * 1000;
+
+      if (shouldShowScoreboardBeforeNextItem) {
+        return {
+          ...currentState,
+          phase: "leaderboard",
+          activeItemStartedAt: null,
+          answersLocked: true,
+          showCorrectAnswer: false,
+        };
+      }
+
+      const nextIndex = currentState.activeItemIndex + 1;
 
       if (nextIndex >= flowItems.length) {
         return {
