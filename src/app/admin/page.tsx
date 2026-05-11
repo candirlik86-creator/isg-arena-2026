@@ -7,6 +7,7 @@ import { QuestionCard } from "@/components/QuestionCard";
 import { StageBadge } from "@/components/StageBadge";
 import { useGameState } from "@/hooks/useGameState";
 import {
+  calculateQuizIntroRemainingSeconds,
   calculateRemainingSeconds,
   getQuestionLabel,
   getQuizAnswerBreakdown,
@@ -142,6 +143,7 @@ export default function AdminPage() {
 
   const hasFlowItems = state.flowItems.length > 0;
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
+  const introRemainingSeconds = calculateQuizIntroRemainingSeconds(state, activeItem, now);
   const activeIndexLabel = hasFlowItems ? `${state.activeItemIndex + 1}/${state.flowItems.length}` : "Akış boş";
   const activeQuizPosition = getQuizPosition(state, activeItem);
   const activeQuizBreakdown = hasFlowItems && activeItem.type === "quiz" ? getQuizAnswerBreakdown(state, activeItem) : null;
@@ -162,6 +164,7 @@ export default function AdminPage() {
                 <p className="mt-2 text-lg font-semibold text-slate-300">
                   Durum: {state.phase} · Akış: {activeIndexLabel}
                   {remainingSeconds !== null ? ` · Kalan süre: ${remainingSeconds} sn` : ""}
+                  {introRemainingSeconds !== null ? ` · Hazırlık: ${introRemainingSeconds} sn` : ""}
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-3 text-center">

@@ -8,14 +8,14 @@ import {
   createInitialGameState,
   createInitialFlowItems,
   DEFAULT_SETTINGS,
+  QUIZ_INTRO_SECONDS,
   deriveLeaderboard,
   getActiveItem,
   getFlowItems,
   getAnsweredCount,
-  getItemPhase,
+  getItemStartPhase,
   getTeamResponses,
   pruneResponsesForFlowItems,
-  shouldRevealLeaderboardAfter,
   type AnswerId,
   type ContentFlowItem,
   type ForkliftRun,
@@ -42,6 +42,17 @@ type SubmitResult = {
   message?: string;
 };
 
+function getStartedItemState(item: ContentFlowItem) {
+  const phase = getItemStartPhase(item);
+
+  return {
+    phase,
+    activeItemStartedAt: Date.now(),
+    answersLocked: phase === "quizIntro",
+    showCorrectAnswer: false,
+  };
+}
+
 function reconcileFlowState(currentState: GameState, flowItems: ContentFlowItem[]): GameState {
   const currentActiveItem = currentState.flowItems[currentState.activeItemIndex];
   const nextActiveIndex = currentActiveItem ? flowItems.findIndex((item) => item.id === currentActiveItem.id) : -1;
@@ -59,7 +70,7 @@ function reconcileFlowState(currentState: GameState, flowItems: ContentFlowItem[
     flowItems,
     activeItemIndex: safeActiveItemIndex,
     responses: pruneResponsesForFlowItems(currentState.responses, flowItems),
-    phase: flowItems.length ? (shouldPreservePhase ? currentState.phase : getItemPhase(nextActiveItem)) : "lobby",
+    phase: flowItems.length ? (shouldPreservePhase ? currentState.phase : getItemStartPhase(nextActiveItem)) : "lobby",
     activeItemStartedAt: activeItemWasPreserved ? currentState.activeItemStartedAt : null,
     answersLocked: activeItemWasPreserved ? currentState.answersLocked : false,
     showCorrectAnswer: activeItemWasPreserved ? currentState.showCorrectAnswer : false,
@@ -121,6 +132,32 @@ export function useGameState() {
 
     return state.teams.find((team) => team.id === teamSession.teamId) ?? null;
   }, [state.settings.gamePin, state.teams, teamSession]);
+
+  useEffect(() => {
+    if (state.phase !== "quizIntro" || activeItem.type !== "quiz" || !state.activeItemStartedAt) {
+      return;
+    }
+
+    if (now - state.activeItemStartedAt < QUIZ_INTRO_SECONDS * 1000) {
+      return;
+    }
+
+    commit((currentState) => {
+      const currentItem = getActiveItem(currentState);
+
+      if (currentState.phase !== "quizIntro" || currentItem.type !== "quiz" || currentItem.id !== activeItem.id) {
+        return currentState;
+      }
+
+      return {
+        ...currentState,
+        phase: "quiz",
+        activeItemStartedAt: Date.now(),
+        answersLocked: false,
+        showCorrectAnswer: false,
+      };
+    });
+  }, [activeItem.id, activeItem.type, commit, now, state.activeItemStartedAt, state.phase]);
 
   const resetGame = useCallback(() => {
     const currentState = loadGameState();
@@ -228,10 +265,7 @@ export function useGameState() {
       const currentItem = getActiveItem(currentState);
       return {
         ...currentState,
-        phase: getItemPhase(currentItem),
-        activeItemStartedAt: Date.now(),
-        answersLocked: false,
-        showCorrectAnswer: false,
+        ...getStartedItemState(currentItem),
       };
     });
   }, [commit]);
@@ -256,11 +290,8 @@ export function useGameState() {
 
         return {
           ...currentState,
-          phase: getItemPhase(nextItem),
           activeItemIndex: safeIndex,
-          activeItemStartedAt: Date.now(),
-          answersLocked: false,
-          showCorrectAnswer: false,
+          ...getStartedItemState(nextItem),
         };
       });
     },
@@ -276,18 +307,6 @@ export function useGameState() {
           activeItemIndex: 0,
           activeItemStartedAt: null,
           answersLocked: false,
-          showCorrectAnswer: false,
-        };
-      }
-
-      const currentItem = getActiveItem(currentState);
-
-      if (currentState.phase !== "leaderboard" && shouldRevealLeaderboardAfter(currentState, currentItem)) {
-        return {
-          ...currentState,
-          phase: "leaderboard",
-          activeItemStartedAt: null,
-          answersLocked: true,
           showCorrectAnswer: false,
         };
       }
@@ -308,11 +327,8 @@ export function useGameState() {
       const nextFlowItem = flowItems[nextIndex];
       return {
         ...currentState,
-        phase: getItemPhase(nextFlowItem),
         activeItemIndex: nextIndex,
-        activeItemStartedAt: Date.now(),
-        answersLocked: false,
-        showCorrectAnswer: false,
+        ...getStartedItemState(nextFlowItem),
       };
     });
   }, [commit]);
@@ -451,7 +467,13 @@ export function useGameState() {
       return { ok: false, message: "Bu soru için cevap zaten gönderildi." };
     }
 
-    const answerTimeMs = currentState.activeItemStartedAt ? Date.now() - currentState.activeItemStartedAt : 0;
+    const submittedAt = Date.now();
+    const answerTimeMs = currentState.activeItemStartedAt ? submittedAt - currentState.activeItemStartedAt : 0;
+
+    if (!currentState.activeItemStartedAt || answerTimeMs >= item.timeLimitSeconds * 1000) {
+      return { ok: false, message: "Cevap süresi doldu." };
+    }
+
     const isCorrect = optionId === item.correctOptionId;
     const scoreResult = calculateQuestionScore({
       isCorrect,
@@ -472,7 +494,7 @@ export function useGameState() {
               isCorrect,
               score: scoreResult.totalScore,
               answerTimeMs,
-              submittedAt: Date.now(),
+              submittedAt,
             },
           },
           forkliftRuns: responses.forkliftRuns,

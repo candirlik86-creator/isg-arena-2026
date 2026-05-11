@@ -1,22 +1,95 @@
 "use client";
 
-import { Countdown } from "@/components/Countdown";
 import { AnswerDistributionChart } from "@/components/AnswerDistributionChart";
 import { Leaderboard } from "@/components/Leaderboard";
 import { Podium } from "@/components/Podium";
 import { ProjectionFrame } from "@/components/ProjectionFrame";
-import { QuestionCard } from "@/components/QuestionCard";
 import { StageBadge } from "@/components/StageBadge";
 import { useGameState } from "@/hooks/useGameState";
-import { calculateRemainingSeconds, getAnsweredCount, getQuizPosition, getYoutubeEmbedUrl } from "@/lib/game-state";
+import {
+  QUIZ_INTRO_SECONDS,
+  calculateQuizIntroRemainingSeconds,
+  calculateRemainingSeconds,
+  getAnsweredCount,
+  getQuizPosition,
+  getYoutubeEmbedUrl,
+} from "@/lib/game-state";
+
+const liveOptionStyles = {
+  A: "border-amber-200/55 bg-amber-400/20 text-amber-100",
+  B: "border-sky-200/55 bg-sky-400/20 text-sky-100",
+  C: "border-emerald-200/55 bg-emerald-400/20 text-emerald-100",
+  D: "border-rose-200/55 bg-rose-400/20 text-rose-100",
+} as const;
+
+const liveOptionBadgeStyles = {
+  A: "bg-amber-300 text-slate-950",
+  B: "bg-sky-300 text-slate-950",
+  C: "bg-emerald-300 text-slate-950",
+  D: "bg-rose-300 text-slate-950",
+} as const;
 
 export default function ScreenPage() {
   const { state, now, activeItem, leaderboard } = useGameState();
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
+  const introRemainingSeconds = calculateQuizIntroRemainingSeconds(state, activeItem, now);
   const answeredCount = getAnsweredCount(state, activeItem);
   const activeQuizPosition = getQuizPosition(state, activeItem);
   const quizTimeExpired = activeItem.type === "quiz" && remainingSeconds !== null && remainingSeconds <= 0;
-  const shouldShowQuizDistribution = activeItem.type === "quiz" && (quizTimeExpired || state.showCorrectAnswer);
+  const shouldShowQuizDistribution = activeItem.type === "quiz" && quizTimeExpired;
+  const quizInProgress = state.phase === "quiz" && activeItem.type === "quiz" && !quizTimeExpired;
+
+  if (quizInProgress && activeItem.type === "quiz") {
+    const liveRemainingSeconds = remainingSeconds ?? activeItem.timeLimitSeconds;
+    const liveProgress = Math.max(0, Math.min(100, (liveRemainingSeconds / activeItem.timeLimitSeconds) * 100));
+
+    return (
+      <main className="min-h-screen overflow-hidden bg-slate-950 p-4 text-white md:p-8">
+        <section className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-7xl flex-col justify-center gap-7 md:min-h-[calc(100vh-4rem)] md:gap-9">
+          <div className="grid gap-4 md:grid-cols-[1fr_360px]">
+            <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-2xl shadow-black/30">
+              <div className="flex items-end justify-between gap-5">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.28em] text-slate-300">Kalan süre</p>
+                  <p className="mt-2 text-7xl font-black leading-none tabular-nums text-white md:text-8xl">{liveRemainingSeconds}</p>
+                </div>
+                <p className="pb-2 text-2xl font-black text-amber-100">saniye</p>
+              </div>
+              <div className="mt-5 h-5 overflow-hidden rounded-full bg-slate-900">
+                <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-amber-300 to-red-500 transition-all" style={{ width: `${liveProgress}%` }} />
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-emerald-300/35 bg-emerald-400/10 p-5 text-center shadow-2xl shadow-black/30">
+              <p className="text-sm font-black uppercase tracking-[0.28em] text-emerald-100">Cevap sayısı</p>
+              <p className="mt-3 text-5xl font-black leading-none text-white md:text-6xl">{answeredCount} cevap</p>
+              <p className="mt-3 text-2xl font-black text-slate-200">
+                {answeredCount} / {state.teams.length} takım
+              </p>
+            </div>
+          </div>
+
+          <h1 className="text-center text-4xl font-black leading-tight text-white md:text-6xl lg:text-7xl">{activeItem.title}</h1>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {activeItem.options.map((option) => (
+              <article
+                key={option.id}
+                className={`min-h-32 rounded-[2rem] border p-5 shadow-2xl shadow-black/25 md:min-h-40 md:p-6 ${liveOptionStyles[option.id]}`}
+              >
+                <div className="flex h-full items-center gap-5">
+                  <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-3xl font-black shadow-xl md:h-20 md:w-20 md:text-4xl ${liveOptionBadgeStyles[option.id]}`}>
+                    {option.id}
+                  </div>
+                  <p className="text-2xl font-black leading-tight text-white md:text-4xl">{option.text}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <ProjectionFrame eyebrow="Projeksiyon Ekranı" title="Canlı Yarışma Sahnesi">
@@ -57,6 +130,32 @@ export default function ScreenPage() {
         </section>
       ) : null}
 
+      {state.phase === "quizIntro" && activeItem.type === "quiz" ? (
+        <section className="grid min-h-[68vh] items-center gap-8 xl:grid-cols-[1fr_340px]">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <StageBadge
+                label={`Soru ${activeQuizPosition?.current ?? activeItem.quizNumber} / ${
+                  activeQuizPosition?.total ?? activeItem.quizNumber
+                }`}
+              />
+              <span className="rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-black text-slate-200">
+                {activeItem.topic}
+              </span>
+            </div>
+            <p className="mt-8 text-sm font-black uppercase tracking-[0.32em] text-amber-200">{activeItem.stage}</p>
+            <h2 className="mt-5 text-6xl font-black leading-tight text-white md:text-8xl">{activeItem.title}</h2>
+          </div>
+          <div className="rounded-[2.5rem] border border-amber-300/35 bg-amber-300/10 p-8 text-center shadow-2xl shadow-amber-950/30">
+            <p className="text-sm font-black uppercase tracking-[0.34em] text-amber-100">Hazırlan</p>
+            <p className="mt-5 text-[10rem] font-black leading-none tabular-nums text-white">
+              {introRemainingSeconds ?? QUIZ_INTRO_SECONDS}
+            </p>
+            <p className="mt-5 text-2xl font-black text-slate-100">Şıklar birazdan açılacak</p>
+          </div>
+        </section>
+      ) : null}
+
       {state.phase === "quiz" && activeItem.type === "quiz" ? (
         shouldShowQuizDistribution ? (
           <section className="space-y-5">
@@ -76,28 +175,7 @@ export default function ScreenPage() {
             </div>
             <AnswerDistributionChart state={state} question={activeItem} />
           </section>
-        ) : (
-          <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
-            <div className="space-y-6">
-              <QuestionCard
-                question={activeItem}
-                compact
-                showCorrectAnswer={state.showCorrectAnswer}
-                quizNumber={activeQuizPosition?.current}
-                quizTotal={activeQuizPosition?.total}
-              />
-              <Countdown seconds={remainingSeconds ?? activeItem.timeLimitSeconds} totalSeconds={activeItem.timeLimitSeconds} />
-            </div>
-            <aside className="space-y-6">
-              <div className="rounded-[2.5rem] border border-emerald-300/30 bg-emerald-400/10 p-6 text-center shadow-2xl">
-                <p className="text-sm font-black uppercase tracking-[0.3em] text-emerald-100">Cevap Sayısı</p>
-                <p className="mt-5 text-7xl font-black text-white">{answeredCount}</p>
-                <p className="mt-3 text-xl font-bold text-slate-200">/{state.teams.length} takım</p>
-              </div>
-              <Leaderboard teams={leaderboard} title="Anlık Skor" limit={3} />
-            </aside>
-          </div>
-        )
+        ) : null
       ) : null}
 
       {state.phase === "infoSlide" && activeItem.type === "infoSlide" ? (

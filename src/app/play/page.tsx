@@ -9,6 +9,8 @@ import { StageBadge } from "@/components/StageBadge";
 import { TeamJoinPanel } from "@/components/TeamJoinPanel";
 import { useGameState } from "@/hooks/useGameState";
 import {
+  QUIZ_INTRO_SECONDS,
+  calculateQuizIntroRemainingSeconds,
   calculateRemainingSeconds,
   getQuizPosition,
   getTeamResponses,
@@ -38,6 +40,7 @@ export default function PlayPage() {
   const currentAnswer = activeItem.type === "quiz" ? responses?.answers[activeItem.id] : undefined;
   const currentForkliftRun = activeItem.type === "forkliftChallenge" ? responses?.forkliftRuns[activeItem.id] : undefined;
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
+  const introRemainingSeconds = calculateQuizIntroRemainingSeconds(state, activeItem, now);
   const ownRank = currentTeam ? leaderboard.findIndex((entry) => entry.id === currentTeam.id) + 1 : 0;
   const currentTeamTotalScore = currentTeam ? getTeamTotalScore(state, currentTeam.id) : 0;
   const correctOption = activeItem.type === "quiz" ? activeItem.options.find((option) => option.id === activeItem.correctOptionId) : undefined;
@@ -54,6 +57,7 @@ export default function PlayPage() {
   }
 
   const answerDisabled =
+    state.phase !== "quiz" ||
     Boolean(currentAnswer) ||
     Boolean(selectedOptionId) ||
     state.answersLocked ||
@@ -96,6 +100,18 @@ export default function PlayPage() {
             <p className="text-sm font-bold uppercase tracking-[0.3em] text-emerald-200">Lobi</p>
             <h2 className="mt-4 text-4xl font-black text-white">Yarışma başlamak üzere</h2>
             <p className="mt-3 text-lg font-semibold text-slate-300">Projeksiyon ekranını takip edin.</p>
+          </section>
+        ) : null}
+
+        {state.phase === "quizIntro" && activeItem.type === "quiz" ? (
+          <section className="rounded-[2rem] border border-amber-300/30 bg-amber-300/10 p-6 text-center shadow-2xl">
+            <p className="text-sm font-bold uppercase tracking-[0.3em] text-amber-100">Hazır ol</p>
+            <h2 className="mt-4 text-4xl font-black text-white">Soru geliyor</h2>
+            <p className="mt-3 text-xl font-black text-slate-100">
+              Soru {activeQuizPosition?.current ?? activeItem.quizNumber}/{activeQuizPosition?.total ?? activeItem.quizNumber}
+            </p>
+            <p className="mt-6 text-8xl font-black tabular-nums text-white">{introRemainingSeconds ?? QUIZ_INTRO_SECONDS}</p>
+            <p className="mt-5 text-lg font-semibold text-slate-200">Cevap seçenekleri birazdan açılacak.</p>
           </section>
         ) : null}
 
