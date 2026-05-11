@@ -107,7 +107,7 @@ export function AnswerDistributionChart({ state, question }: AnswerDistributionC
                       : styles.muted
                   }`}
                 >
-                  <div className="relative grid gap-4 md:grid-cols-[minmax(0,1fr)_170px] md:items-center">
+                  <div className="relative grid gap-4 md:grid-cols-[minmax(0,1fr)_280px] md:items-center">
                     <div className="flex min-w-0 items-center gap-4">
                       <div
                         className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border text-3xl font-black shadow-xl ${
@@ -136,14 +136,14 @@ export function AnswerDistributionChart({ state, question }: AnswerDistributionC
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-slate-950/55 px-5 py-4 md:justify-end md:text-right">
-                      <div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/55 px-4 py-4 text-center">
                         <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Cevap</p>
-                        <p className="text-5xl font-black tabular-nums text-white">{count}</p>
+                        <p className="mt-2 text-4xl font-black tabular-nums text-white lg:text-5xl">{count}</p>
                       </div>
-                      <div>
+                      <div className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/55 px-4 py-4 text-center">
                         <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Oran</p>
-                        <p className={`text-5xl font-black tabular-nums ${isCorrect ? "text-emerald-100" : "text-red-100"}`}>
+                        <p className={`mt-2 text-4xl font-black tabular-nums lg:text-5xl ${isCorrect ? "text-emerald-100" : "text-red-100"}`}>
                           {formatPercent(percent)}
                         </p>
                       </div>

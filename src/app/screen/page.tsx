@@ -29,6 +29,12 @@ const liveOptionBadgeStyles = {
   D: "bg-rose-300 text-slate-950",
 } as const;
 
+const scoreRowStyles = [
+  "border-amber-200/55 bg-amber-300/20 shadow-amber-950/25",
+  "border-slate-200/45 bg-slate-100/10 shadow-slate-950/20",
+  "border-orange-200/40 bg-orange-300/10 shadow-orange-950/20",
+] as const;
+
 export default function ScreenPage() {
   const { state, now, activeItem, leaderboard } = useGameState();
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
@@ -44,8 +50,8 @@ export default function ScreenPage() {
     const liveProgress = Math.max(0, Math.min(100, (liveRemainingSeconds / activeItem.timeLimitSeconds) * 100));
 
     return (
-      <main className="min-h-screen overflow-hidden bg-slate-950 p-4 text-white md:p-8">
-        <section className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-7xl flex-col justify-center gap-7 md:min-h-[calc(100vh-4rem)] md:gap-9">
+      <main className="min-h-screen overflow-hidden bg-slate-950 p-2 text-white md:p-4">
+        <section className="mx-auto flex min-h-[calc(100vh-1rem)] max-w-[1600px] flex-col justify-center gap-7 md:min-h-[calc(100vh-2rem)] md:gap-9">
           <div className="grid gap-4 md:grid-cols-[1fr_360px]">
             <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-2xl shadow-black/30">
               <div className="flex items-end justify-between gap-5">
@@ -91,8 +97,48 @@ export default function ScreenPage() {
     );
   }
 
+  if (state.phase === "leaderboard") {
+    const rankedTeams = leaderboard.slice(0, 10);
+
+    return (
+      <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#164e63_0%,transparent_34%),radial-gradient(circle_at_bottom,#7c2d12_0%,transparent_30%),#020617] p-4 text-white md:p-8">
+        <section className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-6xl flex-col justify-center md:min-h-[calc(100vh-4rem)]">
+          <h1 className="text-center text-6xl font-black leading-none text-white md:text-8xl">Puan Tablosu</h1>
+
+          <div className="mt-10 space-y-4 md:mt-12 md:space-y-5">
+            {rankedTeams.length ? (
+              rankedTeams.map((team, index) => {
+                const rank = index + 1;
+                const rowStyle = scoreRowStyles[index] ?? "border-white/10 bg-white/[0.07] shadow-black/20";
+
+                return (
+                  <article
+                    key={team.id}
+                    className={`grid grid-cols-[86px_minmax(0,1fr)_260px] items-center gap-5 rounded-[1.75rem] border px-5 py-4 shadow-2xl backdrop-blur md:grid-cols-[104px_minmax(0,1fr)_320px] md:px-7 md:py-5 ${rowStyle}`}
+                  >
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-4xl font-black tabular-nums text-slate-950 shadow-xl md:h-20 md:w-20 md:text-5xl">
+                      {rank}
+                    </div>
+                    <h2 className="truncate text-4xl font-black leading-tight text-white md:text-6xl">{team.name}</h2>
+                    <p className="text-right text-4xl font-black tabular-nums text-amber-100 md:text-6xl">
+                      {team.score.toLocaleString("tr-TR")}
+                    </p>
+                  </article>
+                );
+              })
+            ) : (
+              <div className="rounded-[2rem] border border-white/10 bg-white/[0.07] p-10 text-center text-5xl font-black text-slate-200">
+                Henüz takım yok.
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
-    <ProjectionFrame eyebrow="Projeksiyon Ekranı" title="Canlı Yarışma Sahnesi">
+    <ProjectionFrame compactScreen>
       {state.phase === "lobby" ? (
         <section className="grid min-h-[68vh] items-center gap-8 xl:grid-cols-[1fr_0.9fr]">
           <div>
@@ -230,17 +276,6 @@ export default function ScreenPage() {
             )}
           </div>
         </section>
-      ) : null}
-
-      {state.phase === "leaderboard" ? (
-        <div className="grid gap-6 xl:grid-cols-[1fr_0.7fr]">
-          <Leaderboard teams={leaderboard} title="Lider Tablosu" limit={10} />
-          <div className="rounded-[2.5rem] border border-amber-300/30 bg-amber-300/10 p-8 shadow-2xl">
-            <StageBadge label="Ara sonuç" />
-            <h2 className="mt-6 text-5xl font-black leading-tight text-white">Sıralama güncellendi</h2>
-            <p className="mt-5 text-2xl font-semibold text-slate-200">Bir sonraki akış öğesi için admin panelden devam edin.</p>
-          </div>
-        </div>
       ) : null}
 
       {state.phase === "forkliftChallenge" && activeItem.type === "forkliftChallenge" ? (
