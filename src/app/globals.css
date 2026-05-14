@@ -31,3 +31,119 @@ a {
 ::selection {
   background: rgba(250, 204, 21, 0.35);
 }
+
+@layer components {
+  .arena-screen-bg {
+    position: relative;
+    isolation: isolate;
+    background:
+      radial-gradient(ellipse at 12% 8%, rgba(125, 211, 252, 0.45), transparent 38%),
+      radial-gradient(ellipse at 86% 10%, rgba(99, 102, 241, 0.34), transparent 36%),
+      radial-gradient(ellipse at 48% 102%, rgba(34, 211, 238, 0.30), transparent 42%),
+      linear-gradient(135deg, #0b5ed7 0%, #1368df 42%, #2448c7 72%, #4324a8 100%);
+  }
+
+  .arena-play-bg {
+    position: relative;
+    isolation: isolate;
+    background:
+      radial-gradient(ellipse at 18% 0%, rgba(125, 211, 252, 0.44), transparent 38%),
+      radial-gradient(ellipse at 92% 16%, rgba(129, 140, 248, 0.28), transparent 34%),
+      radial-gradient(ellipse at 50% 100%, rgba(34, 211, 238, 0.22), transparent 40%),
+      linear-gradient(150deg, #0b5ed7 0%, #1768dd 52%, #3346c8 100%);
+  }
+
+  .arena-screen-bg::before,
+  .arena-play-bg::before {
+    content: "LC WAIKIKI";
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    z-index: 0;
+    transform: translate(-50%, -50%) rotate(-8deg);
+    color: rgba(255, 255, 255, 0.065);
+    font-size: clamp(5.5rem, 16vw, 19rem);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .arena-screen-bg::after,
+  .arena-play-bg::after {
+    content: "LC Waikiki";
+    position: fixed;
+    right: 1.25rem;
+    top: 1rem;
+    z-index: 1;
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    padding: 0.42rem 0.72rem;
+    pointer-events: none;
+    text-transform: uppercase;
+    backdrop-filter: blur(14px);
+  }
+
+  .arena-screen-bg > *,
+  .arena-play-bg > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  .play-answer-buttons button {
+    min-height: 8.25rem;
+    border-radius: 1.65rem;
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 22px 45px rgba(20, 71, 176, 0.24);
+  }
+
+  .play-answer-buttons button:nth-child(1) {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.94), rgba(234, 179, 8, 0.82));
+  }
+
+  .play-answer-buttons button:nth-child(2) {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.94), rgba(37, 99, 235, 0.84));
+  }
+
+  .play-answer-buttons button:nth-child(3) {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.94), rgba(5, 150, 105, 0.82));
+  }
+
+  .play-answer-buttons button:nth-child(4) {
+    background: linear-gradient(135deg, rgba(244, 63, 94, 0.94), rgba(225, 29, 72, 0.82));
+  }
+
+  .play-answer-buttons button > span {
+    align-items: stretch;
+  }
+
+  .play-answer-buttons button > span > span:first-child {
+    height: 4.5rem;
+    width: 4.5rem;
+    border-radius: 1.25rem;
+    background: rgba(255, 255, 255, 0.96);
+    color: #0f172a;
+    box-shadow: 0 12px 24px rgba(2, 6, 23, 0.24);
+  }
+
+  .play-answer-buttons button > span > span:last-child {
+    display: flex;
+    align-items: center;
+    color: #ffffff;
+    font-size: 1.35rem;
+    line-height: 1.14;
+    text-shadow: 0 2px 12px rgba(2, 6, 23, 0.32);
+  }
+
+  @media (min-width: 640px) {
+    .play-answer-buttons button > span > span:last-child {
+      font-size: 1.55rem;
+    }
+  }
+}

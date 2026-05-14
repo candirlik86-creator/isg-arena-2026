@@ -15,13 +15,9 @@ export function ProjectionFrame({
 }: ProjectionFrameProps) {
   if (compactScreen) {
     return (
-      <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,#1e3a8a_0%,transparent_32%),radial-gradient(circle_at_bottom_right,#ca8a04_0%,transparent_26%),#020617] p-2 text-white md:p-4">
-        <div className="mx-auto flex min-h-[calc(100vh-1rem)] max-w-[1600px] flex-col rounded-[2rem] border border-white/10 bg-black/30 p-4 shadow-2xl shadow-black/50 backdrop-blur md:min-h-[calc(100vh-2rem)] md:p-5">
-          <header className="mb-3 flex justify-end">
-            <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-black uppercase tracking-[0.22em] text-slate-300">
-              İSG Arena 2026
-            </span>
-          </header>
+      <main className="arena-screen-bg min-h-screen overflow-hidden p-2 text-white md:p-4">
+        <div className="mx-auto flex min-h-[calc(100vh-1rem)] max-w-[1600px] flex-col rounded-[2rem] border border-white/25 bg-white/[0.12] p-4 shadow-2xl shadow-blue-950/25 backdrop-blur md:min-h-[calc(100vh-2rem)] md:p-5">
+          <header className="mb-3 h-6" />
           <div className="flex-1">{children}</div>
         </div>
       </main>
