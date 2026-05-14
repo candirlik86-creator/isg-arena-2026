@@ -16,23 +16,23 @@ import {
 } from "@/lib/game-state";
 
 const liveOptionStyles = {
-  A: "border-amber-200/55 bg-amber-400/20 text-amber-100",
-  B: "border-sky-200/55 bg-sky-400/20 text-sky-100",
-  C: "border-emerald-200/55 bg-emerald-400/20 text-emerald-100",
-  D: "border-rose-200/55 bg-rose-400/20 text-rose-100",
+  A: "border-yellow-100/65 bg-gradient-to-br from-amber-400 via-orange-400 to-yellow-500 shadow-amber-950/30",
+  B: "border-sky-100/65 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 shadow-blue-950/30",
+  C: "border-emerald-100/65 bg-gradient-to-br from-emerald-400 via-teal-500 to-green-600 shadow-emerald-950/30",
+  D: "border-rose-100/65 bg-gradient-to-br from-rose-400 via-red-500 to-pink-600 shadow-rose-950/30",
 } as const;
 
 const liveOptionBadgeStyles = {
-  A: "bg-amber-300 text-slate-950",
-  B: "bg-sky-300 text-slate-950",
-  C: "bg-emerald-300 text-slate-950",
-  D: "bg-rose-300 text-slate-950",
+  A: "bg-white text-slate-950",
+  B: "bg-white text-slate-950",
+  C: "bg-white text-slate-950",
+  D: "bg-white text-slate-950",
 } as const;
 
 const scoreRowStyles = [
-  "border-amber-200/55 bg-amber-300/20 shadow-amber-950/25",
-  "border-slate-200/45 bg-slate-100/10 shadow-slate-950/20",
-  "border-orange-200/40 bg-orange-300/10 shadow-orange-950/20",
+  "border-amber-100/65 bg-gradient-to-r from-amber-300/30 via-white/[0.18] to-white/[0.14] shadow-blue-900/20",
+  "border-cyan-100/45 bg-gradient-to-r from-white/[0.22] via-cyan-100/15 to-white/[0.12] shadow-blue-900/20",
+  "border-orange-100/50 bg-gradient-to-r from-orange-300/25 via-white/[0.16] to-white/[0.12] shadow-blue-900/20",
 ] as const;
 
 export default function ScreenPage() {
@@ -50,44 +50,44 @@ export default function ScreenPage() {
     const liveProgress = Math.max(0, Math.min(100, (liveRemainingSeconds / activeItem.timeLimitSeconds) * 100));
 
     return (
-      <main className="min-h-screen overflow-hidden bg-slate-950 p-2 text-white md:p-4">
-        <section className="mx-auto flex min-h-[calc(100vh-1rem)] max-w-[1600px] flex-col justify-center gap-7 md:min-h-[calc(100vh-2rem)] md:gap-9">
-          <div className="grid gap-4 md:grid-cols-[1fr_360px]">
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-2xl shadow-black/30">
+      <main className="arena-screen-bg min-h-screen overflow-hidden p-3 text-white md:p-5">
+        <section className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1720px] flex-col justify-center gap-6 md:min-h-[calc(100vh-2.5rem)] md:gap-8">
+          <div className="grid gap-5 md:grid-cols-[1fr_420px]">
+            <div className="rounded-[2rem] border border-white/35 bg-white/[0.20] p-6 shadow-2xl shadow-blue-950/25 backdrop-blur">
               <div className="flex items-end justify-between gap-5">
                 <div>
-                  <p className="text-sm font-black uppercase tracking-[0.28em] text-slate-300">Kalan süre</p>
-                  <p className="mt-2 text-7xl font-black leading-none tabular-nums text-white md:text-8xl">{liveRemainingSeconds}</p>
+                  <p className="text-sm font-black uppercase tracking-[0.28em] text-cyan-100">Kalan süre</p>
+                  <p className="mt-2 text-8xl font-black leading-none tabular-nums text-white md:text-9xl">{liveRemainingSeconds}</p>
                 </div>
-                <p className="pb-2 text-2xl font-black text-amber-100">saniye</p>
+                <p className="pb-2 text-3xl font-black text-amber-100">saniye</p>
               </div>
-              <div className="mt-5 h-5 overflow-hidden rounded-full bg-slate-900">
-                <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-amber-300 to-red-500 transition-all" style={{ width: `${liveProgress}%` }} />
+              <div className="mt-6 h-6 overflow-hidden rounded-full border border-white/25 bg-white/25 shadow-inner">
+                <div className="h-full rounded-full bg-gradient-to-r from-emerald-300 via-yellow-300 to-rose-500 shadow-lg transition-all" style={{ width: `${liveProgress}%` }} />
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-emerald-300/35 bg-emerald-400/10 p-5 text-center shadow-2xl shadow-black/30">
+            <div className="rounded-[2rem] border border-cyan-100/40 bg-gradient-to-br from-cyan-300/25 via-white/[0.16] to-indigo-300/20 p-6 text-center shadow-2xl shadow-blue-950/25 backdrop-blur">
               <p className="text-sm font-black uppercase tracking-[0.28em] text-emerald-100">Cevap sayısı</p>
-              <p className="mt-3 text-5xl font-black leading-none text-white md:text-6xl">{answeredCount} cevap</p>
-              <p className="mt-3 text-2xl font-black text-slate-200">
+              <p className="mt-4 text-6xl font-black leading-none text-white md:text-7xl">{answeredCount}</p>
+              <p className="mt-3 text-3xl font-black text-slate-100">
                 {answeredCount} / {state.teams.length} takım
               </p>
             </div>
           </div>
 
-          <h1 className="text-center text-4xl font-black leading-tight text-white md:text-6xl lg:text-7xl">{activeItem.title}</h1>
+          <h1 className="mx-auto max-w-[1440px] text-center text-5xl font-black leading-tight text-white drop-shadow-2xl md:text-7xl lg:text-8xl">{activeItem.title}</h1>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-5 md:grid-cols-2">
             {activeItem.options.map((option) => (
               <article
                 key={option.id}
-                className={`min-h-32 rounded-[2rem] border p-5 shadow-2xl shadow-black/25 md:min-h-40 md:p-6 ${liveOptionStyles[option.id]}`}
+                className={`min-h-36 rounded-[2rem] border p-5 shadow-2xl backdrop-blur md:min-h-48 md:p-7 ${liveOptionStyles[option.id]}`}
               >
                 <div className="flex h-full items-center gap-5">
-                  <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-3xl font-black shadow-xl md:h-20 md:w-20 md:text-4xl ${liveOptionBadgeStyles[option.id]}`}>
+                  <div className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl text-4xl font-black shadow-xl md:h-24 md:w-24 md:text-5xl ${liveOptionBadgeStyles[option.id]}`}>
                     {option.id}
                   </div>
-                  <p className="text-2xl font-black leading-tight text-white md:text-4xl">{option.text}</p>
+                  <p className="break-words text-3xl font-black leading-tight text-white drop-shadow-lg md:text-5xl">{option.text}</p>
                 </div>
               </article>
             ))}
@@ -101,20 +101,23 @@ export default function ScreenPage() {
     const rankedTeams = leaderboard.slice(0, 10);
 
     return (
-      <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#164e63_0%,transparent_34%),radial-gradient(circle_at_bottom,#7c2d12_0%,transparent_30%),#020617] p-4 text-white md:p-8">
-        <section className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-6xl flex-col justify-center md:min-h-[calc(100vh-4rem)]">
-          <h1 className="text-center text-6xl font-black leading-none text-white md:text-8xl">Puan Tablosu</h1>
+      <main className="arena-screen-bg min-h-screen overflow-hidden p-4 text-white md:p-8">
+        <section className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-7xl flex-col justify-center md:min-h-[calc(100vh-4rem)]">
+          <div className="text-center">
+            <p className="text-sm font-black uppercase tracking-[0.34em] text-amber-100">Ara Skor</p>
+            <h1 className="mt-3 text-6xl font-black leading-none text-white drop-shadow-2xl md:text-8xl">Puan Tablosu</h1>
+          </div>
 
           <div className="mt-10 space-y-4 md:mt-12 md:space-y-5">
             {rankedTeams.length ? (
               rankedTeams.map((team, index) => {
                 const rank = index + 1;
-                const rowStyle = scoreRowStyles[index] ?? "border-white/10 bg-white/[0.07] shadow-black/20";
+                const rowStyle = scoreRowStyles[index] ?? "border-white/25 bg-white/[0.14] shadow-blue-900/20";
 
                 return (
                   <article
                     key={team.id}
-                    className={`grid grid-cols-[86px_minmax(0,1fr)_260px] items-center gap-5 rounded-[1.75rem] border px-5 py-4 shadow-2xl backdrop-blur md:grid-cols-[104px_minmax(0,1fr)_320px] md:px-7 md:py-5 ${rowStyle}`}
+                    className={`grid grid-cols-[86px_minmax(0,1fr)_260px] items-center gap-5 rounded-[1.5rem] border px-5 py-4 shadow-2xl backdrop-blur md:grid-cols-[104px_minmax(0,1fr)_320px] md:px-7 md:py-5 ${rowStyle}`}
                   >
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-4xl font-black tabular-nums text-slate-950 shadow-xl md:h-20 md:w-20 md:text-5xl">
                       {rank}
@@ -127,7 +130,7 @@ export default function ScreenPage() {
                 );
               })
             ) : (
-              <div className="rounded-[2rem] border border-white/10 bg-white/[0.07] p-10 text-center text-5xl font-black text-slate-200">
+              <div className="rounded-[2rem] border border-white/25 bg-white/[0.16] p-10 text-center text-5xl font-black text-slate-100 shadow-2xl shadow-blue-900/20 backdrop-blur">
                 Henüz takım yok.
               </div>
             )}
@@ -151,7 +154,7 @@ export default function ScreenPage() {
               <p className="mt-5 text-3xl font-black text-white">Katılım adresi: /join</p>
             </div>
           </div>
-          <div className="rounded-[2.5rem] border border-white/10 bg-slate-950/75 p-6 shadow-2xl">
+          <div className="rounded-[2.5rem] border border-white/25 bg-white/[0.14] p-6 shadow-2xl shadow-blue-950/20 backdrop-blur">
             <div className="flex items-center justify-between gap-4">
               <h3 className="text-4xl font-black text-white">Katılan Takımlar</h3>
               <p className="rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-3 text-xl font-black text-emerald-100">
@@ -161,13 +164,13 @@ export default function ScreenPage() {
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {state.teams.length ? (
                 state.teams.map((team, index) => (
-                  <div key={team.id} className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                  <div key={team.id} className="rounded-2xl border border-white/20 bg-white/[0.12] p-4">
                     <p className="text-sm font-black uppercase tracking-widest text-amber-200">Takım {index + 1}</p>
                     <p className="mt-1 text-2xl font-black text-white">{team.name}</p>
                   </div>
                 ))
               ) : (
-                <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center text-xl font-bold text-slate-400 sm:col-span-2">
+                <p className="rounded-2xl border border-white/20 bg-white/[0.10] p-6 text-center text-xl font-bold text-slate-200 sm:col-span-2">
                   Takımlar PIN ile bağlanmayı bekliyor.
                 </p>
               )}
@@ -192,7 +195,7 @@ export default function ScreenPage() {
             <p className="mt-8 text-sm font-black uppercase tracking-[0.32em] text-amber-200">{activeItem.stage}</p>
             <h2 className="mt-5 text-6xl font-black leading-tight text-white md:text-8xl">{activeItem.title}</h2>
           </div>
-          <div className="rounded-[2.5rem] border border-amber-300/35 bg-amber-300/10 p-8 text-center shadow-2xl shadow-amber-950/30">
+          <div className="rounded-[2.5rem] border border-amber-100/45 bg-amber-300/20 p-8 text-center shadow-2xl shadow-blue-950/20 backdrop-blur">
             <p className="text-sm font-black uppercase tracking-[0.34em] text-amber-100">Hazırlan</p>
             <p className="mt-5 text-[10rem] font-black leading-none tabular-nums text-white">
               {introRemainingSeconds ?? QUIZ_INTRO_SECONDS}
@@ -205,7 +208,7 @@ export default function ScreenPage() {
       {state.phase === "quiz" && activeItem.type === "quiz" ? (
         shouldShowQuizDistribution ? (
           <section className="space-y-5">
-            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.94),rgba(2,6,23,0.86))] p-6 shadow-2xl shadow-black/35 md:p-8">
+            <div className="relative overflow-hidden rounded-[2rem] border border-white/25 bg-white/[0.16] p-6 shadow-2xl shadow-blue-950/25 backdrop-blur md:p-8">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
               <div className="relative flex flex-wrap items-start justify-between gap-5">
                 <div className="min-w-0 flex-1">
@@ -213,8 +216,8 @@ export default function ScreenPage() {
                   <p className="mt-5 text-sm font-black uppercase tracking-[0.28em] text-amber-100">{activeItem.stage}</p>
                   <h2 className="mt-3 text-4xl font-black leading-tight text-white md:text-6xl">{activeItem.title}</h2>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-4 text-right shadow-xl">
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Konu</p>
+                <div className="rounded-2xl border border-white/20 bg-white/[0.12] px-5 py-4 text-right shadow-xl shadow-blue-900/15">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100">Konu</p>
                   <p className="mt-1 text-2xl font-black text-white">{activeItem.topic}</p>
                 </div>
               </div>
@@ -231,11 +234,11 @@ export default function ScreenPage() {
             <h2 className="mt-6 text-6xl font-black leading-tight text-white md:text-8xl">{activeItem.title}</h2>
             <p className="mt-8 text-3xl font-semibold leading-relaxed text-slate-200">{activeItem.description}</p>
           </div>
-          <div className="rounded-[3rem] border border-sky-300/20 bg-sky-400/10 p-8 shadow-2xl">
+          <div className="rounded-[3rem] border border-sky-100/30 bg-white/[0.12] p-8 shadow-2xl shadow-blue-950/20 backdrop-blur">
             {activeItem.imageUrl ? (
               <img src={activeItem.imageUrl} alt="" className="h-full max-h-[560px] w-full rounded-[2rem] object-cover" />
             ) : (
-              <div className="flex min-h-[420px] items-center justify-center rounded-[2rem] border border-white/10 bg-slate-950/70 p-8 text-center">
+              <div className="flex min-h-[420px] items-center justify-center rounded-[2rem] border border-white/20 bg-white/[0.12] p-8 text-center">
                 <p className="text-5xl font-black leading-tight text-amber-200">Bil, Fark Et, Güvenli Karar Ver</p>
               </div>
             )}
@@ -286,7 +289,7 @@ export default function ScreenPage() {
             <p className="mt-6 text-3xl font-black text-amber-200">{activeItem.message}</p>
             <p className="mt-5 text-2xl font-semibold leading-relaxed text-slate-300">{activeItem.description}</p>
           </div>
-          <div className="rounded-[3rem] border border-emerald-300/30 bg-emerald-400/10 p-8 text-center shadow-2xl">
+          <div className="rounded-[3rem] border border-emerald-100/35 bg-emerald-300/15 p-8 text-center shadow-2xl shadow-blue-950/20 backdrop-blur">
             <p className="text-sm font-black uppercase tracking-[0.34em] text-emerald-200">Canlı final durumu</p>
             <p className="mt-6 text-8xl font-black text-white">{answeredCount}</p>
             <p className="mt-3 text-3xl font-black text-slate-200">/{state.teams.length} takım parkuru tamamladı</p>
