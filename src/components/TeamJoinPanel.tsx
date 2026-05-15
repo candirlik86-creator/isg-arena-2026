@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import { useGameState } from "@/hooks/useGameState";
 
 type TeamJoinPanelProps = {
@@ -14,22 +14,15 @@ export function TeamJoinPanel({ redirectToPlay = false, title = "PIN ile Arenaya
   const router = useRouter();
   const { state, currentTeam, joinTeam } = useGameState();
   const [pin, setPin] = useState("");
-  const [pinAccepted, setPinAccepted] = useState(false);
   const [teamName, setTeamName] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const validatePin = () => {
-    if (pin.trim() !== state.settings.gamePin) {
-      setError("PIN hatalı. Projeksiyon ekranındaki PIN'i girin.");
-      return;
-    }
-
-    setError("");
-    setPinAccepted(true);
-  };
-
-  const submitTeam = () => {
-    const result = joinTeam(pin, teamName);
+  const submitTeam = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitting(true);
+    const result = await joinTeam(pin, teamName);
+    setSubmitting(false);
 
     if (!result.ok) {
       setError(result.message ?? "Takım katılımı tamamlanamadı.");
@@ -55,55 +48,54 @@ export function TeamJoinPanel({ redirectToPlay = false, title = "PIN ile Arenaya
   }
 
   return (
-    <div className="mx-auto max-w-2xl rounded-[2.5rem] border border-white/10 bg-white/[0.06] p-6 shadow-2xl md:p-10">
+    <div className="mx-auto max-w-2xl rounded-[2rem] border border-white/20 bg-white/[0.12] p-5 shadow-2xl shadow-blue-950/20 backdrop-blur md:p-8">
       <p className="text-sm font-bold uppercase tracking-[0.3em] text-amber-200">İSG Arena 2026</p>
-      <h2 className="mt-3 text-4xl font-black text-white md:text-5xl">{title}</h2>
-      <p className="mt-4 text-lg font-semibold text-slate-300">
-        Önce projeksiyon ekranındaki oyun PIN'ini girin, sonra takım adınızı yazın.
-      </p>
+      <h2 className="mt-3 text-4xl font-black leading-tight text-white md:text-5xl">{title}</h2>
+      <p className="mt-4 text-lg font-semibold text-blue-50">Projeksiyon PIN'ini ve takım adınızı yazın.</p>
 
-      <div className="mt-8 space-y-5">
+      <form onSubmit={submitTeam} className="mt-8 space-y-5">
         <label className="block">
-          <span className="text-sm font-bold uppercase tracking-[0.25em] text-slate-300">Oyun PIN'i</span>
+          <span className="text-sm font-bold uppercase tracking-[0.25em] text-blue-50">PIN</span>
           <input
             value={pin}
             onChange={(event) => {
               setPin(event.target.value.replace(/\D/g, "").slice(0, 4));
-              setPinAccepted(false);
+              setError("");
             }}
             inputMode="numeric"
             autoComplete="one-time-code"
-            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-5 py-5 text-center text-5xl font-black tracking-[0.24em] text-white outline-none ring-amber-300/40 transition placeholder:text-slate-600 focus:border-amber-300 focus:ring-4"
+            className="mt-2 w-full rounded-2xl border border-white/20 bg-slate-950/65 px-5 py-5 text-center text-5xl font-black tracking-[0.24em] text-white outline-none ring-amber-300/40 transition placeholder:text-slate-500 focus:border-amber-300 focus:ring-4"
             placeholder="0000"
           />
         </label>
 
-        {!pinAccepted ? (
-          <button type="button" onClick={validatePin} className="w-full rounded-2xl bg-amber-300 px-6 py-5 text-2xl font-black text-slate-950 shadow-xl shadow-amber-500/20">
-            PIN'i Onayla
-          </button>
-        ) : (
-          <>
-            <label className="block">
-              <span className="text-sm font-bold uppercase tracking-[0.25em] text-slate-300">Takım adı</span>
-              <input
-                value={teamName}
-                onChange={(event) => setTeamName(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-5 py-4 text-2xl font-black text-white outline-none ring-amber-300/40 transition placeholder:text-slate-600 focus:border-amber-300 focus:ring-4"
-                placeholder="Takım adınız"
-              />
-            </label>
-            <button type="button" onClick={submitTeam} className="w-full rounded-2xl bg-emerald-300 px-6 py-5 text-2xl font-black text-slate-950 shadow-xl shadow-emerald-500/20">
-              Katıl ve Cevap Ekranına Geç
-            </button>
-          </>
-        )}
+        <label className="block">
+          <span className="text-sm font-bold uppercase tracking-[0.25em] text-blue-50">Takım adı</span>
+          <input
+            value={teamName}
+            onChange={(event) => {
+              setTeamName(event.target.value);
+              setError("");
+            }}
+            autoComplete="organization"
+            className="mt-2 w-full rounded-2xl border border-white/20 bg-slate-950/65 px-5 py-5 text-2xl font-black text-white outline-none ring-amber-300/40 transition placeholder:text-slate-500 focus:border-amber-300 focus:ring-4"
+            placeholder="Takım adınız"
+          />
+        </label>
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="w-full rounded-2xl bg-amber-300 px-6 py-5 text-2xl font-black text-slate-950 shadow-xl shadow-amber-500/20 transition hover:bg-amber-200 focus:outline-none focus:ring-4 focus:ring-amber-100/50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {submitting ? "Katılım Kaydediliyor" : "Oyuna Katıl"}
+        </button>
 
         {error ? <p className="rounded-2xl border border-red-300/30 bg-red-400/10 p-4 text-center text-lg font-bold text-red-100">{error}</p> : null}
-        <p className="text-center text-sm font-bold text-slate-400">
+        <p className="text-center text-sm font-bold text-blue-100">
           Katılan takım: {state.teams.length} / {state.settings.maxTeams}
         </p>
-      </div>
+      </form>
     </div>
   );
 }

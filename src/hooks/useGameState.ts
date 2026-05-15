@@ -1,33 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { calculateQuestionScore } from "@/lib/scoring";
 import {
-  cloneFlowItem,
-  createFlowItemId,
   createInitialGameState,
-  createInitialFlowItems,
   DEFAULT_SETTINGS,
-  QUIZ_INTRO_SECONDS,
   deriveLeaderboard,
   getActiveItem,
-  getFlowItems,
   getAnsweredCount,
-  getItemStartPhase,
-  getTeamResponses,
-  pruneResponsesForFlowItems,
+  QUIZ_INTRO_SECONDS,
   type AnswerId,
   type ContentFlowItem,
   type ForkliftRun,
   type GameSettings,
   type GameState,
 } from "@/lib/game-state";
+import type { GameAction } from "@/lib/game-actions";
 import {
   clearTeamSession,
-  createTeamId,
+  dispatchGameAction,
+  fetchGameState,
   getTeamSession,
   loadGameState,
-  saveGameState,
   saveTeamSession,
   subscribeGameState,
 } from "@/lib/game-store";
@@ -42,59 +35,7 @@ type SubmitResult = {
   message?: string;
 };
 
-function getStartedItemState(item: ContentFlowItem) {
-  const phase = getItemStartPhase(item);
-
-  return {
-    phase,
-    activeItemStartedAt: Date.now(),
-    answersLocked: phase === "quizIntro",
-    showCorrectAnswer: false,
-  };
-}
-
-function reconcileFlowState(currentState: GameState, flowItems: ContentFlowItem[]): GameState {
-  const currentActiveItem = currentState.flowItems[currentState.activeItemIndex];
-  const nextActiveIndex = currentActiveItem ? flowItems.findIndex((item) => item.id === currentActiveItem.id) : -1;
-  const activeItemWasPreserved = nextActiveIndex >= 0;
-  const shouldPreservePhase = activeItemWasPreserved || currentState.phase === "lobby" || currentState.phase === "finished";
-  const safeActiveItemIndex = activeItemWasPreserved
-    ? nextActiveIndex
-    : flowItems.length
-      ? Math.min(currentState.activeItemIndex, flowItems.length - 1)
-      : 0;
-  const nextActiveItem = flowItems[safeActiveItemIndex];
-
-  return {
-    ...currentState,
-    flowItems,
-    activeItemIndex: safeActiveItemIndex,
-    responses: pruneResponsesForFlowItems(currentState.responses, flowItems),
-    phase: flowItems.length ? (shouldPreservePhase ? currentState.phase : getItemStartPhase(nextActiveItem)) : "lobby",
-    activeItemStartedAt: activeItemWasPreserved ? currentState.activeItemStartedAt : null,
-    answersLocked: activeItemWasPreserved ? currentState.answersLocked : false,
-    showCorrectAnswer: activeItemWasPreserved ? currentState.showCorrectAnswer : false,
-  };
-}
-
-function createDuplicatedFlowItem(item: ContentFlowItem): ContentFlowItem {
-  const duplicatedItem = cloneFlowItem(item);
-  const title = item.title.endsWith(" Kopya") ? item.title : `${item.title} Kopya`;
-
-  if (duplicatedItem.type === "quiz") {
-    return {
-      ...duplicatedItem,
-      id: createFlowItemId("quiz"),
-      title,
-    };
-  }
-
-  return {
-    ...duplicatedItem,
-    id: createFlowItemId(duplicatedItem.type),
-    title,
-  };
-}
+const SERVER_POLL_MS = 750;
 
 export function useGameState() {
   const [state, setState] = useState<GameState>(() => createInitialGameState({ gamePin: DEFAULT_SETTINGS.gamePin }));
@@ -102,13 +43,43 @@ export function useGameState() {
   const [sessionTick, setSessionTick] = useState(0);
 
   useEffect(() => {
-    setState(loadGameState());
-    setSessionTick((value) => value + 1);
+    let cancelled = false;
+    let fetching = false;
 
-    return subscribeGameState(() => {
+    const refreshState = async () => {
+      if (fetching) {
+        return;
+      }
+
+      fetching = true;
+      try {
+        const nextState = await fetchGameState();
+        if (!cancelled) {
+          setState(nextState);
+          setSessionTick((value) => value + 1);
+        }
+      } catch {
+        if (!cancelled) {
+          setState(loadGameState());
+        }
+      } finally {
+        fetching = false;
+      }
+    };
+
+    void refreshState();
+
+    const pollTimer = window.setInterval(refreshState, SERVER_POLL_MS);
+    const unsubscribe = subscribeGameState(() => {
       setState(loadGameState());
       setSessionTick((value) => value + 1);
     });
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(pollTimer);
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -116,10 +87,11 @@ export function useGameState() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const commit = useCallback((updater: (current: GameState) => GameState) => {
-    const nextState = updater(loadGameState());
-    saveGameState(nextState);
-    setState(nextState);
+  const runAction = useCallback(async (action: GameAction) => {
+    const result = await dispatchGameAction(action);
+    setState(result.state);
+    setSessionTick((value) => value + 1);
+    return result;
   }, []);
 
   const activeItem = getActiveItem(state);
@@ -142,435 +114,152 @@ export function useGameState() {
       return;
     }
 
-    commit((currentState) => {
-      const currentItem = getActiveItem(currentState);
-
-      if (currentState.phase !== "quizIntro" || currentItem.type !== "quiz" || currentItem.id !== activeItem.id) {
-        return currentState;
-      }
-
-      return {
-        ...currentState,
-        phase: "quiz",
-        activeItemStartedAt: Date.now(),
-        answersLocked: false,
-        showCorrectAnswer: false,
-      };
-    });
-  }, [activeItem.id, activeItem.type, commit, now, state.activeItemStartedAt, state.phase]);
+    void runAction({ type: "advanceQuizIntro", itemId: activeItem.id });
+  }, [activeItem.id, activeItem.type, now, runAction, state.activeItemStartedAt, state.phase]);
 
   const resetGame = useCallback(() => {
-    const currentState = loadGameState();
-    const nextState = createInitialGameState({
-      ...currentState.settings,
-      gamePin: undefined,
+    void runAction({ type: "resetGame" }).then((result) => {
+      if (result.ok) {
+        clearTeamSession();
+        setSessionTick((value) => value + 1);
+      }
     });
-    saveGameState(nextState);
-    clearTeamSession();
-    setState(nextState);
-    setSessionTick((value) => value + 1);
-  }, []);
+  }, [runAction]);
 
   const updateSettings = useCallback(
     (settings: Partial<GameSettings>) => {
-      commit((currentState) => ({
-        ...currentState,
-        settings: {
-          ...currentState.settings,
-          ...settings,
-          maxTeams: Math.max(1, Math.round(Number(settings.maxTeams ?? currentState.settings.maxTeams))),
-          prizeFirst: Math.max(0, Math.round(Number(settings.prizeFirst ?? currentState.settings.prizeFirst))),
-          prizeSecond: Math.max(0, Math.round(Number(settings.prizeSecond ?? currentState.settings.prizeSecond))),
-          prizeThird: Math.max(0, Math.round(Number(settings.prizeThird ?? currentState.settings.prizeThird))),
-          teamSize: Math.max(1, Math.round(Number(settings.teamSize ?? currentState.settings.teamSize))),
-        },
-      }));
+      void runAction({ type: "updateSettings", settings });
     },
-    [commit],
+    [runAction],
   );
 
-  const joinTeam = useCallback((pin: string, teamName: string): JoinResult => {
-    const currentState = loadGameState();
-    const cleanPin = pin.trim();
-    const cleanTeamName = teamName.trim();
+  const joinTeam = useCallback(
+    async (pin: string, teamName: string): Promise<JoinResult> => {
+      const result = await runAction({ type: "joinTeam", pin, teamName });
 
-    if (cleanPin !== currentState.settings.gamePin) {
-      return { ok: false, message: "PIN hatalı. Projeksiyon ekranındaki PIN'i girin." };
-    }
-
-    if (cleanTeamName.length < 2) {
-      return { ok: false, message: "Takım adı en az 2 karakter olmalı." };
-    }
-
-    const duplicateTeam = currentState.teams.find(
-      (team) => team.name.toLocaleLowerCase("tr-TR") === cleanTeamName.toLocaleLowerCase("tr-TR"),
-    );
-
-    if (duplicateTeam) {
-      saveTeamSession({ teamId: duplicateTeam.id, gamePin: currentState.settings.gamePin });
-      setSessionTick((value) => value + 1);
-      return { ok: true };
-    }
-
-    if (currentState.teams.length >= currentState.settings.maxTeams) {
-      return { ok: false, message: "Takım kapasitesi doldu." };
-    }
-
-    const newTeam = {
-      id: createTeamId(),
-      name: cleanTeamName,
-      joinedAt: Date.now(),
-    };
-
-    const nextState: GameState = {
-      ...currentState,
-      teams: [...currentState.teams, newTeam],
-      responses: {
-        ...currentState.responses,
-        [newTeam.id]: { answers: {}, forkliftRuns: {} },
-      },
-    };
-
-    saveTeamSession({ teamId: newTeam.id, gamePin: currentState.settings.gamePin });
-    saveGameState(nextState);
-    setState(nextState);
-    setSessionTick((value) => value + 1);
-
-    return { ok: true };
-  }, []);
-
-  const openLobby = useCallback(() => {
-    commit((currentState) => ({
-      ...currentState,
-      phase: "lobby",
-      activeItemStartedAt: null,
-      answersLocked: false,
-      showCorrectAnswer: false,
-    }));
-  }, [commit]);
-
-  const startActiveItem = useCallback(() => {
-    commit((currentState) => {
-      if (!currentState.flowItems.length) {
-        return {
-          ...currentState,
-          phase: "lobby",
-          activeItemIndex: 0,
-          activeItemStartedAt: null,
-          answersLocked: false,
-          showCorrectAnswer: false,
-        };
+      if (result.ok && result.teamSession) {
+        saveTeamSession(result.teamSession);
+        setSessionTick((value) => value + 1);
       }
 
-      const currentItem = getActiveItem(currentState);
-      return {
-        ...currentState,
-        ...getStartedItemState(currentItem),
-      };
-    });
-  }, [commit]);
+      return { ok: result.ok, message: result.message };
+    },
+    [runAction],
+  );
+
+  const openLobby = useCallback(() => {
+    void runAction({ type: "openLobby" });
+  }, [runAction]);
+
+  const startActiveItem = useCallback(() => {
+    void runAction({ type: "startActiveItem" });
+  }, [runAction]);
 
   const goToItem = useCallback(
     (index: number) => {
-      commit((currentState) => {
-        const flowItems = currentState.flowItems;
-        if (!flowItems.length) {
-          return {
-            ...currentState,
-            phase: "lobby",
-            activeItemIndex: 0,
-            activeItemStartedAt: null,
-            answersLocked: false,
-            showCorrectAnswer: false,
-          };
-        }
-
-        const safeIndex = Math.max(0, Math.min(flowItems.length - 1, index));
-        const nextItem = flowItems[safeIndex];
-
-        return {
-          ...currentState,
-          activeItemIndex: safeIndex,
-          ...getStartedItemState(nextItem),
-        };
-      });
+      void runAction({ type: "goToItem", index });
     },
-    [commit],
+    [runAction],
   );
 
   const nextItem = useCallback(() => {
-    commit((currentState) => {
-      if (!currentState.flowItems.length) {
-        return {
-          ...currentState,
-          phase: "lobby",
-          activeItemIndex: 0,
-          activeItemStartedAt: null,
-          answersLocked: false,
-          showCorrectAnswer: false,
-        };
-      }
-
-      const flowItems = getFlowItems(currentState);
-      const currentItem = getActiveItem(currentState);
-      const shouldShowScoreboardBeforeNextItem =
-        currentState.phase === "quiz" &&
-        currentItem.type === "quiz" &&
-        Boolean(currentState.activeItemStartedAt) &&
-        Date.now() - (currentState.activeItemStartedAt ?? 0) >= currentItem.timeLimitSeconds * 1000;
-
-      if (shouldShowScoreboardBeforeNextItem) {
-        return {
-          ...currentState,
-          phase: "leaderboard",
-          activeItemStartedAt: null,
-          answersLocked: true,
-          showCorrectAnswer: false,
-        };
-      }
-
-      const nextIndex = currentState.activeItemIndex + 1;
-
-      if (nextIndex >= flowItems.length) {
-        return {
-          ...currentState,
-          phase: "finished",
-          activeItemStartedAt: null,
-          answersLocked: true,
-          showCorrectAnswer: false,
-        };
-      }
-
-      const nextFlowItem = flowItems[nextIndex];
-      return {
-        ...currentState,
-        activeItemIndex: nextIndex,
-        ...getStartedItemState(nextFlowItem),
-      };
-    });
-  }, [commit]);
+    void runAction({ type: "nextItem" });
+  }, [runAction]);
 
   const lockAnswers = useCallback(() => {
-    commit((currentState) => ({ ...currentState, answersLocked: true }));
-  }, [commit]);
+    void runAction({ type: "lockAnswers" });
+  }, [runAction]);
 
   const revealCorrectAnswer = useCallback(() => {
-    commit((currentState) => ({ ...currentState, answersLocked: true, showCorrectAnswer: true }));
-  }, [commit]);
+    void runAction({ type: "revealCorrectAnswer" });
+  }, [runAction]);
 
   const showLeaderboard = useCallback(() => {
-    commit((currentState) => ({
-      ...currentState,
-      phase: "leaderboard",
-      activeItemStartedAt: null,
-      answersLocked: true,
-      showCorrectAnswer: false,
-    }));
-  }, [commit]);
+    void runAction({ type: "showLeaderboard" });
+  }, [runAction]);
 
   const finishGame = useCallback(() => {
-    commit((currentState) => ({
-      ...currentState,
-      phase: "finished",
-      activeItemStartedAt: null,
-      answersLocked: true,
-      showCorrectAnswer: false,
-    }));
-  }, [commit]);
+    void runAction({ type: "finishGame" });
+  }, [runAction]);
 
   const addFlowItem = useCallback(
     (item: ContentFlowItem) => {
-      commit((currentState) => reconcileFlowState(currentState, [...currentState.flowItems, item]));
+      void runAction({ type: "addFlowItem", item });
     },
-    [commit],
+    [runAction],
   );
 
   const updateFlowItem = useCallback(
     (item: ContentFlowItem) => {
-      commit((currentState) =>
-        reconcileFlowState(
-          currentState,
-          currentState.flowItems.map((flowItem) => (flowItem.id === item.id ? item : flowItem)),
-        ),
-      );
+      void runAction({ type: "updateFlowItem", item });
     },
-    [commit],
+    [runAction],
   );
 
   const deleteFlowItem = useCallback(
     (itemId: string) => {
-      commit((currentState) => reconcileFlowState(currentState, currentState.flowItems.filter((item) => item.id !== itemId)));
+      void runAction({ type: "deleteFlowItem", itemId });
     },
-    [commit],
+    [runAction],
   );
 
   const duplicateFlowItem = useCallback(
     (itemId: string) => {
-      commit((currentState) => {
-        const itemIndex = currentState.flowItems.findIndex((item) => item.id === itemId);
-
-        if (itemIndex < 0) {
-          return currentState;
-        }
-
-        const duplicatedItem = createDuplicatedFlowItem(currentState.flowItems[itemIndex]);
-        const nextFlowItems = [
-          ...currentState.flowItems.slice(0, itemIndex + 1),
-          duplicatedItem,
-          ...currentState.flowItems.slice(itemIndex + 1),
-        ];
-
-        return reconcileFlowState(currentState, nextFlowItems);
-      });
+      void runAction({ type: "duplicateFlowItem", itemId });
     },
-    [commit],
+    [runAction],
   );
 
   const moveFlowItem = useCallback(
     (itemId: string, direction: -1 | 1) => {
-      commit((currentState) => {
-        const itemIndex = currentState.flowItems.findIndex((item) => item.id === itemId);
-        const targetIndex = itemIndex + direction;
-
-        if (itemIndex < 0 || targetIndex < 0 || targetIndex >= currentState.flowItems.length) {
-          return currentState;
-        }
-
-        const nextFlowItems = [...currentState.flowItems];
-        const [movedItem] = nextFlowItems.splice(itemIndex, 1);
-        nextFlowItems.splice(targetIndex, 0, movedItem);
-
-        return reconcileFlowState(currentState, nextFlowItems);
-      });
+      void runAction({ type: "moveFlowItem", itemId, direction });
     },
-    [commit],
+    [runAction],
   );
 
   const restoreDefaultFlow = useCallback(() => {
-    commit((currentState) => ({
-      ...reconcileFlowState(currentState, createInitialFlowItems()),
-      phase: "lobby",
-      activeItemIndex: 0,
-      activeItemStartedAt: null,
-      answersLocked: false,
-      showCorrectAnswer: false,
-    }));
-  }, [commit]);
+    void runAction({ type: "restoreDefaultFlow" });
+  }, [runAction]);
 
-  const submitQuizAnswer = useCallback((optionId: AnswerId): SubmitResult => {
-    const session = getTeamSession();
-    const currentState = loadGameState();
-    const item = getActiveItem(currentState);
+  const submitQuizAnswer = useCallback(
+    async (optionId: AnswerId): Promise<SubmitResult> => {
+      const session = getTeamSession();
 
-    if (!session || session.gamePin !== currentState.settings.gamePin) {
-      return { ok: false, message: "Takım oturumu bulunamadı." };
-    }
+      if (!session) {
+        return { ok: false, message: "Takım oturumu bulunamadı." };
+      }
 
-    if (currentState.phase !== "quiz" || item.type !== "quiz") {
-      return { ok: false, message: "Aktif soru yok." };
-    }
+      const result = await runAction({
+        type: "submitQuizAnswer",
+        teamId: session.teamId,
+        gamePin: session.gamePin,
+        optionId,
+      });
 
-    if (currentState.answersLocked || currentState.showCorrectAnswer) {
-      return { ok: false, message: "Cevaplar kilitlendi." };
-    }
+      return { ok: result.ok, message: result.message };
+    },
+    [runAction],
+  );
 
-    const team = currentState.teams.find((entry) => entry.id === session.teamId);
-    if (!team) {
-      return { ok: false, message: "Takım bu oyunda kayıtlı değil." };
-    }
+  const submitForkliftRun = useCallback(
+    async (run: Omit<ForkliftRun, "submittedAt">): Promise<SubmitResult> => {
+      const session = getTeamSession();
 
-    const responses = getTeamResponses(currentState, team.id);
-    if (responses.answers[item.id]) {
-      return { ok: false, message: "Bu soru için cevap zaten gönderildi." };
-    }
+      if (!session) {
+        return { ok: false, message: "Takım oturumu bulunamadı." };
+      }
 
-    const submittedAt = Date.now();
-    const answerTimeMs = currentState.activeItemStartedAt ? submittedAt - currentState.activeItemStartedAt : 0;
+      const result = await runAction({
+        type: "submitForkliftRun",
+        teamId: session.teamId,
+        gamePin: session.gamePin,
+        run,
+      });
 
-    if (!currentState.activeItemStartedAt || answerTimeMs >= item.timeLimitSeconds * 1000) {
-      return { ok: false, message: "Cevap süresi doldu." };
-    }
-
-    const isCorrect = optionId === item.correctOptionId;
-    const scoreResult = calculateQuestionScore({
-      isCorrect,
-      answerTimeMs,
-      timeLimitMs: item.timeLimitSeconds * 1000,
-    });
-
-    const nextState: GameState = {
-      ...currentState,
-      responses: {
-        ...currentState.responses,
-        [team.id]: {
-          answers: {
-            ...responses.answers,
-            [item.id]: {
-              itemId: item.id,
-              optionId,
-              isCorrect,
-              score: scoreResult.totalScore,
-              answerTimeMs,
-              submittedAt,
-            },
-          },
-          forkliftRuns: responses.forkliftRuns,
-        },
-      },
-    };
-
-    saveGameState(nextState);
-    setState(nextState);
-
-    return { ok: true };
-  }, []);
-
-  const submitForkliftRun = useCallback((run: Omit<ForkliftRun, "submittedAt">): SubmitResult => {
-    const session = getTeamSession();
-    const currentState = loadGameState();
-    const item = getActiveItem(currentState);
-
-    if (!session || session.gamePin !== currentState.settings.gamePin) {
-      return { ok: false, message: "Takım oturumu bulunamadı." };
-    }
-
-    if (currentState.phase !== "forkliftChallenge" || item.type !== "forkliftChallenge") {
-      return { ok: false, message: "Aktif final etabı yok." };
-    }
-
-    const team = currentState.teams.find((entry) => entry.id === session.teamId);
-    if (!team) {
-      return { ok: false, message: "Takım bu oyunda kayıtlı değil." };
-    }
-
-    const responses = getTeamResponses(currentState, team.id);
-    if (responses.forkliftRuns[item.id]) {
-      return { ok: false, message: "Final etabı skoru zaten gönderildi." };
-    }
-
-    const nextState: GameState = {
-      ...currentState,
-      responses: {
-        ...currentState.responses,
-        [team.id]: {
-          answers: responses.answers,
-          forkliftRuns: {
-            ...responses.forkliftRuns,
-            [item.id]: {
-              ...run,
-              itemId: item.id,
-              submittedAt: Date.now(),
-            },
-          },
-        },
-      },
-    };
-
-    saveGameState(nextState);
-    setState(nextState);
-
-    return { ok: true };
-  }, []);
+      return { ok: result.ok, message: result.message };
+    },
+    [runAction],
+  );
 
   return {
     state,

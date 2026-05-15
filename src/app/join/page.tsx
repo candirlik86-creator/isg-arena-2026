@@ -1,10 +1,5 @@
-import { ProjectionFrame } from "@/components/ProjectionFrame";
-import { TeamJoinPanel } from "@/components/TeamJoinPanel";
+import { redirect } from "next/navigation";
 
 export default function JoinPage() {
-  return (
-    <ProjectionFrame eyebrow="Takım Katılımı" title="PIN ile Katılım">
-      <TeamJoinPanel redirectToPlay />
-    </ProjectionFrame>
-  );
+  redirect("/play");
 }
