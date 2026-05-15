@@ -43,7 +43,6 @@ export default function PlayPage() {
   const introRemainingSeconds = calculateQuizIntroRemainingSeconds(state, activeItem, now);
   const ownRank = currentTeam ? leaderboard.findIndex((entry) => entry.id === currentTeam.id) + 1 : 0;
   const currentTeamTotalScore = currentTeam ? getTeamTotalScore(state, currentTeam.id) : 0;
-  const correctOption = activeItem.type === "quiz" ? activeItem.options.find((option) => option.id === activeItem.correctOptionId) : undefined;
   const activeQuizPosition = getQuizPosition(state, activeItem);
   const quizTimeExpired = activeItem.type === "quiz" && remainingSeconds !== null && remainingSeconds <= 0;
   const shouldShowQuizResult = activeItem.type === "quiz" && (quizTimeExpired || state.showCorrectAnswer);
@@ -81,7 +80,7 @@ export default function PlayPage() {
   return (
     <main className="arena-play-bg min-h-screen p-3 text-white sm:p-4">
       <div className="mx-auto max-w-2xl space-y-5">
-        <header className="rounded-[1.75rem] border border-white/25 bg-white/[0.16] p-5 shadow-2xl shadow-blue-950/20 backdrop-blur">
+        <header className="rounded-[1.75rem] border border-white/25 bg-white/[0.16] p-5 shadow-lg shadow-blue-950/10">
           <StageBadge label="Mobil cevap ekranı" />
           <div className="mt-5 flex items-center justify-between gap-4">
             <div className="min-w-0">
@@ -96,7 +95,7 @@ export default function PlayPage() {
         </header>
 
         {state.phase === "lobby" ? (
-          <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.15] p-6 text-center shadow-2xl shadow-blue-950/20 backdrop-blur">
+          <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.15] p-6 text-center shadow-lg shadow-blue-950/10">
             <p className="text-sm font-bold uppercase tracking-[0.3em] text-emerald-200">Lobi</p>
             <h2 className="mt-4 text-4xl font-black text-white">Yarışma başlamak üzere</h2>
             <p className="mt-3 text-lg font-semibold text-blue-50">Projeksiyon ekranını takip edin.</p>
@@ -104,7 +103,7 @@ export default function PlayPage() {
         ) : null}
 
         {state.phase === "quizIntro" && activeItem.type === "quiz" ? (
-          <section className="rounded-[1.75rem] border border-amber-100/40 bg-amber-300/20 p-6 text-center shadow-2xl shadow-blue-950/20 backdrop-blur">
+          <section className="rounded-[1.75rem] border border-amber-100/40 bg-amber-300/20 p-6 text-center shadow-lg shadow-blue-950/10">
             <p className="text-sm font-bold uppercase tracking-[0.3em] text-amber-100">Hazır ol</p>
             <h2 className="mt-4 text-4xl font-black text-white">Soru geliyor</h2>
             <p className="mt-3 text-xl font-black text-slate-100">
@@ -117,7 +116,7 @@ export default function PlayPage() {
 
         {state.phase === "quiz" && activeItem.type === "quiz" ? (
           <>
-            <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.16] p-5 shadow-2xl shadow-blue-950/20 backdrop-blur">
+            <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.16] p-5 shadow-lg shadow-blue-950/10">
               <div className="flex items-center justify-between gap-4">
                 <p className="text-sm font-bold uppercase tracking-[0.25em] text-amber-200">
                   Soru {activeQuizPosition?.current ?? activeItem.quizNumber}/{activeQuizPosition?.total ?? activeItem.quizNumber}
@@ -141,12 +140,12 @@ export default function PlayPage() {
 
             {shouldShowQuizResult && currentAnswer ? (
               <div
-                className={`rounded-[1.75rem] border p-6 text-center shadow-2xl backdrop-blur ${
-                  currentAnswer.isCorrect ? "border-emerald-100/50 bg-emerald-400/25 shadow-blue-950/20" : "border-red-100/50 bg-red-400/25 shadow-blue-950/20"
+                className={`rounded-[1.75rem] border p-6 text-center shadow-lg ${
+                  currentAnswer.isCorrect ? "border-emerald-100/50 bg-emerald-400/25 shadow-blue-950/10" : "border-red-100/50 bg-red-400/25 shadow-blue-950/10"
                 }`}
               >
                 <div
-                  className={`mx-auto flex h-24 w-24 items-center justify-center rounded-[1.5rem] text-6xl font-black shadow-xl ${
+                  className={`mx-auto flex h-24 w-24 items-center justify-center rounded-[1.5rem] text-6xl font-black shadow-md ${
                     currentAnswer.isCorrect ? "bg-emerald-300 text-slate-950" : "bg-red-400 text-white"
                   }`}
                 >
@@ -157,18 +156,10 @@ export default function PlayPage() {
                 </p>
                 <p className="mt-4 text-2xl font-black text-white">Kazanılan puan: {currentAnswer.score.toLocaleString("tr-TR")}</p>
                 <p className="mt-2 text-xl font-black text-slate-100">Toplam puan: {currentTeamTotalScore.toLocaleString("tr-TR")}</p>
-                {correctOption ? (
-                  <p className="mt-4 rounded-2xl border border-white/20 bg-white/[0.12] p-4 text-lg font-bold text-blue-50">
-                    Doğru cevap: {correctOption.id} - {correctOption.text}
-                  </p>
-                ) : null}
-                <p className={`mt-4 text-xl font-black ${currentAnswer.isCorrect ? "text-emerald-100" : "text-red-100"}`}>
-                  {currentAnswer.isCorrect ? "Güvenli karar!" : "Bir sonraki soruda dikkat!"}
-                </p>
               </div>
             ) : message || currentAnswer ? (
-              <div className="rounded-[1.75rem] border border-emerald-100/40 bg-emerald-400/20 p-6 text-center shadow-2xl shadow-blue-950/15 backdrop-blur">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-300 text-4xl font-black text-slate-950 shadow-xl">
+              <div className="rounded-[1.75rem] border border-emerald-100/40 bg-emerald-400/20 p-6 text-center shadow-lg shadow-blue-950/10">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-300 text-4xl font-black text-slate-950 shadow-md">
                   ✓
                 </div>
                 <p className="text-2xl font-black leading-tight text-emerald-50">
@@ -178,24 +169,18 @@ export default function PlayPage() {
             ) : null}
 
             {shouldShowQuizResult && !currentAnswer ? (
-              <div className="rounded-[1.75rem] border border-red-100/50 bg-red-400/25 p-6 text-center shadow-2xl shadow-blue-950/20 backdrop-blur">
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-red-400 text-5xl font-black text-white shadow-xl">!</div>
+              <div className="rounded-[1.75rem] border border-red-100/50 bg-red-400/25 p-6 text-center shadow-lg shadow-blue-950/10">
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-red-400 text-5xl font-black text-white shadow-md">!</div>
                 <p className="mt-5 text-4xl font-black text-red-100">Cevap verilmedi</p>
                 <p className="mt-3 text-2xl font-black text-white">Kazanılan puan: 0</p>
                 <p className="mt-2 text-xl font-black text-slate-100">Toplam puan: {currentTeamTotalScore.toLocaleString("tr-TR")}</p>
-                {correctOption ? (
-                  <p className="mt-4 rounded-2xl border border-white/20 bg-white/[0.12] p-4 text-lg font-bold text-blue-50">
-                    Doğru cevap: {correctOption.id} - {correctOption.text}
-                  </p>
-                ) : null}
-                <p className="mt-4 text-xl font-black text-red-100">Bir sonraki soruda dikkat!</p>
               </div>
             ) : null}
           </>
         ) : null}
 
         {(state.phase === "infoSlide" || state.phase === "mediaSlide") && (activeItem.type === "infoSlide" || activeItem.type === "mediaSlide") ? (
-          <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.15] p-6 text-center shadow-2xl shadow-blue-950/20 backdrop-blur">
+          <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.15] p-6 text-center shadow-lg shadow-blue-950/10">
             <p className="text-sm font-bold uppercase tracking-[0.3em] text-sky-200">Bekleme</p>
             <h2 className="mt-4 text-3xl font-black text-white">{activeItem.title}</h2>
             {"description" in activeItem ? <p className="mt-3 text-lg font-semibold text-blue-50">{activeItem.description}</p> : null}
@@ -206,13 +191,24 @@ export default function PlayPage() {
           </section>
         ) : null}
 
-        {state.phase === "leaderboard" ? (
-          <section className="space-y-5">
-            <div className="rounded-[1.75rem] border border-amber-100/40 bg-amber-300/20 p-6 text-center shadow-2xl shadow-blue-950/20 backdrop-blur">
-              <p className="text-sm font-bold uppercase tracking-[0.3em] text-amber-200">Ara sıralama</p>
-              <h2 className="mt-3 text-4xl font-black text-white">{ownRank ? `${ownRank}. sıradasınız` : "Sıralama bekleniyor"}</h2>
+        {state.phase === "leaderboard" && activeItem.type === "quiz" ? (
+          <section
+            className={`rounded-[1.75rem] border p-6 text-center shadow-lg ${
+              currentAnswer ? (currentAnswer.isCorrect ? "border-emerald-100/50 bg-emerald-400/25 shadow-blue-950/10" : "border-red-100/50 bg-red-400/25 shadow-blue-950/10") : "border-red-100/50 bg-red-400/25 shadow-blue-950/10"
+            }`}
+          >
+            <div
+              className={`mx-auto flex h-24 w-24 items-center justify-center rounded-[1.5rem] text-6xl font-black shadow-md ${
+                currentAnswer?.isCorrect ? "bg-emerald-300 text-slate-950" : "bg-red-400 text-white"
+              }`}
+            >
+              {currentAnswer?.isCorrect ? "✓" : "!"}
             </div>
-            <Leaderboard teams={leaderboard} title="İlk 5" limit={5} />
+            <p className={`mt-5 text-5xl font-black ${currentAnswer?.isCorrect ? "text-emerald-100" : "text-red-100"}`}>
+              {currentAnswer ? (currentAnswer.isCorrect ? "Doğru" : "Yanlış") : "Cevap verilmedi"}
+            </p>
+            <p className="mt-4 text-2xl font-black text-white">Kazanılan puan: {(currentAnswer?.score ?? 0).toLocaleString("tr-TR")}</p>
+            <p className="mt-2 text-xl font-black text-slate-100">Toplam puan: {currentTeamTotalScore.toLocaleString("tr-TR")}</p>
           </section>
         ) : null}
 
@@ -228,7 +224,7 @@ export default function PlayPage() {
         ) : null}
 
         {state.phase === "finished" ? (
-          <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.15] p-6 text-center shadow-2xl shadow-blue-950/20 backdrop-blur">
+          <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.15] p-6 text-center shadow-lg shadow-blue-950/10">
             <p className="text-sm font-bold uppercase tracking-[0.3em] text-amber-200">Final Sonuçları</p>
             <h2 className="mt-4 text-4xl font-black text-white">{ownRank ? `${ownRank}. sırada tamamladınız` : "Yarışma tamamlandı"}</h2>
             <Leaderboard teams={leaderboard} title="Genel Skor" limit={5} />
