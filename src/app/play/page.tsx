@@ -73,7 +73,7 @@ export default function PlayPage() {
   const currentTeamTotalScore = currentTeam ? getTeamTotalScore(state, currentTeam.id) : 0;
   const activeQuizPosition = getQuizPosition(state, activeItem);
   const quizTimeExpired = activeItem.type === "quiz" && remainingSeconds !== null && remainingSeconds <= 0;
-  const shouldShowQuizResult = activeItem.type === "quiz" && state.showCorrectAnswer;
+  const shouldShowQuizResult = activeItem.type === "quiz" && (state.showCorrectAnswer || quizTimeExpired);
 
   if (!currentTeam) {
     return (
@@ -121,15 +121,17 @@ export default function PlayPage() {
       <p className={`mt-5 text-5xl font-black ${currentAnswer.isCorrect ? "text-emerald-100" : "text-red-100"}`}>
         {currentAnswer.isCorrect ? "Doğru" : "Yanlış"}
       </p>
-      <p className="mt-4 text-2xl font-black text-white">Kazanılan puan: {currentAnswer.score.toLocaleString("tr-TR")}</p>
-      <p className="mt-2 text-xl font-black text-slate-100">Toplam puan: {currentTeamTotalScore.toLocaleString("tr-TR")}</p>
+      <p className="mt-6 text-xs font-black uppercase tracking-[0.24em] text-blue-50">Kazanılan puan</p>
+      <p className="mt-2 text-7xl font-black leading-none tabular-nums text-white">+ {currentAnswer.score.toLocaleString("tr-TR")}</p>
+      <p className="mt-5 text-2xl font-black text-slate-100">Toplam puan: {currentTeamTotalScore.toLocaleString("tr-TR")}</p>
     </div>
   ) : (
     <div className="rounded-[1.75rem] border border-red-100/50 bg-red-400/25 p-6 text-center shadow-lg shadow-blue-950/10">
       <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-red-400 text-5xl font-black text-white shadow-md">!</div>
       <p className="mt-5 text-4xl font-black text-red-100">Cevap verilmedi</p>
-      <p className="mt-3 text-2xl font-black text-white">Kazanılan puan: 0</p>
-      <p className="mt-2 text-xl font-black text-slate-100">Toplam puan: {currentTeamTotalScore.toLocaleString("tr-TR")}</p>
+      <p className="mt-6 text-xs font-black uppercase tracking-[0.24em] text-blue-50">Kazanılan puan</p>
+      <p className="mt-2 text-7xl font-black leading-none tabular-nums text-white">+ 0</p>
+      <p className="mt-5 text-2xl font-black text-slate-100">Toplam puan: {currentTeamTotalScore.toLocaleString("tr-TR")}</p>
     </div>
   );
 
@@ -158,16 +160,11 @@ export default function PlayPage() {
     if (isWaitingForQuizResult) {
       return (
         <main className="arena-play-bg min-h-[100svh] overflow-hidden p-3 text-white">
-          <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center gap-3">
+          <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
             <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.16] p-7 text-center shadow-lg shadow-blue-950/10 backdrop-blur">
               <p className="text-3xl font-black leading-tight text-white">Cevabın alındı. Sonuç bekleniyor.</p>
               <p className="mt-4 text-xl font-black leading-tight text-blue-50">Sonuç projeksiyon ekranında açıklanacak.</p>
             </section>
-
-            <footer className="rounded-2xl border border-white/20 bg-white/[0.15] px-4 py-3 text-center shadow-lg shadow-blue-950/10 backdrop-blur">
-              <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-cyan-100">Takım</p>
-              <p className="truncate text-xl font-black text-white">{currentTeam.name}</p>
-            </footer>
           </div>
         </main>
       );
