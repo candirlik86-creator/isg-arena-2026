@@ -90,6 +90,34 @@ a {
     backdrop-filter: blur(14px);
   }
 
+  .arena-screen-bg::after {
+    right: clamp(1rem, 1.8vw, 2rem);
+    top: clamp(0.55rem, 0.8vw, 0.85rem);
+    z-index: 3;
+    min-width: clamp(11.5rem, 14vw, 16.5rem);
+    max-width: calc(100vw - 2rem);
+    padding: clamp(0.46rem, 0.5vw, 0.6rem) clamp(0.85rem, 1vw, 1.2rem);
+    font-size: clamp(0.95rem, 0.85vw, 1.12rem);
+    letter-spacing: 0.14em;
+    text-align: center;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.16);
+  }
+
+  @media (max-width: 639px) {
+    .arena-play-bg::before {
+      top: 52%;
+      transform: translate(-50%, -50%) rotate(-6deg);
+      color: rgba(255, 255, 255, 0.06);
+      font-size: clamp(2.25rem, 12vw, 3.9rem);
+      letter-spacing: 0.04em;
+    }
+
+    .arena-play-quiz-active::after {
+      content: none;
+      display: none;
+    }
+  }
+
   .arena-screen-bg > *,
   .arena-play-bg > * {
     position: relative;
