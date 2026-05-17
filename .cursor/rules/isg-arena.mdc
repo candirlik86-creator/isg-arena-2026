@@ -1,0 +1,37 @@
+---
+description: ISG Arena 2026 project rules
+alwaysApply: true
+---
+
+Bu proje Next.js tabanlı ISG Arena 2026 yarışma uygulamasıdır.
+
+Ana ekranlar:
+- /admin: yarışma yönetim paneli
+- /screen: projeksiyon / sahne ekranı
+- /play: mobil oyuncu cevap ekranı
+- /join: katılım yönlendirme ekranı
+
+Değişiklik kuralları:
+- Her işi küçük kapsamlı yap.
+- Kullanıcı açıkça istemedikçe oyun state, puanlama, cevap doğruluk mantığı, PIN akışı ve store dosyalarına dokunma.
+- /play değiştirilecekse /screen ve /admin bozulmamalı.
+- /screen değiştirilecekse /play ve /admin bozulmamalı.
+- LC Waikiki mavi tema, watermark ve cevap renk eşleşmeleri korunmalı.
+- A/B/C/D renk sırası korunmalı:
+  A = turuncu/sarı
+  B = mavi
+  C = yeşil
+  D = kırmızı/pembe
+
+Kontrol kuralları:
+- Değişiklikten sonra mutlaka npm run typecheck çalıştır.
+- Ardından npm run build çalıştır.
+- Hata varsa düzeltmeden işi tamamlandı sayma.
+- Yeni paket ekleme; gerekirse önce kullanıcıdan onay iste.
+- Büyük refactor yapma.
+- Çalışan ekranları bozmamak için mümkün olan en az dosyaya dokun.
+
+Git kuralları:
+- Her büyük iş ayrı branch.
+- Main üzerinde doğrudan geliştirme yapma.
+- Commit atmadan önce git status --short ile değişen dosyaları göster.
