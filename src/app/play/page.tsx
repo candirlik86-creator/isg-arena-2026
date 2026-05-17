@@ -171,7 +171,7 @@ export default function PlayPage() {
     }
 
     return (
-      <main className="arena-play-bg min-h-[100svh] overflow-hidden p-3 text-white">
+      <main className="arena-play-bg arena-play-quiz-active min-h-[100svh] overflow-hidden p-3 text-white">
         <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col gap-3">
           <header className="shrink-0 rounded-2xl border border-white/20 bg-white/[0.14] px-4 py-3 shadow-lg shadow-blue-950/10 backdrop-blur">
             <div className="flex items-center justify-between gap-3">
