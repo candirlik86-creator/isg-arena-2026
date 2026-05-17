@@ -26,23 +26,23 @@ const kahootAnswerTiles: Record<
 > = {
   A: {
     shape: "▲",
-    buttonClass: "border-red-200/70 bg-gradient-to-br from-red-500 to-red-700 shadow-red-950/30",
-    selectedClass: "ring-red-100/80",
+    buttonClass: "border-yellow-100/65 bg-gradient-to-br from-amber-400 via-orange-400 to-yellow-500 shadow-amber-950/30",
+    selectedClass: "ring-yellow-100/80",
   },
   B: {
     shape: "◆",
-    buttonClass: "border-sky-100/70 bg-gradient-to-br from-sky-400 to-blue-700 shadow-blue-950/30",
+    buttonClass: "border-sky-100/65 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 shadow-blue-950/30",
     selectedClass: "ring-sky-100/80",
   },
   C: {
     shape: "●",
-    buttonClass: "border-yellow-100/80 bg-gradient-to-br from-yellow-300 to-amber-500 shadow-amber-950/30",
-    selectedClass: "ring-yellow-50/90",
+    buttonClass: "border-emerald-100/65 bg-gradient-to-br from-emerald-400 via-teal-500 to-green-600 shadow-emerald-950/30",
+    selectedClass: "ring-emerald-100/80",
   },
   D: {
     shape: "■",
-    buttonClass: "border-emerald-100/70 bg-gradient-to-br from-emerald-400 to-green-700 shadow-green-950/30",
-    selectedClass: "ring-emerald-100/80",
+    buttonClass: "border-rose-100/65 bg-gradient-to-br from-rose-400 via-red-500 to-pink-600 shadow-rose-950/30",
+    selectedClass: "ring-rose-100/80",
   },
 };
 
