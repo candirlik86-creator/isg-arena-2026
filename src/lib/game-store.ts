@@ -43,6 +43,34 @@ export async function fetchGameState(): Promise<GameState> {
   return nextState;
 }
 
+export async function replaceGameState(state: GameState): Promise<GameActionResult> {
+  try {
+    const response = await fetch(GAME_STATE_API_PATH, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ state }),
+      cache: "no-store",
+    });
+    const body = (await response.json()) as Partial<GameActionResult> & { state?: unknown };
+    const nextState = normalizeGameState(body.state);
+    saveGameState(nextState);
+
+    return {
+      ok: Boolean(body.ok),
+      state: nextState,
+      message: body.message,
+    };
+  } catch {
+    return {
+      ok: false,
+      state: cachedGameState,
+      message: "Oyun sunucusuna bağlanılamadı. Aynı Wi-Fi ve doğru adresi kontrol edin.",
+    };
+  }
+}
+
 export async function dispatchGameAction(action: GameAction): Promise<GameActionResult> {
   try {
     const response = await fetch(GAME_STATE_API_PATH, {

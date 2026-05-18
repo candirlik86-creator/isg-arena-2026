@@ -15,9 +15,10 @@ import {
   type QuizAnswerBreakdown,
   type QuizFlowItem,
 } from "@/lib/game-state";
+import { listSavedCompetitions, type SavedCompetition } from "@/lib/competition-library";
 import { downloadResultsCsv } from "@/lib/game-store";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 const answerOptionIds: AnswerId[] = ["A", "B", "C", "D"];
 
@@ -169,8 +170,21 @@ function ControlButton({
   );
 }
 
+function formatSavedDate(timestamp: number) {
+  return new Date(timestamp).toLocaleString("tr-TR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"competition" | "settings">("competition");
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [competitionSaveName, setCompetitionSaveName] = useState("");
+  const [savedCompetitions, setSavedCompetitions] = useState<SavedCompetition[]>([]);
+  const [libraryMessage, setLibraryMessage] = useState<string | null>(null);
 
   const {
     state,
@@ -194,7 +208,46 @@ export default function AdminPage() {
     moveFlowItem,
     restoreDefaultFlow,
     goToItem,
+    saveCompetitionToLibrary,
+    openSavedCompetition,
   } = useGameState();
+
+  const refreshSavedCompetitions = () => {
+    setSavedCompetitions(listSavedCompetitions());
+  };
+
+  useEffect(() => {
+    if (libraryOpen) {
+      refreshSavedCompetitions();
+    }
+  }, [libraryOpen]);
+
+  const handleSaveCompetition = () => {
+    try {
+      saveCompetitionToLibrary(competitionSaveName);
+      setLibraryMessage("Yarışma kaydedildi.");
+      setCompetitionSaveName("");
+      refreshSavedCompetitions();
+    } catch (error) {
+      setLibraryMessage(error instanceof Error ? error.message : "Kayıt başarısız.");
+    }
+  };
+
+  const handleOpenSavedCompetition = async (id: string) => {
+    if (
+      !window.confirm(
+        "Kayıtlı yarışma yüklenecek. Takımlar, cevaplar ve skorlar sıfırlanır; yeni bir PIN oluşur. Devam edilsin mi?",
+      )
+    ) {
+      return;
+    }
+
+    const result = await openSavedCompetition(id);
+    setLibraryMessage(result.ok ? "Yarışma yüklendi." : result.message ?? "Yükleme başarısız.");
+    if (result.ok) {
+      setLibraryOpen(false);
+    }
+  };
 
   const hasFlowItems = state.flowItems.length > 0;
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
@@ -269,6 +322,62 @@ export default function AdminPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setLibraryOpen((open) => !open)}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 lg:hidden"
+          >
+            Kayıtlı
+          </button>
+          <div className="relative hidden lg:block">
+            <button
+              type="button"
+              onClick={() => setLibraryOpen((open) => !open)}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:text-blue-700"
+            >
+              Kayıtlı Yarışmalar
+            </button>
+            {libraryOpen ? (
+              <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-slate-800">Yarışma kütüphanesi</h3>
+                  <button type="button" onClick={() => setLibraryOpen(false)} className="rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100">
+                    Kapat
+                  </button>
+                </div>
+                <label className="block">
+                  <span className="text-xs font-medium text-slate-500">Kayıt adı</span>
+                  <input
+                    value={competitionSaveName}
+                    onChange={(event) => setCompetitionSaveName(event.target.value)}
+                    placeholder={state.settings.welcomeTitle || "Yarışma adı"}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </label>
+                <button type="button" onClick={handleSaveCompetition} className="mt-2 w-full rounded-xl bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+                  Mevcut yarışmayı kaydet
+                </button>
+                {libraryMessage ? <p className="mt-2 text-xs font-medium text-slate-600">{libraryMessage}</p> : null}
+                <div className="mt-4 max-h-56 space-y-2 overflow-y-auto border-t border-slate-100 pt-3">
+                  {savedCompetitions.length ? (
+                    savedCompetitions.map((entry) => (
+                      <div key={entry.id} className="flex items-start justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-slate-800">{entry.name}</p>
+                          <p className="mt-0.5 text-xs text-slate-500">{entry.flowItems.length} öğe · {formatSavedDate(entry.updatedAt)}</p>
+                        </div>
+                        <button type="button" onClick={() => void handleOpenSavedCompetition(entry.id)} className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-blue-600 ring-1 ring-slate-200 hover:bg-blue-50">
+                          Aç
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-xs text-slate-500">Henüz kayıtlı yarışma yok.</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
           <div
             className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ${
               isLiveSession ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
@@ -313,6 +422,53 @@ export default function AdminPage() {
           </Link>
         </div>
       </header>
+
+      {libraryOpen ? (
+        <div className="border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
+          <div className="mx-auto max-w-lg space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-800">Yarışma kütüphanesi</h3>
+              <button type="button" onClick={() => setLibraryOpen(false)} className="text-xs text-slate-500">
+                Kapat
+              </button>
+            </div>
+            <label className="block">
+              <span className="text-xs font-medium text-slate-500">Kayıt adı</span>
+              <input
+                value={competitionSaveName}
+                onChange={(event) => setCompetitionSaveName(event.target.value)}
+                placeholder={state.settings.welcomeTitle || "Yarışma adı"}
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              />
+            </label>
+            <button type="button" onClick={handleSaveCompetition} className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-medium text-white">
+              Mevcut yarışmayı kaydet
+            </button>
+            {libraryMessage ? <p className="text-xs text-slate-600">{libraryMessage}</p> : null}
+            <div className="max-h-40 space-y-2 overflow-y-auto">
+              {savedCompetitions.length ? (
+                savedCompetitions.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 p-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-slate-800">{entry.name}</p>
+                      <p className="text-xs text-slate-500">{entry.flowItems.length} öğe</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleOpenSavedCompetition(entry.id)}
+                      className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white"
+                    >
+                      Aç
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-xs text-slate-500">Henüz kayıtlı yarışma yok.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {activeTab === "competition" ? (
         <div className="flex flex-1 overflow-hidden">
