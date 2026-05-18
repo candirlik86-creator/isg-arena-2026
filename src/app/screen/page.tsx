@@ -50,44 +50,61 @@ export default function ScreenPage() {
     const liveProgress = Math.max(0, Math.min(100, (liveRemainingSeconds / activeItem.timeLimitSeconds) * 100));
 
     return (
-      <main className="arena-screen-bg min-h-screen overflow-hidden p-3 text-white md:p-5">
-        <section className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1720px] flex-col justify-center gap-6 md:min-h-[calc(100vh-2.5rem)] md:gap-8">
-          <div className="grid gap-5 md:grid-cols-[1fr_420px]">
-            <div className="rounded-[2rem] border border-white/35 bg-white/[0.20] p-6 shadow-2xl shadow-blue-950/25 backdrop-blur">
-              <div className="flex items-end justify-between gap-5">
+      <main className="arena-screen-bg box-border h-[100dvh] max-h-[100dvh] overflow-hidden p-2 text-white md:p-3">
+        <section className="mx-auto flex h-full max-h-full min-h-0 max-w-[1720px] flex-col justify-center gap-2 overflow-y-auto overflow-x-hidden md:gap-4">
+          <div className="grid shrink-0 gap-2 md:grid-cols-[1fr_420px] md:gap-4">
+            <div className="rounded-[clamp(1rem,2vw,2rem)] border border-white/35 bg-white/[0.20] p-3 shadow-2xl shadow-blue-950/25 backdrop-blur md:p-5">
+              <div className="flex items-end justify-between gap-3">
                 <div>
-                  <p className="text-sm font-black uppercase tracking-[0.28em] text-cyan-100">Kalan süre</p>
-                  <p className="mt-2 text-8xl font-black leading-none tabular-nums text-white md:text-9xl">{liveRemainingSeconds}</p>
+                  <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-100 md:text-sm">Kalan süre</p>
+                  <p
+                    className="mt-1 font-black leading-none tabular-nums text-white md:mt-2"
+                    style={{ fontSize: "clamp(3rem, 11vw, 7.5rem)" }}
+                  >
+                    {liveRemainingSeconds}
+                  </p>
                 </div>
-                <p className="pb-2 text-3xl font-black text-amber-100">saniye</p>
+                <p className="pb-1 text-xl font-black text-amber-100 md:pb-2 md:text-2xl">saniye</p>
               </div>
-              <div className="mt-6 h-6 overflow-hidden rounded-full border border-white/25 bg-white/25 shadow-inner">
+              <div className="mt-3 h-4 overflow-hidden rounded-full border border-white/25 bg-white/25 shadow-inner md:mt-5 md:h-5">
                 <div className="h-full rounded-full bg-gradient-to-r from-emerald-300 via-yellow-300 to-rose-500 shadow-lg transition-all" style={{ width: `${liveProgress}%` }} />
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-cyan-100/40 bg-gradient-to-br from-cyan-300/25 via-white/[0.16] to-indigo-300/20 p-6 text-center shadow-2xl shadow-blue-950/25 backdrop-blur">
-              <p className="text-sm font-black uppercase tracking-[0.28em] text-emerald-100">Cevap sayısı</p>
-              <p className="mt-4 text-6xl font-black leading-none text-white md:text-7xl">{answeredCount}</p>
-              <p className="mt-3 text-3xl font-black text-slate-100">
+            <div className="rounded-[clamp(1rem,2vw,2rem)] border border-cyan-100/40 bg-gradient-to-br from-cyan-300/25 via-white/[0.16] to-indigo-300/20 p-3 text-center shadow-2xl shadow-blue-950/25 backdrop-blur md:p-5">
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-emerald-100 md:text-sm">Cevap sayısı</p>
+              <p className="mt-2 text-4xl font-black leading-none text-white md:mt-3 md:text-6xl">{answeredCount}</p>
+              <p className="mt-2 text-xl font-black text-slate-100 md:mt-3 md:text-2xl">
                 {answeredCount} / {state.teams.length} takım
               </p>
             </div>
           </div>
 
-          <h1 className="mx-auto max-w-[1440px] text-center text-5xl font-black leading-tight text-white drop-shadow-2xl md:text-7xl lg:text-8xl">{activeItem.title}</h1>
+          <h1
+            className="mx-auto max-w-[1440px] shrink-0 text-center font-black leading-tight text-white drop-shadow-2xl"
+            style={{ fontSize: "clamp(1.35rem, 3.8vw, 4.5rem)" }}
+          >
+            {activeItem.title}
+          </h1>
 
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid min-h-0 shrink-0 grid-cols-1 gap-2 md:grid-cols-2 md:gap-3">
             {activeItem.options.map((option) => (
               <article
                 key={option.id}
-                className={`min-h-36 rounded-[2rem] border p-5 shadow-2xl backdrop-blur md:min-h-48 md:p-7 ${liveOptionStyles[option.id]}`}
+                className={`rounded-[clamp(1rem,2vw,2rem)] border p-3 shadow-2xl backdrop-blur md:p-5 ${liveOptionStyles[option.id]}`}
               >
-                <div className="flex h-full items-center gap-5">
-                  <div className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl text-4xl font-black shadow-xl md:h-24 md:w-24 md:text-5xl ${liveOptionBadgeStyles[option.id]}`}>
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div
+                    className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl font-black shadow-xl md:h-20 md:w-20 md:text-4xl ${liveOptionBadgeStyles[option.id]}`}
+                  >
                     {option.id}
                   </div>
-                  <p className="break-words text-3xl font-black leading-tight text-white drop-shadow-lg md:text-5xl">{option.text}</p>
+                  <p
+                    className="min-w-0 break-words font-black leading-tight text-white drop-shadow-lg"
+                    style={{ fontSize: "clamp(1rem, 2.2vw, 2.75rem)" }}
+                  >
+                    {option.text}
+                  </p>
                 </div>
               </article>
             ))}
@@ -101,14 +118,19 @@ export default function ScreenPage() {
     const rankedTeams = leaderboard.slice(0, 10);
 
     return (
-      <main className="arena-screen-bg min-h-screen overflow-hidden p-4 text-white md:p-8">
-        <section className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-7xl flex-col justify-center md:min-h-[calc(100vh-4rem)]">
-          <div className="text-center">
-            <p className="text-sm font-black uppercase tracking-[0.34em] text-amber-100">Ara Skor</p>
-            <h1 className="mt-3 text-6xl font-black leading-none text-white drop-shadow-2xl md:text-8xl">Puan Tablosu</h1>
+      <main className="arena-screen-bg box-border h-[100dvh] max-h-[100dvh] overflow-hidden p-2 text-white md:p-4">
+        <section className="mx-auto flex h-full max-h-full min-h-0 max-w-7xl flex-col justify-center md:py-1">
+          <div className="shrink-0 text-center">
+            <p className="text-xs font-black uppercase tracking-[0.34em] text-amber-100 md:text-sm">Ara Skor</p>
+            <h1
+              className="mt-2 font-black leading-none text-white drop-shadow-2xl md:mt-3"
+              style={{ fontSize: "clamp(2rem, 5vw, 5rem)" }}
+            >
+              Puan Tablosu
+            </h1>
           </div>
 
-          <div className="mt-10 space-y-4 md:mt-12 md:space-y-5">
+          <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pr-1 md:mt-6 md:space-y-3">
             {rankedTeams.length ? (
               rankedTeams.map((team, index) => {
                 const rank = index + 1;
@@ -117,20 +139,20 @@ export default function ScreenPage() {
                 return (
                   <article
                     key={team.id}
-                    className={`grid grid-cols-[86px_minmax(0,1fr)_260px] items-center gap-5 rounded-[1.5rem] border px-5 py-4 shadow-2xl backdrop-blur md:grid-cols-[104px_minmax(0,1fr)_320px] md:px-7 md:py-5 ${rowStyle}`}
+                    className={`grid grid-cols-[minmax(3.5rem,1fr)_minmax(0,3fr)_minmax(5rem,1.1fr)] items-center gap-2 rounded-[1.25rem] border px-3 py-2 shadow-2xl backdrop-blur sm:gap-3 sm:rounded-[1.5rem] sm:px-5 sm:py-3 md:gap-4 md:px-6 md:py-4 ${rowStyle}`}
                   >
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-4xl font-black tabular-nums text-slate-950 shadow-xl md:h-20 md:w-20 md:text-5xl">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-2xl font-black tabular-nums text-slate-950 shadow-xl sm:h-14 sm:w-14 sm:rounded-2xl sm:text-3xl md:h-16 md:w-16 md:text-4xl">
                       {rank}
                     </div>
-                    <h2 className="truncate text-4xl font-black leading-tight text-white md:text-6xl">{team.name}</h2>
-                    <p className="text-right text-4xl font-black tabular-nums text-amber-100 md:text-6xl">
+                    <h2 className="min-w-0 truncate text-xl font-black leading-tight text-white sm:text-3xl md:text-4xl lg:text-5xl">{team.name}</h2>
+                    <p className="text-right text-lg font-black tabular-nums text-amber-100 sm:text-2xl md:text-3xl lg:text-4xl">
                       {team.score.toLocaleString("tr-TR")}
                     </p>
                   </article>
                 );
               })
             ) : (
-              <div className="rounded-[2rem] border border-white/25 bg-white/[0.16] p-10 text-center text-5xl font-black text-slate-100 shadow-2xl shadow-blue-900/20 backdrop-blur">
+              <div className="rounded-[2rem] border border-white/25 bg-white/[0.16] p-6 text-center text-2xl font-black text-slate-100 shadow-2xl shadow-blue-900/20 backdrop-blur md:p-8 md:text-4xl">
                 Henüz takım yok.
               </div>
             )}
@@ -143,34 +165,44 @@ export default function ScreenPage() {
   return (
     <ProjectionFrame compactScreen>
       {state.phase === "lobby" ? (
-        <section className="grid min-h-[68vh] items-center gap-8 xl:grid-cols-[1fr_0.9fr]">
-          <div>
+        <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden xl:grid xl:grid-cols-[1fr_0.9fr] xl:items-center xl:gap-6">
+          <div className="min-h-0 shrink-0 xl:min-h-0">
             <StageBadge label="Lobi açık" tone="green" />
-            <h2 className="mt-6 text-5xl font-black leading-tight text-white md:text-7xl">{state.settings.welcomeTitle}</h2>
-            <p className="mt-5 text-3xl font-bold text-amber-200">{state.settings.subtitle}</p>
-            <div className="mt-10 rounded-[3rem] border border-amber-300/40 bg-amber-300/15 p-8 text-center shadow-2xl shadow-amber-900/20">
-              <p className="text-xl font-black uppercase tracking-[0.4em] text-amber-100">Oyun PIN'i</p>
-              <p className="mt-5 text-[8rem] font-black leading-none tracking-[0.16em] text-white md:text-[12rem]">{state.settings.gamePin}</p>
-              <p className="mt-5 text-3xl font-black text-white">Katılım adresi: /join</p>
+            <h2
+              className="mt-3 font-black leading-tight text-white md:mt-4"
+              style={{ fontSize: "clamp(1.5rem, 3.8vw, 4.25rem)" }}
+            >
+              {state.settings.welcomeTitle}
+            </h2>
+            <p className="mt-3 text-lg font-bold text-amber-200 md:mt-4 md:text-2xl">{state.settings.subtitle}</p>
+            <div className="mt-4 rounded-[clamp(1.25rem,3vw,3rem)] border border-amber-300/40 bg-amber-300/15 p-4 text-center shadow-2xl shadow-amber-900/20 md:mt-6 md:p-6">
+              <p className="text-base font-black uppercase tracking-[0.35em] text-amber-100 md:text-lg">Oyun PIN'i</p>
+              <p
+                className="mt-2 font-black leading-none tracking-[0.12em] text-white md:mt-4"
+                style={{ fontSize: "clamp(2.75rem, 14vw, 7rem)" }}
+              >
+                {state.settings.gamePin}
+              </p>
+              <p className="mt-3 text-lg font-black text-white md:mt-4 md:text-2xl">Katılım adresi: /join</p>
             </div>
           </div>
-          <div className="rounded-[2.5rem] border border-white/25 bg-white/[0.14] p-6 shadow-2xl shadow-blue-950/20 backdrop-blur">
-            <div className="flex items-center justify-between gap-4">
-              <h3 className="text-4xl font-black text-white">Katılan Takımlar</h3>
-              <p className="rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-3 text-xl font-black text-emerald-100">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[clamp(1rem,2.5vw,2.5rem)] border border-white/25 bg-white/[0.14] p-4 shadow-2xl shadow-blue-950/20 backdrop-blur md:p-5">
+            <div className="flex shrink-0 items-center justify-between gap-3">
+              <h3 className="text-xl font-black text-white md:text-3xl">Katılan Takımlar</h3>
+              <p className="rounded-xl border border-emerald-300/30 bg-emerald-400/10 px-3 py-2 text-base font-black text-emerald-100 md:rounded-2xl md:px-4 md:py-3 md:text-lg">
                 {state.teams.length}/{state.settings.maxTeams}
               </p>
             </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="mt-3 grid min-h-0 flex-1 auto-rows-fr gap-2 overflow-y-auto overflow-x-hidden sm:grid-cols-2 md:mt-4 md:gap-3">
               {state.teams.length ? (
                 state.teams.map((team, index) => (
-                  <div key={team.id} className="rounded-2xl border border-white/20 bg-white/[0.12] p-4">
-                    <p className="text-sm font-black uppercase tracking-widest text-amber-200">Takım {index + 1}</p>
-                    <p className="mt-1 text-2xl font-black text-white">{team.name}</p>
+                  <div key={team.id} className="rounded-xl border border-white/20 bg-white/[0.12] p-3 md:rounded-2xl md:p-4">
+                    <p className="text-xs font-black uppercase tracking-widest text-amber-200 md:text-sm">Takım {index + 1}</p>
+                    <p className="mt-1 text-lg font-black text-white md:text-xl">{team.name}</p>
                   </div>
                 ))
               ) : (
-                <p className="rounded-2xl border border-white/20 bg-white/[0.10] p-6 text-center text-xl font-bold text-slate-200 sm:col-span-2">
+                <p className="rounded-xl border border-white/20 bg-white/[0.10] p-4 text-center text-base font-bold text-slate-200 sm:col-span-2 md:p-6 md:text-lg">
                   Takımlar PIN ile bağlanmayı bekliyor.
                 </p>
               )}
@@ -180,66 +212,85 @@ export default function ScreenPage() {
       ) : null}
 
       {state.phase === "quizIntro" && activeItem.type === "quiz" ? (
-        <section className="grid min-h-[68vh] items-center gap-8 xl:grid-cols-[1fr_340px]">
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
+        <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden xl:grid xl:grid-cols-[1fr_300px] xl:items-center xl:gap-6 2xl:grid-cols-[1fr_340px]">
+          <div className="min-h-0 shrink-0 xl:overflow-y-auto xl:pr-1">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3">
               <StageBadge
                 label={`Soru ${activeQuizPosition?.current ?? activeItem.quizNumber} / ${
                   activeQuizPosition?.total ?? activeItem.quizNumber
                 }`}
               />
-              <span className="rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-black text-slate-200">
+              <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-black text-slate-200 md:px-4 md:py-2 md:text-sm">
                 {activeItem.topic}
               </span>
             </div>
-            <p className="mt-8 text-sm font-black uppercase tracking-[0.32em] text-amber-200">{activeItem.stage}</p>
-            <h2 className="mt-5 text-6xl font-black leading-tight text-white md:text-8xl">{activeItem.title}</h2>
+            <p className="mt-4 text-xs font-black uppercase tracking-[0.32em] text-amber-200 md:mt-6 md:text-sm">{activeItem.stage}</p>
+            <h2
+              className="mt-2 font-black leading-tight text-white md:mt-3"
+              style={{ fontSize: "clamp(1.35rem, 3.6vw, 4.5rem)" }}
+            >
+              {activeItem.title}
+            </h2>
           </div>
-          <div className="rounded-[2.5rem] border border-amber-100/45 bg-amber-300/20 p-8 text-center shadow-2xl shadow-blue-950/20 backdrop-blur">
-            <p className="text-sm font-black uppercase tracking-[0.34em] text-amber-100">Hazırlan</p>
-            <p className="mt-5 text-[10rem] font-black leading-none tabular-nums text-white">
+          <div className="flex shrink-0 flex-col justify-center rounded-[clamp(1.25rem,2.5vw,2.5rem)] border border-amber-100/45 bg-amber-300/20 p-4 text-center shadow-2xl shadow-blue-950/20 backdrop-blur md:p-6">
+            <p className="text-xs font-black uppercase tracking-[0.34em] text-amber-100 md:text-sm">Hazırlan</p>
+            <p
+              className="mt-2 font-black leading-none tabular-nums text-white md:mt-4"
+              style={{ fontSize: "clamp(4rem, 16vw, 9rem)" }}
+            >
               {introRemainingSeconds ?? QUIZ_INTRO_SECONDS}
             </p>
-            <p className="mt-5 text-2xl font-black text-slate-100">Şıklar birazdan açılacak</p>
+            <p className="mt-3 text-lg font-black text-slate-100 md:mt-4 md:text-xl">Şıklar birazdan açılacak</p>
           </div>
         </section>
       ) : null}
 
       {state.phase === "quiz" && activeItem.type === "quiz" ? (
         shouldShowQuizDistribution ? (
-          <section className="space-y-5">
-            <div className="relative overflow-hidden rounded-[2rem] border border-white/25 bg-white/[0.16] p-6 shadow-2xl shadow-blue-950/25 backdrop-blur md:p-8">
+          <section className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden md:gap-2.5">
+            <div className="relative shrink-0 overflow-hidden rounded-[clamp(0.85rem,1.5vw,1.25rem)] border border-white/25 bg-white/[0.16] p-2.5 shadow-xl shadow-blue-950/25 backdrop-blur md:p-3">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
-              <div className="relative flex flex-wrap items-start justify-between gap-5">
+              <div className="relative flex items-start justify-between gap-2 md:gap-3">
                 <div className="min-w-0 flex-1">
-                  <StageBadge label={`Soru ${activeQuizPosition?.current ?? activeItem.quizNumber} / ${activeQuizPosition?.total ?? activeItem.quizNumber}`} />
-                  <p className="mt-5 text-sm font-black uppercase tracking-[0.28em] text-amber-100">{activeItem.stage}</p>
-                  <h2 className="mt-3 text-4xl font-black leading-tight text-white md:text-6xl">{activeItem.title}</h2>
+                  <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                    <StageBadge label={`Soru ${activeQuizPosition?.current ?? activeItem.quizNumber} / ${activeQuizPosition?.total ?? activeItem.quizNumber}`} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-100 md:text-xs">{activeItem.stage}</span>
+                  </div>
+                  <h2 className="mt-1 line-clamp-2 text-base font-black leading-snug text-white md:mt-1.5 md:text-xl lg:text-2xl">
+                    {activeItem.title}
+                  </h2>
                 </div>
-                <div className="rounded-2xl border border-white/20 bg-white/[0.12] px-5 py-4 text-right shadow-xl shadow-blue-900/15">
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100">Konu</p>
-                  <p className="mt-1 text-2xl font-black text-white">{activeItem.topic}</p>
+                <div className="shrink-0 rounded-lg border border-white/20 bg-white/[0.12] px-2 py-1.5 text-right shadow-md md:px-3 md:py-2">
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-100 md:text-[10px]">Konu</p>
+                  <p className="mt-0.5 max-w-[8rem] truncate text-xs font-black text-white md:max-w-[10rem] md:text-sm">{activeItem.topic}</p>
                 </div>
               </div>
             </div>
-            <AnswerDistributionChart state={state} question={activeItem} />
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <AnswerDistributionChart state={state} question={activeItem} />
+            </div>
           </section>
         ) : null
       ) : null}
 
       {state.phase === "infoSlide" && activeItem.type === "infoSlide" ? (
-        <section className="grid min-h-[68vh] items-center gap-8 xl:grid-cols-[1fr_0.85fr]">
-          <div>
+        <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden xl:grid xl:grid-cols-[1fr_0.85fr] xl:items-center xl:gap-6">
+          <div className="min-h-0 shrink-0 xl:overflow-y-auto xl:pr-1">
             <StageBadge label="Bilgilendirme" tone="blue" />
-            <h2 className="mt-6 text-6xl font-black leading-tight text-white md:text-8xl">{activeItem.title}</h2>
-            <p className="mt-8 text-3xl font-semibold leading-relaxed text-slate-200">{activeItem.description}</p>
+            <h2
+              className="mt-3 font-black leading-tight text-white md:mt-4"
+              style={{ fontSize: "clamp(1.35rem, 3.5vw, 4.5rem)" }}
+            >
+              {activeItem.title}
+            </h2>
+            <p className="mt-4 text-base font-semibold leading-relaxed text-slate-200 md:mt-5 md:text-xl lg:text-2xl">{activeItem.description}</p>
           </div>
-          <div className="rounded-[3rem] border border-sky-100/30 bg-white/[0.12] p-8 shadow-2xl shadow-blue-950/20 backdrop-blur">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[clamp(1.25rem,2.5vw,3rem)] border border-sky-100/30 bg-white/[0.12] p-4 shadow-2xl shadow-blue-950/20 backdrop-blur md:p-6">
             {activeItem.imageUrl ? (
-              <img src={activeItem.imageUrl} alt="" className="h-full max-h-[560px] w-full rounded-[2rem] object-cover" />
+              <img src={activeItem.imageUrl} alt="" className="max-h-[42dvh] w-full flex-1 rounded-[clamp(1rem,2vw,2rem)] object-contain md:max-h-[45dvh]" />
             ) : (
-              <div className="flex min-h-[420px] items-center justify-center rounded-[2rem] border border-white/20 bg-white/[0.12] p-8 text-center">
-                <p className="text-5xl font-black leading-tight text-amber-200">Bil, Fark Et, Güvenli Karar Ver</p>
+              <div className="flex min-h-[12rem] flex-1 items-center justify-center rounded-[clamp(1rem,2vw,2rem)] border border-white/20 bg-white/[0.12] p-4 text-center md:min-h-[14rem] md:p-6">
+                <p className="text-2xl font-black leading-tight text-amber-200 md:text-4xl">Bil, Fark Et, Güvenli Karar Ver</p>
               </div>
             )}
           </div>
@@ -247,60 +298,69 @@ export default function ScreenPage() {
       ) : null}
 
       {state.phase === "mediaSlide" && activeItem.type === "mediaSlide" ? (
-        <section className="space-y-6">
-          <div>
+        <section className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden md:gap-4">
+          <div className="shrink-0">
             <StageBadge label="Medya Slaytı" tone="blue" />
-            <h2 className="mt-4 text-6xl font-black text-white">{activeItem.title}</h2>
-            <p className="mt-3 text-2xl font-semibold text-slate-300">{activeItem.description}</p>
+            <h2 className="mt-2 text-3xl font-black text-white md:mt-3 md:text-4xl lg:text-5xl">{activeItem.title}</h2>
+            <p className="mt-2 text-base font-semibold text-slate-300 md:text-lg lg:text-xl">{activeItem.description}</p>
             {!activeItem.uploadedImageDataUrl && activeItem.mediaUrl ? (
               <a
                 href={activeItem.mediaUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-4 block break-all rounded-2xl border border-sky-300/25 bg-sky-400/10 p-4 text-xl font-black text-sky-100"
+                className="mt-2 block break-all rounded-xl border border-sky-300/25 bg-sky-400/10 p-3 text-sm font-black text-sky-100 md:mt-3 md:rounded-2xl md:p-4 md:text-base"
               >
                 Medya URL: {activeItem.mediaUrl}
               </a>
             ) : null}
           </div>
-          <div className="overflow-hidden rounded-[2.5rem] border border-white/10 bg-slate-950 shadow-2xl">
+          <div className="min-h-0 flex-1 overflow-hidden rounded-[clamp(1rem,2vw,2.5rem)] border border-white/10 bg-slate-950 shadow-2xl">
             {activeItem.uploadedImageDataUrl ? (
-              <img src={activeItem.uploadedImageDataUrl} alt="" className="max-h-[68vh] w-full object-contain" />
+              <img src={activeItem.uploadedImageDataUrl} alt="" className="max-h-[55dvh] w-full object-contain md:max-h-[58dvh]" />
             ) : activeItem.mediaType === "youtube" ? (
               <iframe
                 title={activeItem.title}
                 src={getYoutubeEmbedUrl(activeItem.mediaUrl)}
-                className="aspect-video w-full"
+                className="aspect-video max-h-[52dvh] w-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
             ) : (
-              <img src={activeItem.mediaUrl} alt="" className="max-h-[68vh] w-full object-cover" />
+              <img src={activeItem.mediaUrl} alt="" className="max-h-[55dvh] w-full object-cover md:max-h-[58dvh]" />
             )}
           </div>
         </section>
       ) : null}
 
       {state.phase === "forkliftChallenge" && activeItem.type === "forkliftChallenge" ? (
-        <section className="grid min-h-[68vh] items-center gap-8 xl:grid-cols-[1fr_0.8fr]">
-          <div>
+        <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden xl:grid xl:grid-cols-[1fr_0.8fr] xl:items-center xl:gap-6">
+          <div className="min-h-0 shrink-0 xl:overflow-y-auto xl:pr-1">
             <StageBadge label="Final özel etap" tone="red" />
-            <h2 className="mt-6 text-6xl font-black leading-tight text-white md:text-8xl">{activeItem.title}</h2>
-            <p className="mt-6 text-3xl font-black text-amber-200">{activeItem.message}</p>
-            <p className="mt-5 text-2xl font-semibold leading-relaxed text-slate-300">{activeItem.description}</p>
+            <h2
+              className="mt-3 font-black leading-tight text-white md:mt-4"
+              style={{ fontSize: "clamp(1.35rem, 3.5vw, 4.5rem)" }}
+            >
+              {activeItem.title}
+            </h2>
+            <p className="mt-3 text-xl font-black text-amber-200 md:mt-4 md:text-2xl">{activeItem.message}</p>
+            <p className="mt-3 text-base font-semibold leading-relaxed text-slate-300 md:mt-4 md:text-lg">{activeItem.description}</p>
           </div>
-          <div className="rounded-[3rem] border border-emerald-100/35 bg-emerald-300/15 p-8 text-center shadow-2xl shadow-blue-950/20 backdrop-blur">
-            <p className="text-sm font-black uppercase tracking-[0.34em] text-emerald-200">Canlı final durumu</p>
-            <p className="mt-6 text-8xl font-black text-white">{answeredCount}</p>
-            <p className="mt-3 text-3xl font-black text-slate-200">/{state.teams.length} takım parkuru tamamladı</p>
-            <div className="mt-8">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[clamp(1.25rem,2.5vw,3rem)] border border-emerald-100/35 bg-emerald-300/15 p-4 text-center shadow-2xl shadow-blue-950/20 backdrop-blur md:p-6">
+            <p className="text-xs font-black uppercase tracking-[0.34em] text-emerald-200 md:text-sm">Canlı final durumu</p>
+            <p className="mt-3 text-5xl font-black text-white md:mt-4 md:text-6xl lg:text-7xl">{answeredCount}</p>
+            <p className="mt-2 text-lg font-black text-slate-200 md:text-xl">/{state.teams.length} takım parkuru tamamladı</p>
+            <div className="mt-3 min-h-0 flex-1 overflow-y-auto overflow-x-hidden md:mt-4">
               <Leaderboard teams={leaderboard} title="Final Skorları" limit={3} />
             </div>
           </div>
         </section>
       ) : null}
 
-      {state.phase === "finished" ? <Podium teams={leaderboard} settings={state.settings} /> : null}
+      {state.phase === "finished" ? (
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto pr-1">
+          <Podium teams={leaderboard} settings={state.settings} />
+        </div>
+      ) : null}
     </ProjectionFrame>
   );
 }
