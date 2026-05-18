@@ -16,11 +16,18 @@ import {
 } from "@/lib/game-state";
 import type { GameAction } from "@/lib/game-actions";
 import {
+  createGameStateFromSavedCompetition,
+  loadSavedCompetition,
+  saveCurrentCompetition,
+  type SavedCompetition,
+} from "@/lib/competition-library";
+import {
   clearTeamSession,
   dispatchGameAction,
   fetchGameState,
   getTeamSession,
   loadGameState,
+  replaceGameState,
   saveTeamSession,
   subscribeGameState,
 } from "@/lib/game-store";
@@ -221,6 +228,30 @@ export function useGameState() {
     void runAction({ type: "restoreDefaultFlow" });
   }, [runAction]);
 
+  const saveCompetitionToLibrary = useCallback(
+    (name: string): SavedCompetition => {
+      return saveCurrentCompetition(state, name);
+    },
+    [state],
+  );
+
+  const openSavedCompetition = useCallback(async (id: string) => {
+    const saved = loadSavedCompetition(id);
+    if (!saved) {
+      return { ok: false, message: "Kayıtlı yarışma bulunamadı." };
+    }
+
+    const nextState = createGameStateFromSavedCompetition(saved);
+    const result = await replaceGameState(nextState);
+    if (result.ok) {
+      clearTeamSession();
+      setState(result.state);
+      setSessionTick((value) => value + 1);
+    }
+
+    return { ok: result.ok, message: result.message };
+  }, []);
+
   const submitQuizAnswer = useCallback(
     async (optionId: AnswerId): Promise<SubmitResult> => {
       const session = getTeamSession();
@@ -286,6 +317,8 @@ export function useGameState() {
     duplicateFlowItem,
     moveFlowItem,
     restoreDefaultFlow,
+    saveCompetitionToLibrary,
+    openSavedCompetition,
     submitQuizAnswer,
     submitForkliftRun,
   };
