@@ -22,6 +22,13 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 
 const answerOptionIds: AnswerId[] = ["A", "B", "C", "D"];
+type AdminTab = "competition" | "settings" | "library";
+
+const adminTabs: { id: AdminTab; label: string }[] = [
+  { id: "competition", label: "Yarışma" },
+  { id: "settings", label: "Ayarlar" },
+  { id: "library", label: "Kütüphane" },
+];
 
 const phaseLabels: Record<GamePhase, string> = {
   lobby: "Lobi",
@@ -110,7 +117,7 @@ function AdminAnswerBreakdown({ breakdown }: { breakdown: QuizAnswerBreakdown })
   };
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <section className="rounded-lg border border-slate-200 bg-slate-50 p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h4 className="text-sm font-semibold text-slate-800">Cevap dökümü</h4>
         <span className="text-xs font-medium text-slate-500">
@@ -164,7 +171,7 @@ function ControlButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full py-3 px-4 font-medium text-sm rounded-xl transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-40 ${variants[variant]} ${className}`}
+      className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-40 ${variants[variant]} ${className}`}
     >
       {children}
     </button>
@@ -181,8 +188,7 @@ function formatSavedDate(timestamp: number) {
 }
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<"competition" | "settings">("competition");
-  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<AdminTab>("competition");
   const [competitionSaveName, setCompetitionSaveName] = useState("");
   const [savedCompetitions, setSavedCompetitions] = useState<SavedCompetition[]>([]);
   const [libraryMessage, setLibraryMessage] = useState<string | null>(null);
@@ -218,14 +224,15 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    if (libraryOpen) {
+    if (activeTab === "library") {
       refreshSavedCompetitions();
     }
-  }, [libraryOpen]);
+  }, [activeTab]);
 
   const handleSaveCompetition = () => {
     try {
-      saveCompetitionToLibrary(competitionSaveName);
+      const fallbackName = state.settings.welcomeTitle || `${state.settings.customerName} Yarışması`;
+      saveCompetitionToLibrary(competitionSaveName.trim() || fallbackName);
       setLibraryMessage("Yarışma kaydedildi.");
       setCompetitionSaveName("");
       refreshSavedCompetitions();
@@ -246,7 +253,7 @@ export default function AdminPage() {
     const result = await openSavedCompetition(id);
     setLibraryMessage(result.ok ? "Yarışma yüklendi." : result.message ?? "Yükleme başarısız.");
     if (result.ok) {
-      setLibraryOpen(false);
+      setActiveTab("competition");
     }
   };
 
@@ -263,6 +270,8 @@ export default function AdminPage() {
   const formattedPin = formatPin(state.settings.gamePin);
   const brand = resolveBrandSettings(state.settings);
   const rankedLeaderboard = [...leaderboard].sort((a, b) => b.score - a.score).slice(0, 5);
+  const quizItemCount = state.flowItems.filter((item) => item.type === "quiz").length;
+  const contentItemCount = state.flowItems.length - quizItemCount;
 
   const patchActiveQuiz = (patch: Partial<QuizFlowItem>) => {
     if (!hasFlowItems || activeItem.type !== "quiz") {
@@ -289,202 +298,127 @@ export default function AdminPage() {
         : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-100">
-      {/* Top bar */}
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-md">
+    <div className="flex min-h-screen flex-col bg-[#f5f7fb] text-slate-950">
+      <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur lg:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-950 shadow-sm">
             <span className="text-sm font-bold text-white">{getProductBrandInitials(brand.productBrandName)}</span>
           </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg font-bold leading-tight text-slate-800">{brand.productBrandName}</h1>
-              <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">{brand.customerName}</span>
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="truncate text-lg font-bold leading-tight text-slate-950">{brand.productBrandName}</h1>
+              <span className="hidden rounded-full border border-blue-100 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700 sm:inline-flex">
+                {brand.customerName}
+              </span>
             </div>
-            <p className="text-xs text-slate-500">ISG Arena · Kontrol Masası</p>
+            <p className="truncate text-xs text-slate-500">ISG Arena · Premium quiz creator</p>
           </div>
         </div>
 
-        <div className="flex items-center rounded-xl bg-slate-100 p-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab("competition")}
-            className={`rounded-lg px-6 py-2 text-sm font-medium transition-all ${
-              activeTab === "competition" ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-800"
-            }`}
-          >
-            Yarışma
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("settings")}
-            className={`rounded-lg px-6 py-2 text-sm font-medium transition-all ${
-              activeTab === "settings" ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-800"
-            }`}
-          >
-            Ayarlar
-          </button>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setLibraryOpen((open) => !open)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 lg:hidden"
-          >
-            Kayıtlı
-          </button>
-          <div className="relative hidden lg:block">
+        <nav className="hidden items-center rounded-lg border border-slate-200 bg-slate-100 p-1 md:flex">
+          {adminTabs.map((tab) => (
             <button
+              key={tab.id}
               type="button"
-              onClick={() => setLibraryOpen((open) => !open)}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:text-blue-700"
+              onClick={() => setActiveTab(tab.id)}
+              className={`rounded-md px-5 py-2 text-sm font-semibold transition-all ${
+                activeTab === tab.id ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-900"
+              }`}
             >
-              Kayıtlı Yarışmalar
+              {tab.label}
             </button>
-            {libraryOpen ? (
-              <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-slate-800">Yarışma kütüphanesi</h3>
-                  <button type="button" onClick={() => setLibraryOpen(false)} className="rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100">
-                    Kapat
-                  </button>
-                </div>
-                <label className="block">
-                  <span className="text-xs font-medium text-slate-500">Kayıt adı</span>
-                  <input
-                    value={competitionSaveName}
-                    onChange={(event) => setCompetitionSaveName(event.target.value)}
-                    placeholder={state.settings.welcomeTitle || "Yarışma adı"}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                  />
-                </label>
-                <button type="button" onClick={handleSaveCompetition} className="mt-2 w-full rounded-xl bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
-                  Mevcut yarışmayı kaydet
-                </button>
-                {libraryMessage ? <p className="mt-2 text-xs font-medium text-slate-600">{libraryMessage}</p> : null}
-                <div className="mt-4 max-h-56 space-y-2 overflow-y-auto border-t border-slate-100 pt-3">
-                  {savedCompetitions.length ? (
-                    savedCompetitions.map((entry) => (
-                      <div key={entry.id} className="flex items-start justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-slate-800">{entry.name}</p>
-                          <p className="mt-0.5 text-xs text-slate-500">{entry.flowItems.length} öğe · {formatSavedDate(entry.updatedAt)}</p>
-                        </div>
-                        <button type="button" onClick={() => void handleOpenSavedCompetition(entry.id)} className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-blue-600 ring-1 ring-slate-200 hover:bg-blue-50">
-                          Aç
-                        </button>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-xs text-slate-500">Henüz kayıtlı yarışma yok.</p>
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </div>
+          ))}
+        </nav>
+
+        <div className="flex shrink-0 items-center gap-2">
           <div
-            className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ${
-              isLiveSession ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+            className={`hidden items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold lg:flex ${
+              isLiveSession ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"
             }`}
           >
             <span className={`h-2 w-2 rounded-full ${isLiveSession ? "animate-pulse bg-emerald-500" : "bg-amber-500"}`} />
             {isLiveSession ? "Canlı" : state.phase === "finished" ? "Kapalı" : "Hazırlık"}
           </div>
-
-          <div className="rounded-lg bg-slate-800 px-4 py-1.5 font-mono text-sm font-bold tracking-wider text-white">
-            PIN: {formattedPin}
+          <div className="rounded-lg border border-slate-200 bg-slate-950 px-3 py-1.5 font-mono text-sm font-bold tracking-wider text-white">
+            PIN {formattedPin}
           </div>
-
-          <div className="hidden h-8 w-px bg-slate-200 lg:block" />
-
           <button
             type="button"
             onClick={() => window.open("/screen", "_blank")}
-            className="hidden rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-800 sm:block"
+            className="hidden rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 sm:block"
           >
             Ön İzle
           </button>
           <button
             type="button"
+            onClick={handleSaveCompetition}
+            className="hidden rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 lg:block"
+          >
+            Kaydet
+          </button>
+          <button
+            type="button"
             onClick={openLobby}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-blue-700"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
           >
             Lobiyi Aç
           </button>
           <button
             type="button"
             onClick={() => downloadResultsCsv(state)}
-            className="hidden rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-800 md:block"
+            className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 xl:block"
           >
-            CSV İndir
+            CSV
           </button>
           <Link
             href="/"
-            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700"
+            className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 md:block"
           >
             Çık
           </Link>
         </div>
       </header>
 
-      {libraryOpen ? (
-        <div className="border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
-          <div className="mx-auto max-w-lg space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-800">Yarışma kütüphanesi</h3>
-              <button type="button" onClick={() => setLibraryOpen(false)} className="text-xs text-slate-500">
-                Kapat
-              </button>
-            </div>
-            <label className="block">
-              <span className="text-xs font-medium text-slate-500">Kayıt adı</span>
-              <input
-                value={competitionSaveName}
-                onChange={(event) => setCompetitionSaveName(event.target.value)}
-                placeholder={state.settings.welcomeTitle || "Yarışma adı"}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-              />
-            </label>
-            <button type="button" onClick={handleSaveCompetition} className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-medium text-white">
-              Mevcut yarışmayı kaydet
-            </button>
-            {libraryMessage ? <p className="text-xs text-slate-600">{libraryMessage}</p> : null}
-            <div className="max-h-40 space-y-2 overflow-y-auto">
-              {savedCompetitions.length ? (
-                savedCompetitions.map((entry) => (
-                  <div key={entry.id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 p-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-800">{entry.name}</p>
-                      <p className="text-xs text-slate-500">{entry.flowItems.length} öğe</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => void handleOpenSavedCompetition(entry.id)}
-                      className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white"
-                    >
-                      Aç
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-xs text-slate-500">Henüz kayıtlı yarışma yok.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <nav className="flex shrink-0 border-b border-slate-200 bg-white px-2 py-2 md:hidden">
+        {adminTabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${
+              activeTab === tab.id ? "bg-slate-950 text-white" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
 
       {activeTab === "competition" ? (
         <div className="flex flex-1 overflow-hidden">
           {/* Left — flow */}
-          <aside className="flex w-72 shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm">
+          <aside className="hidden w-80 shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm lg:flex">
             <div className="border-b border-slate-100 p-4">
-              <h2 className="text-sm font-semibold text-slate-800">Yarışma Akışı</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                {state.flowItems.length} öğe · {phaseLabels[state.phase]}
-                {timerHint ? ` · ${timerHint}` : ""}
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Yarışma Akışı</p>
+                  <h2 className="mt-1 text-base font-bold text-slate-950">{state.flowItems.length} öğe</h2>
+                </div>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                  {phaseLabels[state.phase]}
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-lg font-bold text-slate-950">{quizItemCount}</p>
+                  <p className="text-[11px] font-semibold text-slate-500">Soru</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-lg font-bold text-slate-950">{contentItemCount}</p>
+                  <p className="text-[11px] font-semibold text-slate-500">İçerik</p>
+                </div>
+              </div>
+              {timerHint ? <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">{timerHint}</p> : null}
             </div>
 
             <div className="flex-1 space-y-2 overflow-y-auto p-3">
@@ -494,15 +428,15 @@ export default function AdminPage() {
                   return (
                     <div
                       key={item.id}
-                      className={`rounded-xl border-2 transition-all ${
-                        isActive ? "border-blue-500 bg-blue-50 shadow-sm" : "border-transparent bg-slate-50 hover:border-slate-200"
+                      className={`group rounded-lg border transition-all ${
+                        isActive ? "border-blue-500 bg-blue-50 shadow-sm" : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
                       }`}
                     >
                       <button type="button" onClick={() => goToItem(index)} className="w-full p-3 text-left">
                         <div className="flex items-start gap-3">
                           <div
-                            className={`flex h-12 w-12 items-center justify-center rounded-lg text-xl ${
-                              isActive ? "bg-blue-100" : "bg-white"
+                            className={`flex h-10 w-10 items-center justify-center rounded-lg border text-lg ${
+                              isActive ? "border-blue-200 bg-white" : "border-slate-200 bg-slate-50"
                             }`}
                           >
                             {flowThumbnails[item.type]}
@@ -532,7 +466,7 @@ export default function AdminPage() {
                           title="Yukarı"
                           disabled={index === 0}
                           onClick={() => moveFlowItem(item.id, -1)}
-                          className="flex-1 rounded-lg py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+                          className="flex-1 rounded-md py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 disabled:opacity-30"
                         >
                           ↑
                         </button>
@@ -541,7 +475,7 @@ export default function AdminPage() {
                           title="Aşağı"
                           disabled={index === state.flowItems.length - 1}
                           onClick={() => moveFlowItem(item.id, 1)}
-                          className="flex-1 rounded-lg py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+                          className="flex-1 rounded-md py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 disabled:opacity-30"
                         >
                           ↓
                         </button>
@@ -549,7 +483,7 @@ export default function AdminPage() {
                           type="button"
                           title="Çoğalt"
                           onClick={() => duplicateFlowItem(item.id)}
-                          className="flex-1 rounded-lg py-1 text-xs font-medium text-slate-500 hover:bg-slate-100"
+                          className="flex-1 rounded-md py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100"
                         >
                           ⧉
                         </button>
@@ -561,7 +495,7 @@ export default function AdminPage() {
                               deleteFlowItem(item.id);
                             }
                           }}
-                          className="flex-1 rounded-lg py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+                          className="flex-1 rounded-md py-1 text-xs font-semibold text-red-500 hover:bg-red-50"
                         >
                           ✕
                         </button>
@@ -570,7 +504,7 @@ export default function AdminPage() {
                   );
                 })
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-300 p-4 text-center">
+                <div className="rounded-lg border border-dashed border-slate-300 p-4 text-center">
                   <p className="text-sm font-medium text-slate-600">Akış boş</p>
                   <button
                     type="button"
@@ -589,7 +523,7 @@ export default function AdminPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab("settings")}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-100 py-3 px-4 text-sm font-medium text-slate-700 transition-all hover:bg-slate-200"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
               >
                 <span className="text-lg">+</span>
                 Öğe Ekle / Düzenle
@@ -598,18 +532,30 @@ export default function AdminPage() {
           </aside>
 
           {/* Center — canvas */}
-          <main className="flex-1 overflow-y-auto bg-slate-100 p-6 lg:p-8">
-            <div className="mx-auto max-w-4xl">
+          <main className="flex-1 overflow-y-auto bg-[#f5f7fb] p-4 lg:p-6">
+            <div className="mx-auto max-w-5xl">
               {!hasFlowItems ? (
-                <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-                  <h2 className="text-xl font-semibold text-slate-800">Yarışma akışında içerik yok</h2>
+                <div className="rounded-lg border border-slate-200 bg-white p-10 text-center shadow-sm">
+                  <h2 className="text-xl font-semibold text-slate-950">Yarışma akışında içerik yok</h2>
                   <p className="mt-2 text-sm text-slate-500">Sol panelden varsayılan akışı yükleyin veya Ayarlar sekmesinden öğe ekleyin.</p>
                 </div>
               ) : activeItem.type === "quiz" ? (
                 <>
-                  <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Editör Canvas</p>
+                      <h2 className="mt-1 text-xl font-bold text-slate-950">{getQuestionLabel(activeItem, state)}</h2>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm">
+                      <span>Akış {activeIndexLabel}</span>
+                      <span className="text-slate-300">/</span>
+                      <span>{activeItem.timeLimitSeconds} sn</span>
+                    </div>
+                  </div>
+
+                  <div className="mb-5 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
                     <div className="mb-4 flex flex-wrap items-center gap-3">
-                      <span className="rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-400">
+                      <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500">
                         {activeQuizPosition ? `SORU ${activeQuizPosition.current}` : getQuestionLabel(activeItem, state).toUpperCase()}
                       </span>
                       <span className="text-xs text-slate-400">•</span>
@@ -621,19 +567,19 @@ export default function AdminPage() {
                       type="text"
                       value={activeItem.title}
                       onChange={(event) => patchActiveQuiz({ title: event.target.value })}
-                      className="w-full border-none bg-transparent text-xl font-semibold text-slate-800 outline-none placeholder:text-slate-400"
+                      className="w-full border-none bg-transparent text-2xl font-bold leading-tight text-slate-950 outline-none placeholder:text-slate-400"
                       placeholder="Sorunuzu buraya yazın..."
                     />
                     {activeItem.explanation && state.showCorrectAnswer ? (
-                      <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                      <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
                         {activeItem.explanation}
                       </p>
                     ) : null}
                   </div>
 
-                  <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="rounded-xl border-2 border-dashed border-slate-200 p-8 text-center">
-                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+                  <div className="mb-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-white shadow-sm">
                         <svg className="h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                           <path
                             strokeLinecap="round"
@@ -656,7 +602,7 @@ export default function AdminPage() {
                       return (
                         <div
                           key={optionId}
-                          className={`relative rounded-2xl p-6 text-left transition-all ${isCorrect ? styles.active : styles.base}`}
+                          className={`relative min-h-28 rounded-lg p-5 text-left shadow-sm transition-all ${isCorrect ? styles.active : styles.base}`}
                         >
                           {isCorrect ? (
                             <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-white">
@@ -667,7 +613,7 @@ export default function AdminPage() {
                             <button
                               type="button"
                               onClick={() => patchActiveQuiz({ correctOptionId: optionId })}
-                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20 text-lg font-bold text-white"
+                              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/20 text-lg font-bold text-white"
                             >
                               {optionId}
                             </button>
@@ -686,24 +632,24 @@ export default function AdminPage() {
                 </>
               ) : (
                 <div className="space-y-6">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
                     <div className="mb-4 flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
                         {flowTypeLabels[activeItem.type]}
                       </span>
                       <span className="text-xs text-slate-400">Akış {activeIndexLabel}</span>
                     </div>
-                    <h2 className="text-2xl font-semibold text-slate-800">{activeItem.title}</h2>
+                    <h2 className="text-2xl font-bold text-slate-950">{activeItem.title}</h2>
                     <p className="mt-4 text-base leading-relaxed text-slate-600">
                       {"description" in activeItem ? activeItem.description : "Final etap hazır."}
                     </p>
                     {activeItem.type === "forkliftChallenge" ? (
-                      <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-base font-semibold text-amber-800">
+                      <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-base font-semibold text-amber-800">
                         {activeItem.message}
                       </p>
                     ) : null}
                     {activeItem.type === "mediaSlide" && (activeItem.mediaUrl || activeItem.uploadedImageDataUrl) ? (
-                      <p className="mt-4 break-all rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                      <p className="mt-4 break-all rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
                         {activeItem.mediaUrl || "Yüklenen görsel"}
                       </p>
                     ) : null}
@@ -717,14 +663,17 @@ export default function AdminPage() {
           </main>
 
           {/* Right — inspector */}
-          <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-sm">
+          <aside className="hidden w-96 shrink-0 flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-sm xl:flex">
             {hasFlowItems && activeItem.type === "quiz" ? (
               <div className="border-b border-slate-100 p-5">
-                <h3 className="mb-4 text-sm font-semibold text-slate-800">Soru Ayarları</h3>
+                <div className="mb-4">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Sağ Panel</p>
+                  <h3 className="mt-1 text-base font-bold text-slate-950">Soru Ayarları</h3>
+                </div>
                 <div className="space-y-4">
                   <div>
                     <label className="mb-2 block text-xs font-medium text-slate-500">Soru tipi</label>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">Çoktan seçmeli</div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">Çoktan seçmeli</div>
                   </div>
 
                   <div>
@@ -770,7 +719,7 @@ export default function AdminPage() {
                           key={answer}
                           type="button"
                           onClick={() => patchActiveQuiz({ correctOptionId: answer })}
-                          className={`h-10 w-10 rounded-xl font-bold transition-all ${
+                          className={`h-10 w-10 rounded-lg font-bold transition-all ${
                             activeItem.correctOptionId === answer
                               ? correctAnswerChipStyles[answer]
                               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -785,7 +734,7 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="border-b border-slate-100 p-5">
-                <h3 className="text-sm font-semibold text-slate-800">Aktif öğe</h3>
+                <h3 className="text-sm font-bold text-slate-950">Aktif öğe</h3>
                 <p className="mt-2 text-sm text-slate-500">
                   {hasFlowItems ? `${flowTypeLabels[activeItem.type]} · ${activeItem.title}` : "Öğe seçilmedi"}
                 </p>
@@ -793,7 +742,12 @@ export default function AdminPage() {
             )}
 
             <div className="border-b border-slate-100 p-5">
-              <h3 className="mb-4 text-sm font-semibold text-slate-800">Canlı Kontroller</h3>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h3 className="text-base font-bold text-slate-950">Canlı Kontroller</h3>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                  {phaseLabels[state.phase]}
+                </span>
+              </div>
               <div className="space-y-2">
                 <ControlButton variant="primary" onClick={startActiveItem} disabled={!hasFlowItems}>
                   Soruyu / Slaytı Başlat
@@ -832,17 +786,17 @@ export default function AdminPage() {
 
             <div className="border-b border-slate-100 p-5">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-800">Katılımcılar</h3>
-                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
+                <h3 className="text-sm font-bold text-slate-950">Katılımcılar</h3>
+                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
                   {state.teams.length} takım
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-emerald-50 p-3 text-center">
+                <div className="rounded-lg bg-emerald-50 p-3 text-center">
                   <p className="text-2xl font-bold text-emerald-600">{displayedAnsweredCount}</p>
                   <p className="text-xs text-emerald-700">Cevapladı</p>
                 </div>
-                <div className="rounded-xl bg-amber-50 p-3 text-center">
+                <div className="rounded-lg bg-amber-50 p-3 text-center">
                   <p className="text-2xl font-bold text-amber-600">{waitingCount}</p>
                   <p className="text-xs text-amber-700">Bekliyor</p>
                 </div>
@@ -855,7 +809,7 @@ export default function AdminPage() {
             </div>
 
             <div className="flex-1 p-5">
-              <h3 className="mb-4 text-sm font-semibold text-slate-800">Lider Tablosu</h3>
+              <h3 className="mb-4 text-sm font-bold text-slate-950">Lider Tablosu</h3>
               {rankedLeaderboard.length ? (
                 <div className="space-y-2">
                   {rankedLeaderboard.map((player, index) => {
@@ -869,7 +823,7 @@ export default function AdminPage() {
                     return (
                       <div
                         key={player.id}
-                        className={`flex items-center gap-3 rounded-xl p-2.5 transition-all ${rank <= 3 ? "bg-slate-50" : ""}`}
+                        className={`flex items-center gap-3 rounded-lg p-2.5 transition-all ${rank <= 3 ? "bg-slate-50" : ""}`}
                       >
                         <span
                           className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
@@ -901,8 +855,134 @@ export default function AdminPage() {
             </div>
           </aside>
         </div>
+      ) : activeTab === "library" ? (
+        <main className="flex-1 overflow-y-auto bg-[#f5f7fb] p-4 lg:p-8">
+          <div className="mx-auto max-w-7xl space-y-6">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Yarışma Kütüphanesi</p>
+                <h2 className="mt-1 text-2xl font-bold text-slate-950">Creator taslakları</h2>
+                <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                  Kayıtlı yarışmaları açabilir veya mevcut akışı yerel kütüphaneye ekleyebilirsiniz.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  restoreDefaultFlow();
+                  setActiveTab("competition");
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-700"
+              >
+                Varsayılan akışı yükle
+              </button>
+            </div>
+
+            <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
+              <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-950">Mevcut yarışma</h3>
+                    <p className="mt-1 text-sm text-slate-500">{brand.customerName}</p>
+                  </div>
+                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                    {state.flowItems.length} öğe
+                  </span>
+                </div>
+
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-2xl font-bold text-slate-950">{quizItemCount}</p>
+                    <p className="text-xs font-semibold text-slate-500">Soru</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-2xl font-bold text-slate-950">{contentItemCount}</p>
+                    <p className="text-xs font-semibold text-slate-500">İçerik</p>
+                  </div>
+                </div>
+
+                <label className="mt-5 block">
+                  <span className="text-xs font-semibold text-slate-500">Kayıt adı</span>
+                  <input
+                    value={competitionSaveName}
+                    onChange={(event) => setCompetitionSaveName(event.target.value)}
+                    placeholder={state.settings.welcomeTitle || "Yarışma adı"}
+                    className="mt-1.5 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={handleSaveCompetition}
+                  className="mt-3 w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Mevcut yarışmayı kaydet
+                </button>
+                {libraryMessage ? <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600">{libraryMessage}</p> : null}
+              </section>
+
+              <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-950">Kayıtlı yarışmalar</h3>
+                    <p className="mt-1 text-sm text-slate-500">{savedCompetitions.length} kayıt</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={refreshSavedCompetitions}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    Yenile
+                  </button>
+                </div>
+
+                {savedCompetitions.length ? (
+                  <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                    {savedCompetitions.map((entry) => {
+                      const entryQuizCount = entry.flowItems.filter((item) => item.type === "quiz").length;
+                      return (
+                        <article key={entry.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-white hover:shadow-sm">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-base font-bold text-slate-950">{entry.name}</p>
+                              <p className="mt-1 text-xs font-medium text-slate-500">{formatSavedDate(entry.updatedAt)}</p>
+                            </div>
+                            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                              Taslak
+                            </span>
+                          </div>
+                          <div className="mt-4 grid grid-cols-2 gap-2">
+                            <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200">
+                              <p className="text-lg font-bold text-slate-950">{entryQuizCount}</p>
+                              <p className="text-xs text-slate-500">Soru</p>
+                            </div>
+                            <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200">
+                              <p className="text-lg font-bold text-slate-950">{entry.flowItems.length}</p>
+                              <p className="text-xs text-slate-500">Toplam öğe</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void handleOpenSavedCompetition(entry.id)}
+                            className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                          >
+                            Düzenle
+                          </button>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+                    <p className="text-base font-bold text-slate-800">Henüz kayıtlı yarışma yok</p>
+                    <p className="mt-2 text-sm text-slate-500">Mevcut yarışmayı kaydederek bu alanda listeleyebilirsiniz.</p>
+                  </div>
+                )}
+              </section>
+            </div>
+          </div>
+        </main>
       ) : (
-        <div className="flex-1 overflow-y-auto bg-slate-100 p-6 lg:p-8">
+        <div className="flex-1 overflow-y-auto bg-[#f5f7fb] p-6 lg:p-8">
           <div className="mx-auto max-w-5xl space-y-6">
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div>
