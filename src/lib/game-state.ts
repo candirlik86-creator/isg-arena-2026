@@ -73,6 +73,12 @@ export type GameSettings = {
   prizeThird: number;
   teamSize: number;
   currency: string;
+  productBrandName: string;
+  customerName: string;
+  customerLogoText?: string;
+  customerLogoUrl?: string;
+  watermarkText: string;
+  themeId: string;
 };
 
 export type Team = {
@@ -171,6 +177,12 @@ export const DEFAULT_SETTINGS: GameSettings = {
   prizeThird: 18000,
   teamSize: 3,
   currency: "TL",
+  productBrandName: "Safety Area",
+  customerName: "LC Waikiki",
+  customerLogoText: "",
+  customerLogoUrl: "",
+  watermarkText: "LC Waikiki",
+  themeId: "corporate-blue",
 };
 
 export const DEFAULT_FLOW: ContentFlowItem[] = [

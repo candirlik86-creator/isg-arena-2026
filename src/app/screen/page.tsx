@@ -4,8 +4,10 @@ import { AnswerDistributionChart } from "@/components/AnswerDistributionChart";
 import { Leaderboard } from "@/components/Leaderboard";
 import { Podium } from "@/components/Podium";
 import { ProjectionFrame } from "@/components/ProjectionFrame";
+import { ScreenProductMark } from "@/components/ScreenProductMark";
 import { StageBadge } from "@/components/StageBadge";
 import { useGameState } from "@/hooks/useGameState";
+import { getScreenSurfaceAttributes, resolveBrandSettings } from "@/lib/brand-theme";
 import {
   QUIZ_INTRO_SECONDS,
   calculateQuizIntroRemainingSeconds,
@@ -37,6 +39,8 @@ const scoreRowStyles = [
 
 export default function ScreenPage() {
   const { state, now, activeItem, leaderboard } = useGameState();
+  const brand = resolveBrandSettings(state.settings);
+  const screenSurface = getScreenSurfaceAttributes(state.settings);
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
   const introRemainingSeconds = calculateQuizIntroRemainingSeconds(state, activeItem, now);
   const answeredCount = getAnsweredCount(state, activeItem);
@@ -50,8 +54,12 @@ export default function ScreenPage() {
     const liveProgress = Math.max(0, Math.min(100, (liveRemainingSeconds / activeItem.timeLimitSeconds) * 100));
 
     return (
-      <main className="arena-screen-bg box-border h-[100dvh] max-h-[100dvh] overflow-hidden p-2 text-white md:p-3">
-        <section className="mx-auto flex h-full max-h-full min-h-0 max-w-[1720px] flex-col justify-center gap-2 overflow-y-auto overflow-x-hidden md:gap-4">
+      <main
+        {...screenSurface}
+        className={`${screenSurface.className} relative box-border h-[100dvh] max-h-[100dvh] overflow-hidden p-2 text-white md:p-3`}
+      >
+        <ScreenProductMark productBrandName={brand.productBrandName} />
+        <section className="relative mx-auto flex h-full max-h-full min-h-0 max-w-[1720px] flex-col justify-center gap-2 overflow-y-auto overflow-x-hidden md:gap-4">
           <div className="grid shrink-0 gap-2 md:grid-cols-[1fr_420px] md:gap-4">
             <div className="rounded-[clamp(1rem,2vw,2rem)] border border-white/35 bg-white/[0.20] p-3 shadow-2xl shadow-blue-950/25 backdrop-blur md:p-5">
               <div className="flex items-end justify-between gap-3">
@@ -118,8 +126,12 @@ export default function ScreenPage() {
     const rankedTeams = leaderboard.slice(0, 10);
 
     return (
-      <main className="arena-screen-bg box-border h-[100dvh] max-h-[100dvh] overflow-hidden p-2 text-white md:p-4">
-        <section className="mx-auto flex h-full max-h-full min-h-0 max-w-7xl flex-col justify-center md:py-1">
+      <main
+        {...screenSurface}
+        className={`${screenSurface.className} relative box-border h-[100dvh] max-h-[100dvh] overflow-hidden p-2 text-white md:p-4`}
+      >
+        <ScreenProductMark productBrandName={brand.productBrandName} />
+        <section className="relative mx-auto flex h-full max-h-full min-h-0 max-w-7xl flex-col justify-center md:py-1">
           <div className="shrink-0 text-center">
             <p className="text-xs font-black uppercase tracking-[0.34em] text-amber-100 md:text-sm">Ara Skor</p>
             <h1
@@ -163,7 +175,7 @@ export default function ScreenPage() {
   }
 
   return (
-    <ProjectionFrame compactScreen>
+    <ProjectionFrame compactScreen screenSettings={state.settings}>
       {state.phase === "lobby" ? (
         <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden xl:grid xl:grid-cols-[1fr_0.9fr] xl:items-center xl:gap-6">
           <div className="min-h-0 shrink-0 xl:min-h-0">
