@@ -15,6 +15,7 @@ import {
   type QuizAnswerBreakdown,
   type QuizFlowItem,
 } from "@/lib/game-state";
+import { getProductBrandInitials, resolveBrandSettings, THEME_OPTIONS } from "@/lib/brand-theme";
 import { listSavedCompetitions, type SavedCompetition } from "@/lib/competition-library";
 import { downloadResultsCsv } from "@/lib/game-store";
 import Link from "next/link";
@@ -260,6 +261,7 @@ export default function AdminPage() {
   const waitingCount = Math.max(displayedTeamCount - displayedAnsweredCount, 0);
   const isLiveSession = state.phase !== "lobby" && state.phase !== "finished";
   const formattedPin = formatPin(state.settings.gamePin);
+  const brand = resolveBrandSettings(state.settings);
   const rankedLeaderboard = [...leaderboard].sort((a, b) => b.score - a.score).slice(0, 5);
 
   const patchActiveQuiz = (patch: Partial<QuizFlowItem>) => {
@@ -292,11 +294,14 @@ export default function AdminPage() {
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-md">
-            <span className="text-sm font-bold text-white">ISG</span>
+            <span className="text-sm font-bold text-white">{getProductBrandInitials(brand.productBrandName)}</span>
           </div>
           <div>
-            <h1 className="text-lg font-bold leading-tight text-slate-800">ISG Arena</h1>
-            <p className="text-xs text-slate-500">2026 · Kontrol Masası</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg font-bold leading-tight text-slate-800">{brand.productBrandName}</h1>
+              <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">{brand.customerName}</span>
+            </div>
+            <p className="text-xs text-slate-500">ISG Arena · Kontrol Masası</p>
           </div>
         </div>
 
@@ -899,6 +904,69 @@ export default function AdminPage() {
       ) : (
         <div className="flex-1 overflow-y-auto bg-slate-100 p-6 lg:p-8">
           <div className="mx-auto max-w-5xl space-y-6">
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-800">Marka & Tema</h2>
+                <p className="mt-1 text-sm text-slate-500">Ürün markası, müşteri adı ve projeksiyon teması</p>
+              </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-xs font-medium text-slate-500">Ürün markası</span>
+                  <input
+                    value={brand.productBrandName}
+                    onChange={(event) => updateSettings({ productBrandName: event.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-medium text-slate-500">Müşteri adı</span>
+                  <input
+                    value={brand.customerName}
+                    onChange={(event) => updateSettings({ customerName: event.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </label>
+                <label className="block sm:col-span-2">
+                  <span className="text-xs font-medium text-slate-500">Watermark metni</span>
+                  <input
+                    value={brand.watermarkText}
+                    onChange={(event) => updateSettings({ watermarkText: event.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-medium text-slate-500">Müşteri logo metni (opsiyonel)</span>
+                  <input
+                    value={brand.customerLogoText ?? ""}
+                    onChange={(event) => updateSettings({ customerLogoText: event.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-medium text-slate-500">Müşteri logo URL (opsiyonel)</span>
+                  <input
+                    value={brand.customerLogoUrl ?? ""}
+                    onChange={(event) => updateSettings({ customerLogoUrl: event.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </label>
+                <label className="block sm:col-span-2">
+                  <span className="text-xs font-medium text-slate-500">Tema</span>
+                  <select
+                    value={brand.themeId}
+                    onChange={(event) => updateSettings({ themeId: event.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    {THEME_OPTIONS.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </section>
+
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>

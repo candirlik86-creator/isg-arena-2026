@@ -1,3 +1,4 @@
+import { resolveBrandSettings } from "./brand-theme";
 import {
   answerIds,
   createInitialFlowItems,
@@ -8,6 +9,7 @@ import {
   type AnswerId,
   type ContentFlowItem,
   type GamePhase,
+  type GameSettings,
   type GameState,
   type TeamResponses,
 } from "./game-state";
@@ -183,17 +185,23 @@ export function normalizeGameState(value: unknown): GameState {
   const responses =
     candidate.responses && typeof candidate.responses === "object" ? (candidate.responses as Record<string, TeamResponses>) : {};
 
+  const rawSettings = (candidate.settings ?? {}) as Partial<GameSettings>;
+
   return {
     version: 2,
-    settings: {
+    settings: resolveBrandSettings({
       ...DEFAULT_SETTINGS,
-      ...(candidate.settings ?? {}),
-      maxTeams: Number(candidate.settings?.maxTeams ?? DEFAULT_SETTINGS.maxTeams),
-      prizeFirst: Number(candidate.settings?.prizeFirst ?? DEFAULT_SETTINGS.prizeFirst),
-      prizeSecond: Number(candidate.settings?.prizeSecond ?? DEFAULT_SETTINGS.prizeSecond),
-      prizeThird: Number(candidate.settings?.prizeThird ?? DEFAULT_SETTINGS.prizeThird),
-      teamSize: Number(candidate.settings?.teamSize ?? DEFAULT_SETTINGS.teamSize),
-    },
+      ...rawSettings,
+      welcomeTitle: typeof rawSettings.welcomeTitle === "string" ? rawSettings.welcomeTitle : DEFAULT_SETTINGS.welcomeTitle,
+      subtitle: typeof rawSettings.subtitle === "string" ? rawSettings.subtitle : DEFAULT_SETTINGS.subtitle,
+      gamePin: typeof rawSettings.gamePin === "string" ? rawSettings.gamePin : DEFAULT_SETTINGS.gamePin,
+      currency: typeof rawSettings.currency === "string" ? rawSettings.currency : DEFAULT_SETTINGS.currency,
+      maxTeams: Number(rawSettings.maxTeams ?? DEFAULT_SETTINGS.maxTeams),
+      prizeFirst: Number(rawSettings.prizeFirst ?? DEFAULT_SETTINGS.prizeFirst),
+      prizeSecond: Number(rawSettings.prizeSecond ?? DEFAULT_SETTINGS.prizeSecond),
+      prizeThird: Number(rawSettings.prizeThird ?? DEFAULT_SETTINGS.prizeThird),
+      teamSize: Number(rawSettings.teamSize ?? DEFAULT_SETTINGS.teamSize),
+    }),
     flowItems,
     phase,
     activeItemIndex,

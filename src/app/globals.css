@@ -43,6 +43,38 @@ a {
       linear-gradient(135deg, #0b5ed7 0%, #1368df 42%, #2448c7 72%, #4324a8 100%);
   }
 
+  .arena-screen-bg[data-theme-id="warehouse"] {
+    background:
+      radial-gradient(ellipse at 14% 10%, rgba(251, 191, 36, 0.22), transparent 36%),
+      radial-gradient(ellipse at 88% 12%, rgba(120, 113, 108, 0.28), transparent 34%),
+      radial-gradient(ellipse at 50% 100%, rgba(234, 179, 8, 0.16), transparent 40%),
+      linear-gradient(135deg, #3f3f46 0%, #57534e 38%, #44403c 72%, #292524 100%);
+  }
+
+  .arena-screen-bg[data-theme-id="safety-yellow"] {
+    background:
+      radial-gradient(ellipse at 12% 8%, rgba(253, 224, 71, 0.42), transparent 38%),
+      radial-gradient(ellipse at 86% 10%, rgba(245, 158, 11, 0.32), transparent 36%),
+      radial-gradient(ellipse at 48% 102%, rgba(250, 204, 21, 0.24), transparent 42%),
+      linear-gradient(135deg, #ca8a04 0%, #eab308 42%, #d97706 72%, #b45309 100%);
+  }
+
+  .arena-screen-bg[data-theme-id="dark"] {
+    background:
+      radial-gradient(ellipse at 12% 8%, rgba(71, 85, 105, 0.35), transparent 38%),
+      radial-gradient(ellipse at 86% 10%, rgba(30, 41, 59, 0.45), transparent 36%),
+      radial-gradient(ellipse at 48% 102%, rgba(51, 65, 85, 0.28), transparent 42%),
+      linear-gradient(135deg, #020617 0%, #0f172a 42%, #1e293b 72%, #111827 100%);
+  }
+
+  .arena-screen-bg[data-theme-id="neon"] {
+    background:
+      radial-gradient(ellipse at 12% 8%, rgba(34, 211, 238, 0.38), transparent 38%),
+      radial-gradient(ellipse at 86% 10%, rgba(168, 85, 247, 0.34), transparent 36%),
+      radial-gradient(ellipse at 48% 102%, rgba(236, 72, 153, 0.26), transparent 42%),
+      linear-gradient(135deg, #6d28d9 0%, #7c3aed 38%, #2563eb 72%, #db2777 100%);
+  }
+
   .arena-play-bg {
     position: relative;
     isolation: isolate;
@@ -53,7 +85,22 @@ a {
       linear-gradient(150deg, #0b5ed7 0%, #1768dd 52%, #3346c8 100%);
   }
 
-  .arena-screen-bg::before,
+  .arena-screen-bg[data-watermark-text]::before {
+    content: attr(data-watermark-text);
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    z-index: 0;
+    transform: translate(-50%, -50%) rotate(-8deg);
+    color: rgba(255, 255, 255, 0.065);
+    font-size: clamp(5.5rem, 16vw, 19rem);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
   .arena-play-bg::before {
     content: "LC WAIKIKI";
     position: fixed;
@@ -70,7 +117,29 @@ a {
     white-space: nowrap;
   }
 
-  .arena-screen-bg::after,
+  .arena-screen-bg[data-customer-name]::after {
+    content: attr(data-customer-name);
+    position: fixed;
+    right: clamp(1rem, 1.8vw, 2rem);
+    top: clamp(0.55rem, 0.8vw, 0.85rem);
+    z-index: 3;
+    min-width: clamp(8rem, 12vw, 14rem);
+    max-width: calc(100vw - 2rem);
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.86);
+    font-size: clamp(0.78rem, 0.85vw, 1.05rem);
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    padding: clamp(0.42rem, 0.5vw, 0.58rem) clamp(0.72rem, 1vw, 1.1rem);
+    pointer-events: none;
+    text-transform: uppercase;
+    text-align: center;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.16);
+  }
+
   .arena-play-bg::after {
     content: "LC Waikiki";
     position: fixed;
@@ -88,19 +157,6 @@ a {
     pointer-events: none;
     text-transform: uppercase;
     backdrop-filter: blur(14px);
-  }
-
-  .arena-screen-bg::after {
-    right: clamp(1rem, 1.8vw, 2rem);
-    top: clamp(0.55rem, 0.8vw, 0.85rem);
-    z-index: 3;
-    min-width: clamp(11.5rem, 14vw, 16.5rem);
-    max-width: calc(100vw - 2rem);
-    padding: clamp(0.46rem, 0.5vw, 0.6rem) clamp(0.85rem, 1vw, 1.2rem);
-    font-size: clamp(0.95rem, 0.85vw, 1.12rem);
-    letter-spacing: 0.14em;
-    text-align: center;
-    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.16);
   }
 
   @media (max-width: 639px) {
