@@ -298,31 +298,31 @@ export default function AdminPage() {
         : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f5f7fb] text-slate-950">
-      <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur lg:px-6">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 text-slate-950">
+      <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-blue-200/50 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 px-4 py-3 shadow-xl backdrop-blur lg:px-6">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-950 shadow-sm">
-            <span className="text-sm font-bold text-white">{getProductBrandInitials(brand.productBrandName)}</span>
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/20 shadow-lg backdrop-blur-sm">
+            <span className="text-base font-bold text-white">{getProductBrandInitials(brand.productBrandName)}</span>
           </div>
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
-              <h1 className="truncate text-lg font-bold leading-tight text-slate-950">{brand.productBrandName}</h1>
-              <span className="hidden rounded-full border border-blue-100 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700 sm:inline-flex">
+              <h1 className="truncate text-xl font-bold leading-tight text-white">{brand.productBrandName}</h1>
+              <span className="hidden rounded-full border border-white/30 bg-white/20 px-3 py-1 text-xs font-semibold text-white sm:inline-flex backdrop-blur-sm">
                 {brand.customerName}
               </span>
             </div>
-            <p className="truncate text-xs text-slate-500">ISG Arena · Premium quiz creator</p>
+            <p className="truncate text-xs text-blue-100">ISG Arena · Premium quiz creator</p>
           </div>
         </div>
 
-        <nav className="hidden items-center rounded-lg border border-slate-200 bg-slate-100 p-1 md:flex">
+        <nav className="hidden items-center rounded-xl border border-white/20 bg-white/10 p-1.5 backdrop-blur-sm md:flex">
           {adminTabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`rounded-md px-5 py-2 text-sm font-semibold transition-all ${
-                activeTab === tab.id ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-900"
+              className={`rounded-lg px-6 py-2.5 text-sm font-semibold transition-all ${
+                activeTab === tab.id ? "bg-white text-blue-700 shadow-lg" : "text-white/90 hover:bg-white/10 hover:text-white"
               }`}
             >
               {tab.label}
@@ -332,47 +332,47 @@ export default function AdminPage() {
 
         <div className="flex shrink-0 items-center gap-2">
           <div
-            className={`hidden items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold lg:flex ${
-              isLiveSession ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"
+            className={`hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold lg:flex backdrop-blur-sm ${
+              isLiveSession ? "border-emerald-300/50 bg-emerald-500/20 text-emerald-100" : "border-amber-300/50 bg-amber-500/20 text-amber-100"
             }`}
           >
-            <span className={`h-2 w-2 rounded-full ${isLiveSession ? "animate-pulse bg-emerald-500" : "bg-amber-500"}`} />
+            <span className={`h-2.5 w-2.5 rounded-full ${isLiveSession ? "animate-pulse bg-emerald-400" : "bg-amber-400"}`} />
             {isLiveSession ? "Canlı" : state.phase === "finished" ? "Kapalı" : "Hazırlık"}
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-950 px-3 py-1.5 font-mono text-sm font-bold tracking-wider text-white">
+          <div className="rounded-xl border border-white/30 bg-white/20 px-4 py-2 font-mono text-sm font-bold tracking-wider text-white backdrop-blur-sm shadow-lg">
             PIN {formattedPin}
           </div>
           <button
             type="button"
             onClick={() => window.open("/screen", "_blank")}
-            className="hidden rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 sm:block"
+            className="hidden rounded-xl border border-white/30 bg-white/20 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/30 sm:block"
           >
             Ön İzle
           </button>
           <button
             type="button"
             onClick={handleSaveCompetition}
-            className="hidden rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 lg:block"
+            className="hidden rounded-xl border border-white/30 bg-white/20 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur-sm transition hover:bg-white/30 lg:block"
           >
             Kaydet
           </button>
           <button
             type="button"
             onClick={openLobby}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+            className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-blue-700 shadow-xl transition hover:bg-blue-50"
           >
             Lobiyi Aç
           </button>
           <button
             type="button"
             onClick={() => downloadResultsCsv(state)}
-            className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 xl:block"
+            className="hidden rounded-xl px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white xl:block"
           >
             CSV
           </button>
           <Link
             href="/"
-            className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 md:block"
+            className="hidden rounded-xl px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white md:block"
           >
             Çık
           </Link>
@@ -397,76 +397,76 @@ export default function AdminPage() {
       {activeTab === "competition" ? (
         <div className="flex flex-1 overflow-hidden">
           {/* Left — flow */}
-          <aside className="hidden w-80 shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm lg:flex">
-            <div className="border-b border-slate-100 p-4">
+          <aside className="hidden w-80 shrink-0 flex-col border-r border-blue-200/30 bg-gradient-to-b from-white to-blue-50/30 shadow-lg lg:flex">
+            <div className="border-b border-blue-100/50 p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Yarışma Akışı</p>
-                  <h2 className="mt-1 text-base font-bold text-slate-950">{state.flowItems.length} öğe</h2>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-blue-600">Yarışma Akışı</p>
+                  <h2 className="mt-1 text-lg font-bold text-slate-950">{state.flowItems.length} öğe</h2>
                 </div>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                <span className="rounded-full border border-blue-200 bg-gradient-to-r from-blue-100 to-indigo-100 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm">
                   {phaseLabels[state.phase]}
                 </span>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-lg font-bold text-slate-950">{quizItemCount}</p>
-                  <p className="text-[11px] font-semibold text-slate-500">Soru</p>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-blue-200/50 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 shadow-sm">
+                  <p className="text-xl font-bold text-blue-900">{quizItemCount}</p>
+                  <p className="text-[11px] font-semibold text-blue-600">Soru</p>
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-lg font-bold text-slate-950">{contentItemCount}</p>
-                  <p className="text-[11px] font-semibold text-slate-500">İçerik</p>
+                <div className="rounded-xl border border-purple-200/50 bg-gradient-to-br from-purple-50 to-pink-50 p-4 shadow-sm">
+                  <p className="text-xl font-bold text-purple-900">{contentItemCount}</p>
+                  <p className="text-[11px] font-semibold text-purple-600">İçerik</p>
                 </div>
               </div>
-              {timerHint ? <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">{timerHint}</p> : null}
+              {timerHint ? <p className="mt-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2.5 text-xs font-semibold text-white shadow-lg">{timerHint}</p> : null}
             </div>
 
-            <div className="flex-1 space-y-2 overflow-y-auto p-3">
+            <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
               {state.flowItems.length ? (
                 state.flowItems.map((item, index) => {
                   const isActive = index === state.activeItemIndex;
                   return (
                     <div
                       key={item.id}
-                      className={`group rounded-lg border transition-all ${
-                        isActive ? "border-blue-500 bg-blue-50 shadow-sm" : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
+                      className={`group rounded-xl border transition-all shadow-sm ${
+                        isActive ? "border-blue-400 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md" : "border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/30"
                       }`}
                     >
-                      <button type="button" onClick={() => goToItem(index)} className="w-full p-3 text-left">
+                      <button type="button" onClick={() => goToItem(index)} className="w-full p-4 text-left">
                         <div className="flex items-start gap-3">
                           <div
-                            className={`flex h-10 w-10 items-center justify-center rounded-lg border text-lg ${
-                              isActive ? "border-blue-200 bg-white" : "border-slate-200 bg-slate-50"
+                            className={`flex h-12 w-12 items-center justify-center rounded-xl border text-xl shadow-sm ${
+                              isActive ? "border-blue-300 bg-white" : "border-slate-200 bg-slate-50"
                             }`}
                           >
                             {flowThumbnails[item.type]}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className={`text-xs font-medium ${isActive ? "text-blue-600" : "text-slate-400"}`}>
+                              <span className={`text-xs font-bold ${isActive ? "text-blue-700" : "text-slate-400"}`}>
                                 {index + 1}
                               </span>
                               <span
-                                className={`rounded-full px-2 py-0.5 text-xs ${
-                                  isActive ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-600"
+                                className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                  isActive ? "bg-blue-500 text-white" : "bg-slate-200 text-slate-600"
                                 }`}
                               >
                                 {flowTypeLabels[item.type]}
                               </span>
                             </div>
-                            <p className={`mt-1 truncate text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-700"}`}>
+                            <p className={`mt-1.5 truncate text-sm font-semibold ${isActive ? "text-blue-900" : "text-slate-700"}`}>
                               {item.title}
                             </p>
                           </div>
                         </div>
                       </button>
-                      <div className="flex gap-1 border-t border-slate-100 px-2 py-1.5">
+                      <div className="flex gap-1 border-t border-slate-100/50 px-3 py-2">
                         <button
                           type="button"
                           title="Yukarı"
                           disabled={index === 0}
                           onClick={() => moveFlowItem(item.id, -1)}
-                          className="flex-1 rounded-md py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+                          className="flex-1 rounded-lg py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 disabled:opacity-30"
                         >
                           ↑
                         </button>
@@ -475,7 +475,7 @@ export default function AdminPage() {
                           title="Aşağı"
                           disabled={index === state.flowItems.length - 1}
                           onClick={() => moveFlowItem(item.id, 1)}
-                          className="flex-1 rounded-md py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+                          className="flex-1 rounded-lg py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 disabled:opacity-30"
                         >
                           ↓
                         </button>
@@ -483,7 +483,7 @@ export default function AdminPage() {
                           type="button"
                           title="Çoğalt"
                           onClick={() => duplicateFlowItem(item.id)}
-                          className="flex-1 rounded-md py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100"
+                          className="flex-1 rounded-lg py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100"
                         >
                           ⧉
                         </button>
@@ -532,55 +532,55 @@ export default function AdminPage() {
           </aside>
 
           {/* Center — canvas */}
-          <main className="flex-1 overflow-y-auto bg-[#f5f7fb] p-4 lg:p-6">
+          <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 p-4 lg:p-6">
             <div className="mx-auto max-w-5xl">
               {!hasFlowItems ? (
-                <div className="rounded-lg border border-slate-200 bg-white p-10 text-center shadow-sm">
-                  <h2 className="text-xl font-semibold text-slate-950">Yarışma akışında içerik yok</h2>
-                  <p className="mt-2 text-sm text-slate-500">Sol panelden varsayılan akışı yükleyin veya Ayarlar sekmesinden öğe ekleyin.</p>
+                <div className="rounded-2xl border border-blue-200/50 bg-gradient-to-br from-white to-blue-50/30 p-12 text-center shadow-xl">
+                  <h2 className="text-2xl font-bold text-slate-950">Yarışma akışında içerik yok</h2>
+                  <p className="mt-3 text-base text-slate-500">Sol panelden varsayılan akışı yükleyin veya Ayarlar sekmesinden öğe ekleyin.</p>
                 </div>
               ) : activeItem.type === "quiz" ? (
                 <>
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Editör Canvas</p>
-                      <h2 className="mt-1 text-xl font-bold text-slate-950">{getQuestionLabel(activeItem, state)}</h2>
+                      <p className="text-xs font-bold uppercase tracking-wide text-blue-600">Editör Canvas</p>
+                      <h2 className="mt-1 text-2xl font-bold text-slate-950">{getQuestionLabel(activeItem, state)}</h2>
                     </div>
-                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm">
+                    <div className="flex items-center gap-3 rounded-xl border border-blue-200/50 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2.5 text-sm font-semibold text-blue-700 shadow-md">
                       <span>Akış {activeIndexLabel}</span>
-                      <span className="text-slate-300">/</span>
+                      <span className="text-blue-300">/</span>
                       <span>{activeItem.timeLimitSeconds} sn</span>
                     </div>
                   </div>
 
-                  <div className="mb-5 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="mb-6 rounded-2xl border border-blue-200/50 bg-gradient-to-br from-white to-blue-50/20 p-7 shadow-lg">
                     <div className="mb-4 flex flex-wrap items-center gap-3">
-                      <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500">
+                      <span className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 px-3 py-1.5 text-xs font-bold text-white shadow-md">
                         {activeQuizPosition ? `SORU ${activeQuizPosition.current}` : getQuestionLabel(activeItem, state).toUpperCase()}
                       </span>
                       <span className="text-xs text-slate-400">•</span>
-                      <span className="text-xs text-slate-500">{activeItem.topic}</span>
+                      <span className="text-xs font-semibold text-slate-600">{activeItem.topic}</span>
                       <span className="text-xs text-slate-400">•</span>
-                      <span className="text-xs text-slate-500">Akış {activeIndexLabel}</span>
+                      <span className="text-xs font-semibold text-slate-600">Akış {activeIndexLabel}</span>
                     </div>
                     <input
                       type="text"
                       value={activeItem.title}
                       onChange={(event) => patchActiveQuiz({ title: event.target.value })}
-                      className="w-full border-none bg-transparent text-2xl font-bold leading-tight text-slate-950 outline-none placeholder:text-slate-400"
+                      className="w-full border-none bg-transparent text-3xl font-bold leading-tight text-slate-950 outline-none placeholder:text-slate-400"
                       placeholder="Sorunuzu buraya yazın..."
                     />
                     {activeItem.explanation && state.showCorrectAnswer ? (
-                      <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                      <p className="mt-5 rounded-xl border border-emerald-300/50 bg-gradient-to-r from-emerald-50 to-green-50 p-4 text-base font-medium text-emerald-800 shadow-sm">
                         {activeItem.explanation}
                       </p>
                     ) : null}
                   </div>
 
-                  <div className="mb-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-white shadow-sm">
-                        <svg className="h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <div className="mb-6 rounded-2xl border border-blue-200/50 bg-gradient-to-br from-white to-blue-50/20 p-6 shadow-lg">
+                    <div className="rounded-2xl border-2 border-dashed border-blue-300/50 bg-gradient-to-br from-blue-50/30 to-indigo-50/30 p-10 text-center">
+                      <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-lg">
+                        <svg className="h-10 w-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -589,12 +589,12 @@ export default function AdminPage() {
                           />
                         </svg>
                       </div>
-                      <p className="mb-1 font-medium text-slate-600">Medya alanı</p>
-                      <p className="text-sm text-slate-400">Görsel veya video için Ayarlar → Akış Editörü</p>
+                      <p className="mb-2 text-lg font-semibold text-slate-600">Medya alanı</p>
+                      <p className="text-base text-slate-400">Görsel veya video için Ayarlar → Akış Editörü</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                     {answerOptionIds.map((optionId) => {
                       const option = activeItem.options.find((entry) => entry.id === optionId);
                       const isCorrect = activeItem.correctOptionId === optionId;
@@ -602,18 +602,18 @@ export default function AdminPage() {
                       return (
                         <div
                           key={optionId}
-                          className={`relative min-h-28 rounded-lg p-5 text-left shadow-sm transition-all ${isCorrect ? styles.active : styles.base}`}
+                          className={`relative min-h-32 rounded-2xl p-6 text-left shadow-lg transition-all ${isCorrect ? styles.active : styles.base}`}
                         >
                           {isCorrect ? (
-                            <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-white">
-                              <CheckIcon className={`h-4 w-4 ${styles.check}`} />
+                            <div className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-lg">
+                              <CheckIcon className={`h-5 w-5 ${styles.check}`} />
                             </div>
                           ) : null}
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-4">
                             <button
                               type="button"
                               onClick={() => patchActiveQuiz({ correctOptionId: optionId })}
-                              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/20 text-lg font-bold text-white"
+                              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-2xl font-bold text-white shadow-lg"
                             >
                               {optionId}
                             </button>
@@ -621,7 +621,7 @@ export default function AdminPage() {
                               type="text"
                               value={option?.text ?? ""}
                               onChange={(event) => setQuizOptionText(optionId, event.target.value)}
-                              className="flex-1 border-none bg-transparent text-lg font-medium text-white outline-none placeholder:text-white/60"
+                              className="flex-1 border-none bg-transparent text-xl font-semibold text-white outline-none placeholder:text-white/60"
                               placeholder={`${optionId} seçeneği`}
                             />
                           </div>
@@ -663,45 +663,45 @@ export default function AdminPage() {
           </main>
 
           {/* Right — inspector */}
-          <aside className="hidden w-96 shrink-0 flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-sm xl:flex">
+          <aside className="hidden w-96 shrink-0 flex-col overflow-y-auto border-l border-blue-200/30 bg-gradient-to-b from-white to-blue-50/20 shadow-lg xl:flex">
             {hasFlowItems && activeItem.type === "quiz" ? (
-              <div className="border-b border-slate-100 p-5">
-                <div className="mb-4">
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Sağ Panel</p>
-                  <h3 className="mt-1 text-base font-bold text-slate-950">Soru Ayarları</h3>
+              <div className="border-b border-blue-100/50 p-6">
+                <div className="mb-5">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-blue-600">Sağ Panel</p>
+                  <h3 className="mt-1 text-lg font-bold text-slate-950">Soru Ayarları</h3>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div>
-                    <label className="mb-2 block text-xs font-medium text-slate-500">Soru tipi</label>
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">Çoktan seçmeli</div>
+                    <label className="mb-2.5 block text-xs font-semibold text-slate-600">Soru tipi</label>
+                    <div className="rounded-xl border border-blue-200/50 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 text-sm font-semibold text-blue-900 shadow-sm">Çoktan seçmeli</div>
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-xs font-medium text-slate-500">Süre limiti</label>
-                    <div className="flex items-center gap-2">
+                    <label className="mb-2.5 block text-xs font-semibold text-slate-600">Süre limiti</label>
+                    <div className="flex items-center gap-3">
                       <input
                         type="range"
                         min={10}
                         max={120}
                         value={activeItem.timeLimitSeconds}
                         onChange={(event) => patchActiveQuiz({ timeLimitSeconds: Number(event.target.value) })}
-                        className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-blue-600"
+                        className="h-2.5 flex-1 cursor-pointer appearance-none rounded-full bg-gradient-to-r from-blue-200 to-indigo-200 accent-blue-600"
                       />
-                      <span className="w-16 text-right text-sm font-medium text-slate-700">{activeItem.timeLimitSeconds} sn</span>
+                      <span className="w-20 text-right text-sm font-bold text-blue-900">{activeItem.timeLimitSeconds} sn</span>
                     </div>
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-xs font-medium text-slate-500">Puan</label>
+                    <label className="mb-2.5 block text-xs font-semibold text-slate-600">Puan</label>
                     <div className="flex gap-2">
                       {[500, 1000, 2000].map((points) => (
                         <button
                           key={points}
                           type="button"
                           onClick={() => patchActiveQuiz({ maxScore: points })}
-                          className={`flex-1 rounded-lg py-2 text-sm font-medium transition-all ${
+                          className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all shadow-md ${
                             activeItem.maxScore === points
-                              ? "bg-blue-600 text-white"
+                              ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg"
                               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                           }`}
                         >
@@ -712,14 +712,14 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-xs font-medium text-slate-500">Doğru cevap</label>
+                    <label className="mb-2.5 block text-xs font-semibold text-slate-600">Doğru cevap</label>
                     <div className="flex gap-2">
                       {answerOptionIds.map((answer) => (
                         <button
                           key={answer}
                           type="button"
                           onClick={() => patchActiveQuiz({ correctOptionId: answer })}
-                          className={`h-10 w-10 rounded-lg font-bold transition-all ${
+                          className={`h-12 w-12 rounded-xl font-bold transition-all shadow-md ${
                             activeItem.correctOptionId === answer
                               ? correctAnswerChipStyles[answer]
                               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -733,22 +733,22 @@ export default function AdminPage() {
                 </div>
               </div>
             ) : (
-              <div className="border-b border-slate-100 p-5">
-                <h3 className="text-sm font-bold text-slate-950">Aktif öğe</h3>
-                <p className="mt-2 text-sm text-slate-500">
+              <div className="border-b border-blue-100/50 p-6">
+                <h3 className="text-base font-bold text-slate-950">Aktif öğe</h3>
+                <p className="mt-2.5 text-sm text-slate-500">
                   {hasFlowItems ? `${flowTypeLabels[activeItem.type]} · ${activeItem.title}` : "Öğe seçilmedi"}
                 </p>
               </div>
             )}
 
-            <div className="border-b border-slate-100 p-5">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h3 className="text-base font-bold text-slate-950">Canlı Kontroller</h3>
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+            <div className="border-b border-blue-100/50 p-6">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <h3 className="text-lg font-bold text-slate-950">Canlı Kontroller</h3>
+                <span className="rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm">
                   {phaseLabels[state.phase]}
                 </span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <ControlButton variant="primary" onClick={startActiveItem} disabled={!hasFlowItems}>
                   Soruyu / Slaytı Başlat
                 </ControlButton>
