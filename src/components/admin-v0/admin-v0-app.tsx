@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type DragEvent } from "react";
+import { useGameState } from "@/hooks/useGameState";
 
 type Screen = "library" | "editor" | "lobby" | "projection";
 type EditorTab = "competition" | "settings" | "theme" | "library";
@@ -58,7 +59,6 @@ type Theme = {
 };
 
 const warehouseImageUrl = "/images/warehouse-hazards.jpg";
-const pin = "847 293";
 
 const competitionsSeed: Competition[] = [
   {
@@ -284,23 +284,6 @@ const themes: Theme[] = [
   },
 ];
 
-const participants = [
-  "Ahmet Y.",
-  "Mehmet K.",
-  "Ayse S.",
-  "Fatma D.",
-  "Ali R.",
-  "Zeynep T.",
-  "Mustafa B.",
-  "Elif N.",
-  "Hasan O.",
-  "Hatice A.",
-  "Emre K.",
-  "Selin M.",
-  "Burak T.",
-  "Deniz S.",
-  "Merve A.",
-];
 
 const leaderboard = [
   { name: "Ahmet Y.", score: 2450, streak: 5, correct: true },
@@ -419,6 +402,7 @@ function AdminV0Header({
   onBack,
   onLobby,
   onExit,
+  gamePin,
 }: {
   activeTab: EditorTab;
   customerName: string;
@@ -426,6 +410,7 @@ function AdminV0Header({
   onBack: () => void;
   onLobby: () => void;
   onExit: () => void;
+  gamePin: string;
 }) {
   const tabs: { id: EditorTab; label: string }[] = [
     { id: "competition", label: "Yarisma" },
@@ -459,7 +444,7 @@ function AdminV0Header({
 
       <div className="flex shrink-0 items-center gap-2">
         <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-mono text-sm font-bold text-slate-700">
-          # {pin}
+          # {gamePin}
         </span>
         <Button variant="ghost" size="sm">
           Goz
@@ -662,6 +647,7 @@ function EditorScreen({
   onBack: () => void;
   onStartLobby: () => void;
 }) {
+  const { state } = useGameState();
   const [items, setItems] = useState<QuizItem[]>(cloneItems);
   const [selectedItemId, setSelectedItemId] = useState(quizItemsSeed[0]?.id ?? "");
   const [activeTab, setActiveTab] = useState<EditorTab>("competition");
@@ -782,6 +768,7 @@ function EditorScreen({
         onBack={onBack}
         onLobby={onStartLobby}
         onExit={() => setUnsavedDialogOpen(true)}
+        gamePin={state.settings.gamePin}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -1414,25 +1401,9 @@ function LobbyScreen({
   onStart: () => void;
   onBack: () => void;
 }) {
+  const { state } = useGameState();
   const [showPin, setShowPin] = useState(false);
-  const [joinedParticipants, setJoinedParticipants] = useState<string[]>([]);
   const [musicPlaying, setMusicPlaying] = useState(false);
-
-  useEffect(() => {
-    if (!showPin) {
-      return;
-    }
-    const interval = window.setInterval(() => {
-      setJoinedParticipants((current) => {
-        if (current.length >= participants.length) {
-          window.clearInterval(interval);
-          return current;
-        }
-        return [...current, participants[current.length]];
-      });
-    }, 650);
-    return () => window.clearInterval(interval);
-  }, [showPin]);
 
   if (!showPin) {
     return (
@@ -1468,7 +1439,7 @@ function LobbyScreen({
         </div>
         <div className="mb-10 rounded-3xl bg-white/10 px-12 py-10 backdrop-blur-sm">
           <p className="mb-3 text-center text-lg font-semibold uppercase tracking-widest text-white/70">Oyun PIN Kodu</p>
-          <p className="text-center font-mono text-8xl font-bold tracking-[0.2em] md:text-[10rem]">{pin}</p>
+          <p className="text-center font-mono text-8xl font-bold tracking-[0.2em] md:text-[10rem]">{state.settings.gamePin}</p>
         </div>
         <div className="mb-10 flex items-center gap-8">
           <div className="grid h-40 w-40 grid-cols-5 gap-1 rounded-2xl bg-white p-5 shadow-2xl">
@@ -1485,17 +1456,17 @@ function LobbyScreen({
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-2xl">👥</span>
-              <span className="text-xl font-semibold">{joinedParticipants.length} Katilimci</span>
+              <span className="text-xl font-semibold">{state.teams.length} Katilimci</span>
             </div>
             <Button variant="ghost" className="text-white hover:bg-white/10 hover:text-white" onClick={() => setMusicPlaying(!musicPlaying)}>
               {musicPlaying ? "Sessiz" : "Lobi Muzigi"}
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {joinedParticipants.length ? (
-              joinedParticipants.map((name) => (
-                <span key={name} className="rounded-full bg-white px-4 py-2 text-sm font-medium text-blue-700">
-                  {name}
+            {state.teams.length ? (
+              state.teams.map((team) => (
+                <span key={team.id} className="rounded-full bg-white px-4 py-2 text-sm font-medium text-blue-700">
+                  {team.name}
                 </span>
               ))
             ) : (
