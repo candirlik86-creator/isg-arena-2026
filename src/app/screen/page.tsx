@@ -232,13 +232,9 @@ export default function ScreenPage() {
                   activeQuizPosition?.total ?? activeItem.quizNumber
                 }`}
               />
-              <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-black text-slate-200 md:px-4 md:py-2 md:text-sm">
-                {activeItem.topic}
-              </span>
             </div>
-            <p className="mt-4 text-xs font-black uppercase tracking-[0.32em] text-amber-200 md:mt-6 md:text-sm">{activeItem.stage}</p>
             <h2
-              className="mt-2 font-black leading-tight text-white md:mt-3"
+              className="mt-4 font-black leading-tight text-white md:mt-6"
               style={{ fontSize: "clamp(1.35rem, 3.6vw, 4.5rem)" }}
             >
               {activeItem.title}
@@ -266,15 +262,10 @@ export default function ScreenPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
                     <StageBadge label={`Soru ${activeQuizPosition?.current ?? activeItem.quizNumber} / ${activeQuizPosition?.total ?? activeItem.quizNumber}`} />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-100 md:text-xs">{activeItem.stage}</span>
                   </div>
                   <h2 className="mt-1 line-clamp-2 text-base font-black leading-snug text-white md:mt-1.5 md:text-xl lg:text-2xl">
                     {activeItem.title}
                   </h2>
-                </div>
-                <div className="shrink-0 rounded-lg border border-white/20 bg-white/[0.12] px-2 py-1.5 text-right shadow-md md:px-3 md:py-2">
-                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-100 md:text-[10px]">Konu</p>
-                  <p className="mt-0.5 max-w-[8rem] truncate text-xs font-black text-white md:max-w-[10rem] md:text-sm">{activeItem.topic}</p>
                 </div>
               </div>
             </div>
