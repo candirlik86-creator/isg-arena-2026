@@ -1,7 +1,6 @@
 import { resolveBrandSettings } from "./brand-theme";
 import {
   answerIds,
-  createInitialFlowItems,
   createInitialGameState,
   DEFAULT_SETTINGS,
   inferMediaType,
@@ -177,7 +176,7 @@ export function normalizeGameState(value: unknown): GameState {
   const candidate = value as Partial<GameState>;
   const flowItems = Array.isArray(candidate.flowItems)
     ? normalizeFlowItems(candidate.flowItems, [])
-    : createInitialFlowItems();
+    : [];
   const activeItemIndex =
     typeof candidate.activeItemIndex === "number" && candidate.activeItemIndex >= 0 && flowItems.length
       ? Math.min(candidate.activeItemIndex, flowItems.length - 1)

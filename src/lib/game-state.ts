@@ -422,7 +422,7 @@ export function createInitialGameState(settings: Partial<GameSettings> = {}): Ga
       ...settings,
       gamePin: settings.gamePin ?? generatePin(),
     },
-    flowItems: createInitialFlowItems(),
+    flowItems: [],
     phase: "lobby",
     activeItemIndex: 0,
     activeItemStartedAt: null,

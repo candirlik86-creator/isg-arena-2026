@@ -228,9 +228,21 @@ export function useGameState() {
     void runAction({ type: "restoreDefaultFlow" });
   }, [runAction]);
 
+  const createBlankCompetition = useCallback(async () => {
+    const nextState = createInitialGameState();
+    const result = await replaceGameState(nextState);
+    if (result.ok) {
+      clearTeamSession();
+      setState(result.state);
+      setSessionTick((value) => value + 1);
+    }
+
+    return { ok: result.ok, message: result.message };
+  }, []);
+
   const saveCompetitionToLibrary = useCallback(
-    (name: string): SavedCompetition => {
-      return saveCurrentCompetition(state, name);
+    (name: string, existingId?: string): SavedCompetition => {
+      return saveCurrentCompetition(state, name, existingId);
     },
     [state],
   );
@@ -317,6 +329,7 @@ export function useGameState() {
     duplicateFlowItem,
     moveFlowItem,
     restoreDefaultFlow,
+    createBlankCompetition,
     saveCompetitionToLibrary,
     openSavedCompetition,
     submitQuizAnswer,

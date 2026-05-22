@@ -16,7 +16,15 @@ import {
   type QuizFlowItem,
 } from "@/lib/game-state";
 import { getProductBrandInitials, resolveBrandSettings, THEME_OPTIONS } from "@/lib/brand-theme";
-import { listSavedCompetitions, type SavedCompetition } from "@/lib/competition-library";
+import {
+  duplicateSavedCompetition,
+  listSavedCompetitions,
+  listTrashedCompetitions,
+  moveSavedCompetitionToTrash,
+  permanentlyDeleteSavedCompetition,
+  restoreSavedCompetition,
+  type SavedCompetition,
+} from "@/lib/competition-library";
 import { downloadResultsCsv } from "@/lib/game-store";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
@@ -188,9 +196,11 @@ function formatSavedDate(timestamp: number) {
 }
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<AdminTab>("competition");
+  const [activeTab, setActiveTab] = useState<AdminTab>("library");
   const [competitionSaveName, setCompetitionSaveName] = useState("");
   const [savedCompetitions, setSavedCompetitions] = useState<SavedCompetition[]>([]);
+  const [trashedCompetitions, setTrashedCompetitions] = useState<SavedCompetition[]>([]);
+  const [editingCompetitionId, setEditingCompetitionId] = useState<string | null>(null);
   const [libraryMessage, setLibraryMessage] = useState<string | null>(null);
 
   const {
@@ -214,6 +224,7 @@ export default function AdminPage() {
     duplicateFlowItem,
     moveFlowItem,
     restoreDefaultFlow,
+    createBlankCompetition,
     goToItem,
     saveCompetitionToLibrary,
     openSavedCompetition,
@@ -221,6 +232,7 @@ export default function AdminPage() {
 
   const refreshSavedCompetitions = () => {
     setSavedCompetitions(listSavedCompetitions());
+    setTrashedCompetitions(listTrashedCompetitions());
   };
 
   useEffect(() => {
@@ -232,19 +244,37 @@ export default function AdminPage() {
   const handleSaveCompetition = () => {
     try {
       const fallbackName = state.settings.welcomeTitle || `${state.settings.customerName} Yarışması`;
-      saveCompetitionToLibrary(competitionSaveName.trim() || fallbackName);
-      setLibraryMessage("Yarışma kaydedildi.");
-      setCompetitionSaveName("");
+      const savedCompetition = saveCompetitionToLibrary(competitionSaveName.trim() || fallbackName, editingCompetitionId ?? undefined);
+      setEditingCompetitionId(savedCompetition.id);
+      setCompetitionSaveName(savedCompetition.name);
+      setLibraryMessage(editingCompetitionId ? "Yarışma güncellendi." : "Yarışma kaydedildi.");
       refreshSavedCompetitions();
     } catch (error) {
       setLibraryMessage(error instanceof Error ? error.message : "Kayıt başarısız.");
     }
   };
 
-  const handleOpenSavedCompetition = async (id: string) => {
+  const handleCreateBlankCompetition = async () => {
+    if (
+      (state.flowItems.length || state.teams.length) &&
+      !window.confirm("Boş yarışma oluşturulacak. Aktif oturum, takımlar ve cevaplar sıfırlansın mı?")
+    ) {
+      return;
+    }
+
+    const result = await createBlankCompetition();
+    setLibraryMessage(result.ok ? "Boş yarışma oluşturuldu." : result.message ?? "Yeni yarışma oluşturulamadı.");
+    if (result.ok) {
+      setEditingCompetitionId(null);
+      setCompetitionSaveName("");
+      setActiveTab("competition");
+    }
+  };
+
+  const handlePlaySavedCompetition = async (id: string) => {
     if (
       !window.confirm(
-        "Kayıtlı yarışma yüklenecek. Takımlar, cevaplar ve skorlar sıfırlanır; yeni bir PIN oluşur. Devam edilsin mi?",
+        "Yarışma canlı oyun için yüklenecek. PIN, takımlar, cevaplar ve skorlar sıfırlanır. Devam edilsin mi?",
       )
     ) {
       return;
@@ -253,8 +283,60 @@ export default function AdminPage() {
     const result = await openSavedCompetition(id);
     setLibraryMessage(result.ok ? "Yarışma yüklendi." : result.message ?? "Yükleme başarısız.");
     if (result.ok) {
+      setEditingCompetitionId(null);
+      setCompetitionSaveName("");
       setActiveTab("competition");
     }
+  };
+
+  const handleEditSavedCompetition = async (entry: SavedCompetition) => {
+    const result = await openSavedCompetition(entry.id);
+    setLibraryMessage(result.ok ? "Yarışma editöre yüklendi." : result.message ?? "Yükleme başarısız.");
+    if (result.ok) {
+      setEditingCompetitionId(entry.id);
+      setCompetitionSaveName(entry.name);
+      setActiveTab("competition");
+    }
+  };
+
+  const handleDuplicateSavedCompetition = (id: string) => {
+    try {
+      duplicateSavedCompetition(id);
+      setLibraryMessage("Yarışma kopyalandı.");
+      refreshSavedCompetitions();
+    } catch (error) {
+      setLibraryMessage(error instanceof Error ? error.message : "Kopyalama başarısız.");
+    }
+  };
+
+  const handleDeleteSavedCompetition = (entry: SavedCompetition) => {
+    if (!window.confirm(`"${entry.name}" Çöp Kutusu'na taşınsın mı?`)) {
+      return;
+    }
+
+    moveSavedCompetitionToTrash(entry.id);
+    if (editingCompetitionId === entry.id) {
+      setEditingCompetitionId(null);
+      setCompetitionSaveName("");
+    }
+    setLibraryMessage("Yarışma Çöp Kutusu'na taşındı.");
+    refreshSavedCompetitions();
+  };
+
+  const handleRestoreSavedCompetition = (entry: SavedCompetition) => {
+    restoreSavedCompetition(entry.id);
+    setLibraryMessage(`"${entry.name}" geri yüklendi.`);
+    refreshSavedCompetitions();
+  };
+
+  const handlePermanentlyDeleteSavedCompetition = (entry: SavedCompetition) => {
+    if (!window.confirm(`"${entry.name}" kalıcı olarak silinsin mi? Bu işlem geri alınamaz.`)) {
+      return;
+    }
+
+    permanentlyDeleteSavedCompetition(entry.id);
+    setLibraryMessage("Yarışma kalıcı olarak silindi.");
+    refreshSavedCompetitions();
   };
 
   const hasFlowItems = state.flowItems.length > 0;
@@ -508,12 +590,10 @@ export default function AdminPage() {
                   <p className="text-sm font-medium text-slate-600">Akış boş</p>
                   <button
                     type="button"
-                    onClick={() => {
-                      restoreDefaultFlow();
-                    }}
+                    onClick={() => setActiveTab("settings")}
                     className="mt-3 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700"
                   >
-                    Varsayılan akışı yükle
+                    Öğe ekle
                   </button>
                 </div>
               )}
@@ -537,7 +617,7 @@ export default function AdminPage() {
               {!hasFlowItems ? (
                 <div className="rounded-2xl border border-blue-200/50 bg-gradient-to-br from-white to-blue-50/30 p-12 text-center shadow-xl">
                   <h2 className="text-2xl font-bold text-slate-950">Yarışma akışında içerik yok</h2>
-                  <p className="mt-3 text-base text-slate-500">Sol panelden varsayılan akışı yükleyin veya Ayarlar sekmesinden öğe ekleyin.</p>
+                  <p className="mt-3 text-base text-slate-500">Ayarlar sekmesinden öğe ekleyin veya Kütüphane ekranından örnek yarışmayı açın.</p>
                 </div>
               ) : activeItem.type === "quiz" ? (
                 <>
@@ -903,20 +983,17 @@ export default function AdminPage() {
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Yarışma Kütüphanesi</p>
-                <h2 className="mt-1 text-2xl font-bold text-slate-950">Creator taslakları</h2>
+                <h2 className="mt-1 text-2xl font-bold text-slate-950">Kayıtlı Yarışmalar</h2>
                 <p className="mt-1 max-w-2xl text-sm text-slate-500">
-                  Kayıtlı yarışmaları açabilir veya mevcut akışı yerel kütüphaneye ekleyebilirsiniz.
+                  Yarışma seçin, kopyalayın veya boş bir yarışma oluşturarak başlayın.
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  restoreDefaultFlow();
-                  setActiveTab("competition");
-                }}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-700"
+                onClick={() => void handleCreateBlankCompetition()}
+                className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
               >
-                Varsayılan akışı yükle
+                Yeni Yarışma Oluştur
               </button>
             </div>
 
@@ -952,12 +1029,17 @@ export default function AdminPage() {
                     className="mt-1.5 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   />
                 </label>
+                {editingCompetitionId ? (
+                  <p className="mt-2 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
+                    Düzenlenen kayıt güncellenecek.
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   onClick={handleSaveCompetition}
                   className="mt-3 w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
                 >
-                  Mevcut yarışmayı kaydet
+                  Yarışmayı Kaydet
                 </button>
                 {libraryMessage ? <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600">{libraryMessage}</p> : null}
               </section>
@@ -1002,13 +1084,36 @@ export default function AdminPage() {
                               <p className="text-xs text-slate-500">Toplam öğe</p>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => void handleOpenSavedCompetition(entry.id)}
-                            className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-                          >
-                            Düzenle
-                          </button>
+                          <div className="mt-4 grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void handlePlaySavedCompetition(entry.id)}
+                              className="rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                            >
+                              Oyna
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleEditSavedCompetition(entry)}
+                              className="rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                            >
+                              Düzenle
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDuplicateSavedCompetition(entry.id)}
+                              className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700"
+                            >
+                              Kopyala
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSavedCompetition(entry)}
+                              className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100"
+                            >
+                              Sil
+                            </button>
+                          </div>
                         </article>
                       );
                     })}
@@ -1016,11 +1121,81 @@ export default function AdminPage() {
                 ) : (
                   <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
                     <p className="text-base font-bold text-slate-800">Henüz kayıtlı yarışma yok</p>
-                    <p className="mt-2 text-sm text-slate-500">Mevcut yarışmayı kaydederek bu alanda listeleyebilirsiniz.</p>
+                    <p className="mt-2 text-sm text-slate-500">Yeni yarışma oluşturabilir veya mevcut yarışmayı kaydedebilirsiniz.</p>
                   </div>
                 )}
               </section>
             </div>
+
+            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-bold text-slate-950">Çöp Kutusu</h3>
+                  <p className="mt-1 text-sm text-slate-500">{trashedCompetitions.length} silinmiş kayıt</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={refreshSavedCompetitions}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                >
+                  Yenile
+                </button>
+              </div>
+
+              {trashedCompetitions.length ? (
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {trashedCompetitions.map((entry) => {
+                    const entryQuizCount = entry.flowItems.filter((item) => item.type === "quiz").length;
+
+                    return (
+                      <article key={entry.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-base font-bold text-slate-950">{entry.name}</p>
+                            <p className="mt-1 text-xs font-medium text-slate-500">
+                              Silinme: {formatSavedDate(entry.deletedAt ?? entry.updatedAt)}
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-100">
+                            Çöp
+                          </span>
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                          <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200">
+                            <p className="text-lg font-bold text-slate-950">{entryQuizCount}</p>
+                            <p className="text-xs text-slate-500">Soru</p>
+                          </div>
+                          <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200">
+                            <p className="text-lg font-bold text-slate-950">{entry.flowItems.length}</p>
+                            <p className="text-xs text-slate-500">Toplam öğe</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleRestoreSavedCompetition(entry)}
+                            className="rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                          >
+                            Geri Yükle
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePermanentlyDeleteSavedCompetition(entry)}
+                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100"
+                          >
+                            Kalıcı Sil
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+                  <p className="text-sm font-semibold text-slate-600">Çöp Kutusu boş.</p>
+                </div>
+              )}
+            </section>
           </div>
         </main>
       ) : (

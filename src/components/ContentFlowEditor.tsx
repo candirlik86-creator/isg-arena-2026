@@ -659,11 +659,8 @@ export function ContentFlowEditor({
         <div className="mt-5 rounded-[1.5rem] border border-red-300/30 bg-red-400/10 p-5">
           <p className="text-lg font-black text-red-100">Akışta öğe yok.</p>
           <p className="mt-2 text-sm font-semibold text-slate-200">
-            Yeni bir içerik ekleyebilir veya varsayılan akışı geri yükleyebilirsiniz.
+            Yeni içerik ekleyebilir veya Kütüphane ekranından örnek yarışmayı açabilirsiniz.
           </p>
-          <button type="button" onClick={onRestoreDefaultFlow} className="mt-4 rounded-2xl bg-amber-300 px-5 py-3 text-sm font-black text-slate-950">
-            Varsayılan Akışı Geri Yükle
-          </button>
         </div>
       ) : null}
 
