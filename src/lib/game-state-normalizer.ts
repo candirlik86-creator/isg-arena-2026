@@ -83,6 +83,7 @@ function normalizeFlowItem(value: unknown, usedIds: Set<string>, quizNumber: num
       topic: asString(value.topic ?? value.category, "Genel"),
       category: asString(value.category),
       stage: asString(value.stage, "Quiz"),
+      imageUrl: asString(value.imageUrl) || undefined,
       timeLimitSeconds: asPositiveNumber(value.timeLimitSeconds, 30),
       maxScore: asPositiveNumber(value.maxScore, 1000),
       options,

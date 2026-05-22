@@ -52,6 +52,80 @@ export default function ScreenPage() {
   if (quizInProgress && activeItem.type === "quiz") {
     const liveRemainingSeconds = remainingSeconds ?? activeItem.timeLimitSeconds;
     const liveProgress = Math.max(0, Math.min(100, (liveRemainingSeconds / activeItem.timeLimitSeconds) * 100));
+    const questionImageUrl = activeItem.imageUrl?.trim();
+
+    if (questionImageUrl) {
+      return (
+        <main
+          {...screenSurface}
+          data-customer-name={undefined}
+          className={`${screenSurface.className} relative box-border h-[100dvh] max-h-[100dvh] overflow-hidden p-2 text-white md:p-3`}
+        >
+          <ScreenProductMark productBrandName={brand.productBrandName} />
+          <p className="pointer-events-none absolute right-2 top-2 z-20 max-w-[7.5rem] truncate rounded-full border border-white/25 bg-white/[0.16] px-2 py-1 text-center text-[0.58rem] font-black uppercase tracking-[0.1em] text-white/85 shadow-lg shadow-blue-950/15 backdrop-blur md:right-3 md:top-2.5 md:max-w-[8.5rem] md:px-2.5 md:text-[0.68rem]">
+            {brand.customerName}
+          </p>
+          <section className="relative mx-auto flex h-full max-h-full min-h-0 max-w-[1720px] flex-col gap-2 overflow-hidden">
+            <header className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-stretch gap-2">
+              <div className="min-w-0 rounded-[clamp(0.75rem,1.25vw,1.15rem)] border border-white/30 bg-white/[0.18] p-2 shadow-2xl shadow-blue-950/25 backdrop-blur md:px-3">
+                <div className="flex items-center gap-2">
+                  <StageBadge label={`Soru ${activeQuizPosition?.current ?? activeItem.quizNumber} / ${activeQuizPosition?.total ?? activeItem.quizNumber}`} />
+                  <div className="h-2 flex-1 overflow-hidden rounded-full border border-white/25 bg-white/25 shadow-inner">
+                    <div className="h-full rounded-full bg-gradient-to-r from-emerald-300 via-yellow-300 to-rose-500 shadow-lg transition-all" style={{ width: `${liveProgress}%` }} />
+                  </div>
+                </div>
+                <h1
+                  className="mt-1 line-clamp-2 break-words font-black leading-tight text-white drop-shadow-2xl"
+                  style={{ fontSize: "clamp(0.95rem, 1.75vw, 2.15rem)" }}
+                >
+                  {activeItem.title}
+                </h1>
+              </div>
+
+              <div className="mr-[clamp(4.25rem,7vw,7.25rem)] grid shrink-0 grid-cols-2 gap-1.5 md:gap-2">
+                <div className="min-w-[3.5rem] rounded-[clamp(0.6rem,0.95vw,0.9rem)] border border-white/30 bg-white/[0.18] px-1.5 py-0.5 text-center shadow-2xl shadow-blue-950/25 backdrop-blur md:min-w-[4.25rem] md:px-2 md:py-1">
+                  <p className="text-[7px] font-black uppercase tracking-[0.16em] text-cyan-100 md:text-[8px]">Süre</p>
+                  <p className="text-2xl font-black leading-none tabular-nums text-white md:text-[1.65rem]">{liveRemainingSeconds}</p>
+                </div>
+                <div className="min-w-[3.5rem] rounded-[clamp(0.6rem,0.95vw,0.9rem)] border border-white/30 bg-white/[0.18] px-1.5 py-0.5 text-center shadow-2xl shadow-blue-950/25 backdrop-blur md:min-w-[4.25rem] md:px-2 md:py-1">
+                  <p className="text-[7px] font-black uppercase tracking-[0.16em] text-emerald-100 md:text-[8px]">Cevap</p>
+                  <p className="text-2xl font-black leading-none tabular-nums text-white md:text-[1.65rem]">{answeredCount}</p>
+                </div>
+              </div>
+            </header>
+
+            <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(18rem,32rem)] gap-2 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(24rem,34rem)]">
+              <div className="flex min-h-0 overflow-hidden rounded-[clamp(0.9rem,1.8vw,1.7rem)] border border-white/25 bg-slate-950/45 p-2 shadow-2xl shadow-blue-950/25 backdrop-blur md:p-3">
+                <img src={questionImageUrl} alt="" className="h-full min-h-0 w-full rounded-[clamp(0.75rem,1.5vw,1.4rem)] object-contain" />
+              </div>
+
+              <div className="grid min-h-0 grid-rows-4 gap-2 overflow-hidden">
+                {activeItem.options.map((option) => (
+                  <article
+                    key={option.id}
+                    className={`flex min-h-0 overflow-hidden rounded-[clamp(0.8rem,1.35vw,1.25rem)] border p-2 shadow-2xl backdrop-blur md:p-3 ${liveOptionStyles[option.id]}`}
+                  >
+                    <div className="flex min-h-0 w-full items-center gap-2 md:gap-3">
+                      <div
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl font-black shadow-xl md:h-12 md:w-12 md:rounded-2xl md:text-2xl ${liveOptionBadgeStyles[option.id]}`}
+                      >
+                        {option.id}
+                      </div>
+                      <p
+                        className="line-clamp-2 min-w-0 break-words font-black leading-tight text-white drop-shadow-lg"
+                        style={{ fontSize: "clamp(0.85rem, 1.35vw, 1.65rem)" }}
+                      >
+                        {option.text}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        </main>
+      );
+    }
 
     return (
       <main

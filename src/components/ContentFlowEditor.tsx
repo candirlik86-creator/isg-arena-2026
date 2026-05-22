@@ -35,6 +35,7 @@ type FlowItemFormState = {
   category: string;
   timeLimitSeconds: string;
   description: string;
+  imageUrl: string;
   mediaUrl: string;
   uploadedImageDataUrl: string;
   message: string;
@@ -84,6 +85,7 @@ function createEmptyForm(type: FlowItemType): FlowItemFormState {
     category: "",
     timeLimitSeconds: type === "forkliftChallenge" ? "60" : type === "quiz" ? "30" : "",
     description: "",
+    imageUrl: "",
     mediaUrl: "",
     uploadedImageDataUrl: "",
     message: type === "forkliftChallenge" ? "Hızlı olan değil, güvenli süren kazanır." : "",
@@ -106,6 +108,7 @@ function createFormFromItem(item: ContentFlowItem): FlowItemFormState {
       options: Object.fromEntries(item.options.map((option) => [option.id, option.text])) as Record<AnswerId, string>,
       correctOptionId: item.correctOptionId,
       explanation: item.explanation ?? "",
+      imageUrl: item.imageUrl ?? "",
     };
   }
 
@@ -220,6 +223,7 @@ function buildFlowItem(form: FlowItemFormState, state: GameState, existingItem?:
       stage: existingQuiz?.stage ?? "Admin Eklenen Quiz",
       timeLimitSeconds: duration ?? 30,
       maxScore: existingQuiz?.maxScore ?? 1000,
+      imageUrl: form.imageUrl.trim() || undefined,
       options: answerIds.map((optionId) => ({
         id: optionId,
         text: form.options[optionId].trim(),
@@ -528,6 +532,16 @@ export function ContentFlowEditor({
                   </div>
                   <FieldError message={errors.correctOptionId} />
                 </div>
+
+                <label className="block lg:col-span-2">
+                  <span className={labelClass}>Görsel URL / public path optional</span>
+                  <input
+                    value={form.imageUrl}
+                    onChange={(event) => patchForm({ imageUrl: event.target.value })}
+                    className={inputClass}
+                    placeholder="/images/warehouse-hazards.jpg"
+                  />
+                </label>
 
                 <label className="block lg:col-span-2">
                   <span className={labelClass}>Açıklama / öğrenme notu optional</span>

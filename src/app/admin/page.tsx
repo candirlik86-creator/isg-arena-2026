@@ -578,19 +578,47 @@ export default function AdminPage() {
                   </div>
 
                   <div className="mb-6 rounded-2xl border border-blue-200/50 bg-gradient-to-br from-white to-blue-50/20 p-6 shadow-lg">
-                    <div className="rounded-2xl border-2 border-dashed border-blue-300/50 bg-gradient-to-br from-blue-50/30 to-indigo-50/30 p-10 text-center">
-                      <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-lg">
-                        <svg className="h-10 w-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                      </div>
-                      <p className="mb-2 text-lg font-semibold text-slate-600">Medya alanı</p>
-                      <p className="text-base text-slate-400">Görsel veya video için Ayarlar → Akış Editörü</p>
+                    <div className="overflow-hidden rounded-2xl border-2 border-dashed border-blue-300/50 bg-gradient-to-br from-blue-50/30 to-indigo-50/30 p-4 text-center">
+                      {activeItem.imageUrl ? (
+                        <img
+                          src={activeItem.imageUrl}
+                          alt=""
+                          className="max-h-72 w-full rounded-xl object-contain shadow-lg"
+                        />
+                      ) : (
+                        <div className="p-6">
+                          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-lg">
+                            <svg className="h-10 w-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1.5}
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </div>
+                          <p className="mb-2 text-lg font-semibold text-slate-600">Medya alanı</p>
+                          <p className="text-base text-slate-400">Görsel URL / public path için sağ paneli kullanın</p>
+                        </div>
+                      )}
+                      {activeItem.imageUrl ? (
+                        <p className="mt-3 break-all rounded-xl bg-white/80 px-3 py-2 text-sm font-semibold text-slate-600">
+                          {activeItem.imageUrl}
+                        </p>
+                      ) : null}
+                      <label className="mt-4 block text-left">
+                        <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-blue-600">Görsel URL / public path</span>
+                        <input
+                          type="text"
+                          value={activeItem.imageUrl ?? ""}
+                          onChange={(event) => {
+                            const imageUrl = event.target.value.trim();
+                            patchActiveQuiz({ imageUrl: imageUrl || undefined });
+                          }}
+                          placeholder="/images/warehouse-hazards.jpg"
+                          className="w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        />
+                      </label>
                     </div>
                   </div>
 
@@ -729,6 +757,20 @@ export default function AdminPage() {
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2.5 block text-xs font-semibold text-slate-600">Görsel URL / public path</label>
+                    <input
+                      type="text"
+                      value={activeItem.imageUrl ?? ""}
+                      onChange={(event) => {
+                        const imageUrl = event.target.value.trim();
+                        patchActiveQuiz({ imageUrl: imageUrl || undefined });
+                      }}
+                      placeholder="/images/warehouse-hazards.jpg"
+                      className="w-full rounded-xl border border-blue-200/60 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
                   </div>
                 </div>
               </div>

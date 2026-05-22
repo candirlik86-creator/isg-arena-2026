@@ -16,6 +16,7 @@ export type QuizFlowItem = BaseFlowItem & {
   quizNumber: number;
   topic: string;
   stage: string;
+  imageUrl?: string;
   timeLimitSeconds: number;
   maxScore: number;
   options: AnswerOption[];
