@@ -5,13 +5,18 @@ import { useGameState } from "@/hooks/useGameState";
 import {
   calculateQuizIntroRemainingSeconds,
   calculateRemainingSeconds,
+  getFlowItemMedia,
   getQuestionLabel,
   getQuizAnswerBreakdown,
   getQuizAnswerStatusLabel,
   getQuizPosition,
+  getYoutubeEmbedUrl,
+  inferMediaSource,
+  inferMediaType,
   type AnswerId,
   type ContentFlowItem,
   type GamePhase,
+  type MediaType,
   type QuizAnswerBreakdown,
   type QuizFlowItem,
 } from "@/lib/game-state";
@@ -27,7 +32,7 @@ import {
 } from "@/lib/competition-library";
 import { downloadResultsCsv } from "@/lib/game-store";
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ChangeEvent, type ReactNode } from "react";
 
 const answerOptionIds: AnswerId[] = ["A", "B", "C", "D"];
 type AdminTab = "competition" | "settings" | "library";
@@ -113,6 +118,63 @@ function CheckIcon({ className }: { className: string }) {
         clipRule="evenodd"
       />
     </svg>
+  );
+}
+
+async function uploadMediaFile(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/uploads", {
+    method: "POST",
+    body: formData,
+  });
+  const body = (await response.json()) as { ok?: boolean; path?: string; message?: string };
+
+  if (!response.ok || !body.ok || !body.path) {
+    throw new Error(body.message ?? "Dosya yüklenemedi.");
+  }
+
+  return body.path;
+}
+
+function AdminMediaPreview({ mediaUrl, title }: { mediaUrl: string; title: string }) {
+  const cleanUrl = mediaUrl.trim();
+  const mediaType = inferMediaType(cleanUrl);
+
+  if (!cleanUrl) {
+    return (
+      <div className="rounded-2xl border-2 border-dashed border-blue-300/50 bg-gradient-to-br from-blue-50/30 to-indigo-50/30 p-8 text-center">
+        <p className="text-lg font-semibold text-slate-600">Medya alanı</p>
+        <p className="mt-2 text-base text-slate-400">Görsel, video veya YouTube bağlantısı ekleyin.</p>
+      </div>
+    );
+  }
+
+  if (mediaType === "none") {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-center text-sm font-semibold text-red-700">
+        Bağlantı desteklenen görsel, video veya YouTube formatı değil.
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-blue-200 bg-slate-950 shadow-lg">
+      {mediaType === "image" ? (
+        <img src={cleanUrl} alt="" className="max-h-72 w-full object-contain" />
+      ) : mediaType === "video" ? (
+        <video src={cleanUrl} controls className="max-h-72 w-full" />
+      ) : (
+        <iframe
+          title={title}
+          src={getYoutubeEmbedUrl(cleanUrl)}
+          className="aspect-video max-h-72 w-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      )}
+    </div>
   );
 }
 
@@ -202,6 +264,7 @@ export default function AdminPage() {
   const [trashedCompetitions, setTrashedCompetitions] = useState<SavedCompetition[]>([]);
   const [editingCompetitionId, setEditingCompetitionId] = useState<string | null>(null);
   const [libraryMessage, setLibraryMessage] = useState<string | null>(null);
+  const [mediaMessage, setMediaMessage] = useState<string | null>(null);
 
   const {
     state,
@@ -354,12 +417,50 @@ export default function AdminPage() {
   const rankedLeaderboard = [...leaderboard].sort((a, b) => b.score - a.score).slice(0, 5);
   const quizItemCount = state.flowItems.filter((item) => item.type === "quiz").length;
   const contentItemCount = state.flowItems.length - quizItemCount;
+  const activeItemMedia = hasFlowItems ? getFlowItemMedia(activeItem) : { mediaUrl: "", mediaType: "none" as MediaType, mediaSource: "none" as const };
 
   const patchActiveQuiz = (patch: Partial<QuizFlowItem>) => {
     if (!hasFlowItems || activeItem.type !== "quiz") {
       return;
     }
     updateFlowItem({ ...activeItem, ...patch });
+  };
+
+  const patchActiveQuizMedia = (mediaUrl: string) => {
+    const cleanUrl = mediaUrl.trim();
+    const mediaType = inferMediaType(cleanUrl);
+
+    patchActiveQuiz({
+      mediaUrl: cleanUrl || undefined,
+      mediaType,
+      mediaSource: inferMediaSource(cleanUrl),
+      imageUrl: mediaType === "image" ? cleanUrl || undefined : undefined,
+    });
+  };
+
+  const handleActiveQuizMediaUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      setMediaMessage("Sadece görsel veya video dosyası seçilebilir.");
+      event.currentTarget.value = "";
+      return;
+    }
+
+    setMediaMessage("Dosya yükleniyor...");
+    try {
+      const mediaUrl = await uploadMediaFile(file);
+      patchActiveQuizMedia(mediaUrl);
+      setMediaMessage("Dosya yüklendi.");
+    } catch (error) {
+      setMediaMessage(error instanceof Error ? error.message : "Dosya yüklenemedi.");
+    } finally {
+      event.currentTarget.value = "";
+    }
   };
 
   const setQuizOptionText = (optionId: AnswerId, text: string) => {
@@ -658,47 +759,46 @@ export default function AdminPage() {
                   </div>
 
                   <div className="mb-6 rounded-2xl border border-blue-200/50 bg-gradient-to-br from-white to-blue-50/20 p-6 shadow-lg">
-                    <div className="overflow-hidden rounded-2xl border-2 border-dashed border-blue-300/50 bg-gradient-to-br from-blue-50/30 to-indigo-50/30 p-4 text-center">
-                      {activeItem.imageUrl ? (
-                        <img
-                          src={activeItem.imageUrl}
-                          alt=""
-                          className="max-h-72 w-full rounded-xl object-contain shadow-lg"
-                        />
-                      ) : (
-                        <div className="p-6">
-                          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-lg">
-                            <svg className="h-10 w-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1.5}
-                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                              />
-                            </svg>
-                          </div>
-                          <p className="mb-2 text-lg font-semibold text-slate-600">Medya alanı</p>
-                          <p className="text-base text-slate-400">Görsel URL / public path için sağ paneli kullanın</p>
+                    <div className="rounded-2xl border-2 border-dashed border-blue-300/50 bg-gradient-to-br from-blue-50/30 to-indigo-50/30 p-4">
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-wide text-blue-600">Medya Ekle</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-500">
+                            Görsel, video veya YouTube bağlantısı
+                          </p>
                         </div>
-                      )}
-                      {activeItem.imageUrl ? (
-                        <p className="mt-3 break-all rounded-xl bg-white/80 px-3 py-2 text-sm font-semibold text-slate-600">
-                          {activeItem.imageUrl}
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 shadow-sm">
+                          {activeItemMedia.mediaType === "none" ? "Medya yok" : activeItemMedia.mediaType}
+                        </span>
+                      </div>
+                      <AdminMediaPreview mediaUrl={activeItemMedia.mediaUrl} title={activeItem.title} />
+                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        <label className="block">
+                          <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-blue-600">Bilgisayardan Dosya Seç</span>
+                          <input
+                            type="file"
+                            accept="image/*,video/*"
+                            onChange={(event) => void handleActiveQuizMediaUpload(event)}
+                            className="w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-blue-600">Link / YouTube URL</span>
+                          <input
+                            type="text"
+                            value={activeItemMedia.mediaUrl}
+                            onChange={(event) => patchActiveQuizMedia(event.target.value)}
+                            placeholder="/images/warehouse-hazards.jpg"
+                            className="w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          />
+                        </label>
+                      </div>
+                      {mediaMessage ? <p className="mt-3 rounded-xl bg-white/80 px-3 py-2 text-sm font-semibold text-slate-600">{mediaMessage}</p> : null}
+                      {activeItemMedia.mediaType === "none" && activeItemMedia.mediaUrl ? (
+                        <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+                          Bağlantı desteklenen görsel, video veya YouTube formatı değil.
                         </p>
                       ) : null}
-                      <label className="mt-4 block text-left">
-                        <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-blue-600">Görsel URL / public path</span>
-                        <input
-                          type="text"
-                          value={activeItem.imageUrl ?? ""}
-                          onChange={(event) => {
-                            const imageUrl = event.target.value.trim();
-                            patchActiveQuiz({ imageUrl: imageUrl || undefined });
-                          }}
-                          placeholder="/images/warehouse-hazards.jpg"
-                          className="w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                        />
-                      </label>
                     </div>
                   </div>
 
@@ -756,9 +856,9 @@ export default function AdminPage() {
                         {activeItem.message}
                       </p>
                     ) : null}
-                    {activeItem.type === "mediaSlide" && (activeItem.mediaUrl || activeItem.uploadedImageDataUrl) ? (
+                    {activeItemMedia.mediaType !== "none" ? (
                       <p className="mt-4 break-all rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-                        {activeItem.mediaUrl || "Yüklenen görsel"}
+                        {activeItemMedia.mediaType} · {activeItemMedia.mediaUrl}
                       </p>
                     ) : null}
                   </div>
@@ -840,17 +940,17 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2.5 block text-xs font-semibold text-slate-600">Görsel URL / public path</label>
+                    <label className="mb-2.5 block text-xs font-semibold text-slate-600">Medya linki</label>
                     <input
                       type="text"
-                      value={activeItem.imageUrl ?? ""}
-                      onChange={(event) => {
-                        const imageUrl = event.target.value.trim();
-                        patchActiveQuiz({ imageUrl: imageUrl || undefined });
-                      }}
-                      placeholder="/images/warehouse-hazards.jpg"
+                      value={activeItemMedia.mediaUrl}
+                      onChange={(event) => patchActiveQuizMedia(event.target.value)}
+                      placeholder="/images/warehouse-hazards.jpg veya https://youtu.be/..."
                       className="w-full rounded-xl border border-blue-200/60 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     />
+                    <p className="mt-2 text-xs font-semibold text-slate-500">
+                      Tür: {activeItemMedia.mediaType === "none" ? "medya yok" : activeItemMedia.mediaType}
+                    </p>
                   </div>
                 </div>
               </div>

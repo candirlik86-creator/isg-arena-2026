@@ -13,6 +13,7 @@ import {
   calculateQuizIntroRemainingSeconds,
   calculateRemainingSeconds,
   getAnsweredCount,
+  getFlowItemMedia,
   getQuizPosition,
   getYoutubeEmbedUrl,
 } from "@/lib/game-state";
@@ -37,6 +38,36 @@ const scoreRowStyles = [
   "border-orange-100/50 bg-gradient-to-r from-orange-300/25 via-white/[0.16] to-white/[0.12] shadow-blue-900/20",
 ] as const;
 
+function ScreenMedia({ mediaUrl, title }: { mediaUrl: string; title: string }) {
+  const mediaType = mediaUrl ? getFlowItemMedia({ id: "preview", type: "mediaSlide", title, mediaUrl, mediaType: "none", mediaSource: "none", description: "" }).mediaType : "none";
+
+  if (mediaType === "image") {
+    return <img src={mediaUrl} alt="" className="h-full min-h-0 w-full rounded-[clamp(0.75rem,1.5vw,1.4rem)] object-contain" />;
+  }
+
+  if (mediaType === "video") {
+    return <video src={mediaUrl} controls className="h-full min-h-0 w-full rounded-[clamp(0.75rem,1.5vw,1.4rem)] object-contain" />;
+  }
+
+  if (mediaType === "youtube") {
+    return (
+      <iframe
+        title={title}
+        src={getYoutubeEmbedUrl(mediaUrl)}
+        className="h-full min-h-0 w-full rounded-[clamp(0.75rem,1.5vw,1.4rem)]"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0 w-full items-center justify-center rounded-[clamp(0.75rem,1.5vw,1.4rem)] border border-white/20 bg-white/[0.08] p-4 text-center">
+      <p className="text-lg font-black text-slate-100 md:text-2xl">Medya eklenmedi veya bağlantı desteklenmiyor.</p>
+    </div>
+  );
+}
+
 export default function ScreenPage() {
   const { state, now, activeItem, leaderboard } = useGameState();
   const brand = resolveBrandSettings(state.settings);
@@ -48,13 +79,14 @@ export default function ScreenPage() {
   const quizTimeExpired = activeItem.type === "quiz" && remainingSeconds !== null && remainingSeconds <= 0;
   const shouldShowQuizDistribution = activeItem.type === "quiz" && quizTimeExpired;
   const quizInProgress = state.phase === "quiz" && activeItem.type === "quiz" && !quizTimeExpired;
+  const activeItemMedia = getFlowItemMedia(activeItem);
 
   if (quizInProgress && activeItem.type === "quiz") {
     const liveRemainingSeconds = remainingSeconds ?? activeItem.timeLimitSeconds;
     const liveProgress = Math.max(0, Math.min(100, (liveRemainingSeconds / activeItem.timeLimitSeconds) * 100));
-    const questionImageUrl = activeItem.imageUrl?.trim();
+    const questionMedia = activeItemMedia;
 
-    if (questionImageUrl) {
+    if (questionMedia.mediaType !== "none") {
       return (
         <main
           {...screenSurface}
@@ -96,7 +128,7 @@ export default function ScreenPage() {
 
             <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(18rem,32rem)] gap-2 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(24rem,34rem)]">
               <div className="flex min-h-0 overflow-hidden rounded-[clamp(0.9rem,1.8vw,1.7rem)] border border-white/25 bg-slate-950/45 p-2 shadow-2xl shadow-blue-950/25 backdrop-blur md:p-3">
-                <img src={questionImageUrl} alt="" className="h-full min-h-0 w-full rounded-[clamp(0.75rem,1.5vw,1.4rem)] object-contain" />
+                <ScreenMedia mediaUrl={questionMedia.mediaUrl} title={activeItem.title} />
               </div>
 
               <div className="grid min-h-0 grid-rows-4 gap-2 overflow-hidden">
@@ -380,31 +412,19 @@ export default function ScreenPage() {
             <StageBadge label="Medya Slaytı" tone="blue" />
             <h2 className="mt-2 text-3xl font-black text-white md:mt-3 md:text-4xl lg:text-5xl">{activeItem.title}</h2>
             <p className="mt-2 text-base font-semibold text-slate-300 md:text-lg lg:text-xl">{activeItem.description}</p>
-            {!activeItem.uploadedImageDataUrl && activeItem.mediaUrl ? (
+            {activeItemMedia.mediaUrl && activeItemMedia.mediaType !== "none" ? (
               <a
-                href={activeItem.mediaUrl}
+                href={activeItemMedia.mediaUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="mt-2 block break-all rounded-xl border border-sky-300/25 bg-sky-400/10 p-3 text-sm font-black text-sky-100 md:mt-3 md:rounded-2xl md:p-4 md:text-base"
               >
-                Medya URL: {activeItem.mediaUrl}
+                Medya URL: {activeItemMedia.mediaUrl}
               </a>
             ) : null}
           </div>
-          <div className="min-h-0 flex-1 overflow-hidden rounded-[clamp(1rem,2vw,2.5rem)] border border-white/10 bg-slate-950 shadow-2xl">
-            {activeItem.uploadedImageDataUrl ? (
-              <img src={activeItem.uploadedImageDataUrl} alt="" className="max-h-[55dvh] w-full object-contain md:max-h-[58dvh]" />
-            ) : activeItem.mediaType === "youtube" ? (
-              <iframe
-                title={activeItem.title}
-                src={getYoutubeEmbedUrl(activeItem.mediaUrl)}
-                className="aspect-video max-h-[52dvh] w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            ) : (
-              <img src={activeItem.mediaUrl} alt="" className="max-h-[55dvh] w-full object-cover md:max-h-[58dvh]" />
-            )}
+          <div className="flex min-h-0 flex-1 overflow-hidden rounded-[clamp(1rem,2vw,2.5rem)] border border-white/10 bg-slate-950 p-2 shadow-2xl md:p-3">
+            <ScreenMedia mediaUrl={activeItemMedia.mediaUrl} title={activeItem.title} />
           </div>
         </section>
       ) : null}

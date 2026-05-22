@@ -3,6 +3,7 @@ import {
   answerIds,
   createInitialGameState,
   DEFAULT_SETTINGS,
+  inferMediaSource,
   inferMediaType,
   pruneResponsesForFlowItems,
   type AnswerId,
@@ -10,6 +11,8 @@ import {
   type GamePhase,
   type GameSettings,
   type GameState,
+  type MediaSource,
+  type MediaType,
   type TeamResponses,
 } from "./game-state";
 
@@ -57,6 +60,14 @@ function isAnswerId(value: unknown): value is AnswerId {
   return answerIds.includes(value as AnswerId);
 }
 
+function isMediaType(value: unknown): value is MediaType {
+  return value === "image" || value === "video" || value === "youtube" || value === "none";
+}
+
+function isMediaSource(value: unknown): value is MediaSource {
+  return value === "upload" || value === "url" || value === "youtube" || value === "public-path" || value === "none";
+}
+
 function normalizeFlowItem(value: unknown, usedIds: Set<string>, quizNumber: number): ContentFlowItem | null {
   if (!isRecord(value)) {
     return null;
@@ -65,6 +76,9 @@ function normalizeFlowItem(value: unknown, usedIds: Set<string>, quizNumber: num
   const type = value.type;
 
   if (type === "quiz") {
+    const mediaUrl = asString(value.mediaUrl ?? value.imageUrl).trim();
+    const mediaType = isMediaType(value.mediaType) ? value.mediaType : inferMediaType(mediaUrl);
+    const mediaSource = isMediaSource(value.mediaSource) ? value.mediaSource : inferMediaSource(mediaUrl);
     const rawOptions = Array.isArray(value.options) ? value.options : [];
     const options = answerIds.map((id) => {
       const rawOption = rawOptions.find((option) => isRecord(option) && option.id === id);
@@ -83,6 +97,9 @@ function normalizeFlowItem(value: unknown, usedIds: Set<string>, quizNumber: num
       category: asString(value.category),
       stage: asString(value.stage, "Quiz"),
       imageUrl: asString(value.imageUrl) || undefined,
+      mediaUrl: mediaUrl || undefined,
+      mediaType,
+      mediaSource,
       timeLimitSeconds: asPositiveNumber(value.timeLimitSeconds, 30),
       maxScore: asPositiveNumber(value.maxScore, 1000),
       options,
@@ -92,6 +109,10 @@ function normalizeFlowItem(value: unknown, usedIds: Set<string>, quizNumber: num
   }
 
   if (type === "infoSlide") {
+    const mediaUrl = asString(value.mediaUrl ?? value.imageUrl).trim();
+    const mediaType = isMediaType(value.mediaType) ? value.mediaType : inferMediaType(mediaUrl);
+    const mediaSource = isMediaSource(value.mediaSource) ? value.mediaSource : inferMediaSource(mediaUrl);
+
     return {
       id: createSafeId("infoSlide", usedIds, value.id),
       type: "infoSlide",
@@ -99,13 +120,17 @@ function normalizeFlowItem(value: unknown, usedIds: Set<string>, quizNumber: num
       category: asString(value.category),
       description: asString(value.description),
       imageUrl: asString(value.imageUrl) || undefined,
+      mediaUrl: mediaUrl || undefined,
+      mediaType,
+      mediaSource,
       timeLimitSeconds: asOptionalPositiveNumber(value.timeLimitSeconds),
     };
   }
 
   if (type === "mediaSlide") {
-    const mediaUrl = asString(value.mediaUrl);
-    const mediaType = value.mediaType === "youtube" || value.mediaType === "image" ? value.mediaType : inferMediaType(mediaUrl);
+    const mediaUrl = asString(value.mediaUrl ?? value.uploadedImageDataUrl).trim();
+    const mediaType = isMediaType(value.mediaType) ? value.mediaType : inferMediaType(mediaUrl);
+    const mediaSource = isMediaSource(value.mediaSource) ? value.mediaSource : inferMediaSource(mediaUrl);
 
     return {
       id: createSafeId("mediaSlide", usedIds, value.id),
@@ -113,6 +138,7 @@ function normalizeFlowItem(value: unknown, usedIds: Set<string>, quizNumber: num
       title: asString(value.title, "Adsız medya slaytı"),
       category: asString(value.category),
       mediaType,
+      mediaSource,
       mediaUrl,
       description: asString(value.description),
       timeLimitSeconds: asOptionalPositiveNumber(value.timeLimitSeconds),

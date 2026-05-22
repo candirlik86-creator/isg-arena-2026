@@ -5,10 +5,16 @@ export type AnswerOption = {
   text: string;
 };
 
+export type MediaType = "image" | "video" | "youtube" | "none";
+export type MediaSource = "upload" | "url" | "youtube" | "public-path" | "none";
+
 type BaseFlowItem = {
   id: string;
   title: string;
   category?: string;
+  mediaUrl?: string;
+  mediaType?: MediaType;
+  mediaSource?: MediaSource;
 };
 
 export type QuizFlowItem = BaseFlowItem & {
@@ -33,7 +39,8 @@ export type InfoSlideFlowItem = BaseFlowItem & {
 
 export type MediaSlideFlowItem = BaseFlowItem & {
   type: "mediaSlide";
-  mediaType: "image" | "youtube";
+  mediaType: MediaType;
+  mediaSource: MediaSource;
   mediaUrl: string;
   description: string;
   timeLimitSeconds?: number;
@@ -301,6 +308,7 @@ export const DEFAULT_FLOW: ContentFlowItem[] = [
     type: "mediaSlide",
     title: "Güvenli Sürüş Kısa Ara",
     mediaType: "youtube",
+    mediaSource: "youtube",
     mediaUrl: "https://www.youtube.com/watch?v=ysz5S6PUM-U",
     description: "Ekranda güvenli sürüş davranışlarını izleyin; hız, görüş ve yaya ayrımına odaklanın.",
   },
@@ -489,13 +497,85 @@ export function getItemDurationSeconds(item: ContentFlowItem) {
   return "timeLimitSeconds" in item && typeof item.timeLimitSeconds === "number" ? item.timeLimitSeconds : null;
 }
 
-export function inferMediaType(url: string): MediaSlideFlowItem["mediaType"] {
+const imageUrlPattern = /\.(jpe?g|png|webp|gif)(\?.*)?$/i;
+const videoUrlPattern = /\.(mp4|webm|mov)(\?.*)?$/i;
+
+function isYoutubeUrl(url: string) {
   try {
     const parsedUrl = new URL(url);
-    return parsedUrl.hostname.includes("youtube.com") || parsedUrl.hostname.includes("youtu.be") ? "youtube" : "image";
+    return parsedUrl.hostname.includes("youtube.com") || parsedUrl.hostname.includes("youtu.be");
   } catch {
-    return url.includes("youtube.com") || url.includes("youtu.be") ? "youtube" : "image";
+    return url.includes("youtube.com") || url.includes("youtu.be");
   }
+}
+
+export function inferMediaType(url: string): MediaType {
+  const mediaUrl = url.trim();
+
+  if (!mediaUrl) {
+    return "none";
+  }
+
+  if (isYoutubeUrl(mediaUrl)) {
+    return "youtube";
+  }
+
+  if (mediaUrl.startsWith("data:image/")) {
+    return "image";
+  }
+
+  if (mediaUrl.startsWith("data:video/")) {
+    return "video";
+  }
+
+  if (imageUrlPattern.test(mediaUrl)) {
+    return "image";
+  }
+
+  if (videoUrlPattern.test(mediaUrl)) {
+    return "video";
+  }
+
+  return "none";
+}
+
+export function inferMediaSource(url: string): MediaSource {
+  const mediaUrl = url.trim();
+
+  if (!mediaUrl || inferMediaType(mediaUrl) === "none") {
+    return "none";
+  }
+
+  if (isYoutubeUrl(mediaUrl)) {
+    return "youtube";
+  }
+
+  if (mediaUrl.startsWith("/")) {
+    return mediaUrl.startsWith("/uploads/") ? "upload" : "public-path";
+  }
+
+  return "url";
+}
+
+export function getFlowItemMedia(item: ContentFlowItem) {
+  const legacyMediaUrl =
+    item.type === "quiz" || item.type === "infoSlide"
+      ? item.imageUrl
+      : item.type === "mediaSlide"
+        ? item.uploadedImageDataUrl
+        : undefined;
+  const mediaUrl = (item.mediaUrl ?? legacyMediaUrl ?? "").trim();
+  const inferredType = inferMediaType(mediaUrl);
+
+  if (!mediaUrl || inferredType === "none") {
+    return { mediaUrl: "", mediaType: "none" as const, mediaSource: "none" as const };
+  }
+
+  return {
+    mediaUrl,
+    mediaType: inferredType,
+    mediaSource: item.mediaSource ?? inferMediaSource(mediaUrl),
+  };
 }
 
 export function getItemPhase(item: ContentFlowItem): GamePhase {

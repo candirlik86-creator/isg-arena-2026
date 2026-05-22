@@ -4,11 +4,14 @@ import { useMemo, useState, type ChangeEvent } from "react";
 import {
   answerIds,
   createFlowItemId,
+  getFlowItemMedia,
   getItemCategory,
   getItemDurationSeconds,
   getQuestionLabel,
   getQuizItems,
   getQuizPosition,
+  getYoutubeEmbedUrl,
+  inferMediaSource,
   inferMediaType,
   type AnswerId,
   type ContentFlowItem,
@@ -35,7 +38,6 @@ type FlowItemFormState = {
   category: string;
   timeLimitSeconds: string;
   description: string;
-  imageUrl: string;
   mediaUrl: string;
   uploadedImageDataUrl: string;
   message: string;
@@ -74,9 +76,7 @@ const subtleButton =
   "rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-200 transition hover:border-amber-300/40 hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-35";
 const dangerButton =
   "rounded-xl border border-red-300/30 bg-red-400/10 px-3 py-2 text-xs font-black uppercase tracking-widest text-red-100 transition hover:bg-red-400/15";
-const acceptedImageTypes = ["image/png", "image/jpeg", "image/webp", "image/gif"];
-const largeImageWarningThresholdBytes = 2 * 1024 * 1024;
-const largeImageWarning = "Büyük dosyalar tarayıcı hafızasını zorlayabilir.";
+const acceptedMediaTypes = "image/*,video/*";
 
 function createEmptyForm(type: FlowItemType): FlowItemFormState {
   return {
@@ -85,7 +85,6 @@ function createEmptyForm(type: FlowItemType): FlowItemFormState {
     category: "",
     timeLimitSeconds: type === "forkliftChallenge" ? "60" : type === "quiz" ? "30" : "",
     description: "",
-    imageUrl: "",
     mediaUrl: "",
     uploadedImageDataUrl: "",
     message: type === "forkliftChallenge" ? "Hızlı olan değil, güvenli süren kazanır." : "",
@@ -108,7 +107,7 @@ function createFormFromItem(item: ContentFlowItem): FlowItemFormState {
       options: Object.fromEntries(item.options.map((option) => [option.id, option.text])) as Record<AnswerId, string>,
       correctOptionId: item.correctOptionId,
       explanation: item.explanation ?? "",
-      imageUrl: item.imageUrl ?? "",
+      mediaUrl: item.mediaUrl ?? item.imageUrl ?? "",
     };
   }
 
@@ -172,6 +171,10 @@ function validateForm(form: FlowItemFormState) {
     if (!form.correctOptionId) {
       errors.correctOptionId = "Doğru cevap seçili olmalı.";
     }
+
+    if (form.mediaUrl.trim() && inferMediaType(form.mediaUrl) === "none") {
+      errors.mediaUrl = "Desteklenen görsel, video veya YouTube bağlantısı girin.";
+    }
   }
 
   if ((form.type === "infoSlide" || form.type === "mediaSlide") && form.timeLimitSeconds.trim() && !duration) {
@@ -183,8 +186,10 @@ function validateForm(form: FlowItemFormState) {
   }
 
   if (form.type === "mediaSlide") {
-    if (!form.mediaUrl.trim() && !form.uploadedImageDataUrl) {
-      errors.mediaUrl = "Medya URL yazın veya resim dosyası seçin.";
+    if (!form.mediaUrl.trim()) {
+      errors.mediaUrl = "Medya URL yazın veya dosya seçin.";
+    } else if (inferMediaType(form.mediaUrl) === "none") {
+      errors.mediaUrl = "Desteklenen görsel, video veya YouTube bağlantısı girin.";
     }
   }
 
@@ -223,7 +228,10 @@ function buildFlowItem(form: FlowItemFormState, state: GameState, existingItem?:
       stage: existingQuiz?.stage ?? "Admin Eklenen Quiz",
       timeLimitSeconds: duration ?? 30,
       maxScore: existingQuiz?.maxScore ?? 1000,
-      imageUrl: form.imageUrl.trim() || undefined,
+      imageUrl: inferMediaType(form.mediaUrl) === "image" ? form.mediaUrl.trim() || undefined : undefined,
+      mediaUrl: form.mediaUrl.trim() || undefined,
+      mediaType: inferMediaType(form.mediaUrl),
+      mediaSource: inferMediaSource(form.mediaUrl),
       options: answerIds.map((optionId) => ({
         id: optionId,
         text: form.options[optionId].trim(),
@@ -250,6 +258,7 @@ function buildFlowItem(form: FlowItemFormState, state: GameState, existingItem?:
   if (form.type === "mediaSlide") {
     const existingMediaSlide = existingItem?.type === "mediaSlide" ? existingItem : null;
     const mediaUrl = form.mediaUrl.trim();
+    const mediaType = inferMediaType(mediaUrl);
 
     return {
       id: existingMediaSlide?.id ?? createFlowItemId("mediaSlide"),
@@ -258,9 +267,10 @@ function buildFlowItem(form: FlowItemFormState, state: GameState, existingItem?:
       category: category || undefined,
       description: form.description.trim(),
       mediaUrl,
-      mediaType: inferMediaType(mediaUrl),
+      mediaType,
+      mediaSource: inferMediaSource(mediaUrl),
       timeLimitSeconds: duration ?? undefined,
-      uploadedImageDataUrl: form.uploadedImageDataUrl || undefined,
+      uploadedImageDataUrl: undefined,
     };
   }
 
@@ -282,6 +292,62 @@ function FieldError({ message }: { message?: string }) {
   return message ? <p className="mt-2 text-sm font-bold text-red-200">{message}</p> : null;
 }
 
+async function uploadMediaFile(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/uploads", {
+    method: "POST",
+    body: formData,
+  });
+  const body = (await response.json()) as { ok?: boolean; path?: string; message?: string };
+
+  if (!response.ok || !body.ok || !body.path) {
+    throw new Error(body.message ?? "Dosya yüklenemedi.");
+  }
+
+  return body.path;
+}
+
+function MediaPreview({ mediaUrl }: { mediaUrl: string }) {
+  const cleanUrl = mediaUrl.trim();
+  const mediaType = inferMediaType(cleanUrl);
+
+  if (!cleanUrl) {
+    return (
+      <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm font-bold text-slate-300">
+        Medya seçilmedi.
+      </div>
+    );
+  }
+
+  if (mediaType === "none") {
+    return (
+      <div className="mt-3 rounded-2xl border border-red-300/30 bg-red-400/10 p-4 text-sm font-bold text-red-100">
+        Bu bağlantı desteklenen görsel, video veya YouTube formatı değil.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-slate-950">
+      {mediaType === "image" ? (
+        <img src={cleanUrl} alt="" className="max-h-52 w-full object-contain" />
+      ) : mediaType === "video" ? (
+        <video src={cleanUrl} controls className="max-h-52 w-full" />
+      ) : (
+        <iframe
+          title="Medya önizleme"
+          src={getYoutubeEmbedUrl(cleanUrl)}
+          className="aspect-video max-h-52 w-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      )}
+    </div>
+  );
+}
+
 export function ContentFlowEditor({
   state,
   onSelectItem,
@@ -297,7 +363,7 @@ export function ContentFlowEditor({
   const [form, setForm] = useState<FlowItemFormState>(() => createEmptyForm("quiz"));
   const [errors, setErrors] = useState<FormErrors>({});
   const [notice, setNotice] = useState("");
-  const [imageWarning, setImageWarning] = useState("");
+  const [mediaMessage, setMediaMessage] = useState("");
   const quizCount = useMemo(() => getQuizItems(state).length, [state]);
   const editingItem = editingItemId ? state.flowItems.find((item) => item.id === editingItemId) : undefined;
 
@@ -313,7 +379,7 @@ export function ContentFlowEditor({
     setForm(createEmptyForm(type));
     setErrors({});
     setNotice("");
-    setImageWarning("");
+    setMediaMessage("");
   };
 
   const startEdit = (item: ContentFlowItem) => {
@@ -322,7 +388,7 @@ export function ContentFlowEditor({
     setForm(createFormFromItem(item));
     setErrors({});
     setNotice("");
-    setImageWarning("");
+    setMediaMessage("");
   };
 
   const closeForm = () => {
@@ -330,51 +396,40 @@ export function ContentFlowEditor({
     setEditingItemId(null);
     setForm(createEmptyForm("quiz"));
     setErrors({});
-    setImageWarning("");
+    setMediaMessage("");
   };
 
-  const handleMediaImageFile = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleMediaFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
 
     if (!file) {
       return;
     }
 
-    if (!acceptedImageTypes.includes(file.type)) {
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
       setErrors((currentErrors) => ({
         ...currentErrors,
-        uploadedImageDataUrl: "Sadece PNG, JPEG, WebP veya GIF resmi seçilebilir.",
+        mediaUrl: "Sadece görsel veya video dosyası seçilebilir.",
       }));
       event.currentTarget.value = "";
       return;
     }
 
-    setImageWarning(file.size > largeImageWarningThresholdBytes ? largeImageWarning : "");
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== "string") {
-        setErrors((currentErrors) => ({
-          ...currentErrors,
-          uploadedImageDataUrl: "Resim okunamadı.",
-        }));
-        return;
-      }
-
-      setForm((currentForm) => ({
-        ...currentForm,
-        uploadedImageDataUrl: reader.result as string,
-      }));
+    setMediaMessage("Dosya yükleniyor...");
+    try {
+      const mediaUrl = await uploadMediaFile(file);
+      patchForm({ mediaUrl, uploadedImageDataUrl: "" });
       setErrors({});
-      setNotice("");
-    };
-    reader.onerror = () => {
+      setMediaMessage("Dosya yüklendi.");
+    } catch (error) {
       setErrors((currentErrors) => ({
         ...currentErrors,
-        uploadedImageDataUrl: "Resim okunamadı.",
+        mediaUrl: error instanceof Error ? error.message : "Dosya yüklenemedi.",
       }));
-    };
-    reader.readAsDataURL(file);
+      setMediaMessage("");
+    } finally {
+      event.currentTarget.value = "";
+    }
   };
 
   const submitForm = () => {
@@ -533,15 +588,35 @@ export function ContentFlowEditor({
                   <FieldError message={errors.correctOptionId} />
                 </div>
 
-                <label className="block lg:col-span-2">
-                  <span className={labelClass}>Görsel URL / public path optional</span>
-                  <input
-                    value={form.imageUrl}
-                    onChange={(event) => patchForm({ imageUrl: event.target.value })}
-                    className={inputClass}
-                    placeholder="/images/warehouse-hazards.jpg"
-                  />
-                </label>
+                <div className="lg:col-span-2">
+                  <p className={labelClass}>Medya Ekle optional</p>
+                  <label className="mt-2 block">
+                    <span className="text-sm font-black text-slate-300">Bilgisayardan Dosya Seç</span>
+                    <input
+                      type="file"
+                      accept={acceptedMediaTypes}
+                      onChange={(event) => void handleMediaFile(event)}
+                      className={`${inputClass} file:mr-4 file:rounded-xl file:border-0 file:bg-amber-300 file:px-4 file:py-2 file:text-sm file:font-black file:text-slate-950`}
+                    />
+                  </label>
+                  <label className="mt-4 block">
+                    <span className="text-sm font-black text-slate-300">Link / YouTube URL</span>
+                    <input
+                      value={form.mediaUrl}
+                      onChange={(event) => patchForm({ mediaUrl: event.target.value, uploadedImageDataUrl: "" })}
+                      className={inputClass}
+                      placeholder="/images/warehouse-hazards.jpg veya https://youtu.be/..."
+                    />
+                    <FieldError message={errors.mediaUrl} />
+                  </label>
+                  {mediaMessage ? (
+                    <p className="mt-3 rounded-2xl border border-emerald-300/30 bg-emerald-400/10 p-3 text-sm font-black text-emerald-100">
+                      {mediaMessage}
+                    </p>
+                  ) : null}
+                  <p className="mt-4 text-xs font-black uppercase tracking-[0.22em] text-slate-400">Önizleme</p>
+                  <MediaPreview mediaUrl={form.mediaUrl} />
+                </div>
 
                 <label className="block lg:col-span-2">
                   <span className={labelClass}>Açıklama / öğrenme notu optional</span>
@@ -576,47 +651,34 @@ export function ContentFlowEditor({
                     className={`${inputClass} min-h-28 resize-none`}
                   />
                 </label>
-                <label className="block lg:col-span-2">
-                  <span className={labelClass}>Medya URL</span>
-                  <input value={form.mediaUrl} onChange={(event) => patchForm({ mediaUrl: event.target.value })} className={inputClass} />
-                  <FieldError message={errors.mediaUrl} />
-                </label>
                 <div className="lg:col-span-2">
+                  <p className={labelClass}>Medya Ekle</p>
                   <label className="block">
-                    <span className={labelClass}>Dosya Seç</span>
+                    <span className="text-sm font-black text-slate-300">Bilgisayardan Dosya Seç</span>
                     <input
                       type="file"
-                      accept={acceptedImageTypes.join(",")}
-                      onChange={handleMediaImageFile}
+                      accept={acceptedMediaTypes}
+                      onChange={(event) => void handleMediaFile(event)}
                       className={`${inputClass} file:mr-4 file:rounded-xl file:border-0 file:bg-amber-300 file:px-4 file:py-2 file:text-sm file:font-black file:text-slate-950`}
                     />
                   </label>
-                  <FieldError message={errors.uploadedImageDataUrl} />
-                  {imageWarning ? (
-                    <p className="mt-3 rounded-2xl border border-amber-300/30 bg-amber-300/10 p-3 text-sm font-black text-amber-100">
-                      {imageWarning}
+                  <label className="mt-4 block">
+                    <span className="text-sm font-black text-slate-300">Link / YouTube URL</span>
+                    <input
+                      value={form.mediaUrl}
+                      onChange={(event) => patchForm({ mediaUrl: event.target.value, uploadedImageDataUrl: "" })}
+                      className={inputClass}
+                      placeholder="/uploads/video.mp4 veya https://youtube.com/watch?v=..."
+                    />
+                    <FieldError message={errors.mediaUrl} />
+                  </label>
+                  {mediaMessage ? (
+                    <p className="mt-3 rounded-2xl border border-emerald-300/30 bg-emerald-400/10 p-3 text-sm font-black text-emerald-100">
+                      {mediaMessage}
                     </p>
                   ) : null}
-                  {form.uploadedImageDataUrl ? (
-                    <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                      <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Seçilen resim önizleme</p>
-                      <img
-                        src={form.uploadedImageDataUrl}
-                        alt=""
-                        className="mt-3 max-h-48 w-full rounded-xl object-contain"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          patchForm({ uploadedImageDataUrl: "" });
-                          setImageWarning("");
-                        }}
-                        className={`${subtleButton} mt-3`}
-                      >
-                        Resmi Kaldır
-                      </button>
-                    </div>
-                  ) : null}
+                  <p className="mt-4 text-xs font-black uppercase tracking-[0.22em] text-slate-400">Önizleme</p>
+                  <MediaPreview mediaUrl={form.mediaUrl} />
                 </div>
               </>
             ) : null}
@@ -671,6 +733,7 @@ export function ContentFlowEditor({
           const category = getItemCategory(item) || "Kategori yok";
           const quizPosition = item.type === "quiz" ? getQuizPosition(state, item) : null;
           const correctOption = item.type === "quiz" ? item.options.find((option) => option.id === item.correctOptionId) : undefined;
+          const media = getFlowItemMedia(item);
 
           return (
             <article
@@ -712,9 +775,9 @@ export function ContentFlowEditor({
                       {correctOption ? ` - ${correctOption.text}` : ""}
                     </p>
                   ) : null}
-                  {item.type === "mediaSlide" ? (
+                  {media.mediaType !== "none" ? (
                     <p className="mt-3 break-all rounded-xl border border-sky-300/20 bg-sky-400/10 p-3 text-sm font-bold text-sky-100">
-                      Medya URL: {item.mediaUrl || "Yok"}
+                      Medya: {media.mediaType} · {media.mediaUrl}
                     </p>
                   ) : null}
                 </div>
