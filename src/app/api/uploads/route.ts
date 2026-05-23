@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
+import { ADMIN_SESSION_COOKIE, getCookieValue, isValidAdminSessionValue } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,11 @@ function sanitizeFileName(name: string) {
 
 export async function POST(request: Request) {
   try {
+    const sessionCookie = getCookieValue(request.headers.get("cookie"), ADMIN_SESSION_COOKIE);
+    if (!isValidAdminSessionValue(sessionCookie)) {
+      return NextResponse.json({ ok: false, message: "Admin girişi gerekli." }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
 
