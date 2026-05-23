@@ -376,6 +376,10 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
       });
     }
 
+    if (currentState.phase !== "lobby") {
+      return failure(currentState, "Yarışma başladı, katılım kapandı.");
+    }
+
     if (currentState.teams.length >= currentState.settings.maxTeams) {
       return failure(currentState, "Takım kapasitesi doldu.");
     }

@@ -16,6 +16,7 @@ import {
   getFlowItemMedia,
   getQuizPosition,
   getYoutubeEmbedUrl,
+  inferMediaType,
 } from "@/lib/game-state";
 
 const liveOptionStyles = {
@@ -39,7 +40,7 @@ const scoreRowStyles = [
 ] as const;
 
 function ScreenMedia({ mediaUrl, title }: { mediaUrl: string; title: string }) {
-  const mediaType = mediaUrl ? getFlowItemMedia({ id: "preview", type: "mediaSlide", title, mediaUrl, mediaType: "none", mediaSource: "none", description: "" }).mediaType : "none";
+  const mediaType = inferMediaType(mediaUrl);
 
   if (mediaType === "image") {
     return <img src={mediaUrl} alt="" className="h-full min-h-0 w-full rounded-[clamp(0.75rem,1.5vw,1.4rem)] object-contain" />;
