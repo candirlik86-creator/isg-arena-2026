@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent, type ReactNode } from "react";
 import {
   answerIds,
   createFlowItemId,
@@ -48,6 +48,16 @@ type FlowItemFormState = {
 
 type FormErrors = Partial<Record<keyof FlowItemFormState | AnswerId, string>>;
 
+type AddContentCard = {
+  id: string;
+  label: string;
+  description: string;
+  type: FlowItemType;
+  badge: string;
+  accentClass: string;
+  template?: Partial<FlowItemFormState>;
+};
+
 const typeLabels: Record<FlowItemType, string> = {
   quiz: "Quiz",
   infoSlide: "Bilgi",
@@ -62,6 +72,66 @@ const typeDescriptions: Record<FlowItemType, string> = {
   forkliftChallenge: "Özel güvenli sürüş etabı",
 };
 
+const addContentCards: AddContentCard[] = [
+  {
+    id: "quiz",
+    label: "Quiz",
+    description: "Dört seçenekli, puanlanan klasik yarışma sorusu.",
+    type: "quiz",
+    badge: "Soru",
+    accentClass: "from-blue-50 to-indigo-50 border-blue-200 hover:border-blue-400",
+  },
+  {
+    id: "visual-quiz",
+    label: "Görselli Quiz",
+    description: "Soruya görsel, video veya YouTube bağlantısı ekleyin.",
+    type: "quiz",
+    badge: "Medya",
+    accentClass: "from-cyan-50 to-blue-50 border-cyan-200 hover:border-cyan-400",
+  },
+  {
+    id: "info-slide",
+    label: "Bilgi Slaytı",
+    description: "Katılımcılara kısa eğitim, not veya yönlendirme gösterin.",
+    type: "infoSlide",
+    badge: "İçerik",
+    accentClass: "from-emerald-50 to-teal-50 border-emerald-200 hover:border-emerald-400",
+  },
+  {
+    id: "media-slide",
+    label: "Medya Slaytı",
+    description: "Görsel, video veya YouTube içeriğini büyük ekranda sunun.",
+    type: "mediaSlide",
+    badge: "Ekran",
+    accentClass: "from-violet-50 to-fuchsia-50 border-violet-200 hover:border-violet-400",
+  },
+  {
+    id: "true-false",
+    label: "Doğru/Yanlış",
+    description: "Hızlı karar gerektiren doğru/yanlış formatlı quiz.",
+    type: "quiz",
+    badge: "Hızlı",
+    accentClass: "from-amber-50 to-orange-50 border-amber-200 hover:border-amber-400",
+    template: {
+      options: {
+        A: "Doğru",
+        B: "Yanlış",
+        C: "Emin değilim",
+        D: "Pas",
+      },
+      correctOptionId: "A",
+    },
+  },
+  {
+    id: "forklift",
+    label: "Forklift Etabı",
+    description: "Finale özel güvenli sürüş ve saha farkındalığı etabı.",
+    type: "forkliftChallenge",
+    badge: "Final",
+    accentClass: "from-slate-50 to-zinc-50 border-slate-200 hover:border-slate-400",
+  },
+];
+
 const emptyOptions: Record<AnswerId, string> = {
   A: "",
   B: "",
@@ -70,12 +140,12 @@ const emptyOptions: Record<AnswerId, string> = {
 };
 
 const inputClass =
-  "mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-amber-300 focus:ring-4 focus:ring-amber-300/10";
-const labelClass = "text-xs font-black uppercase tracking-[0.22em] text-slate-400";
+  "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100";
+const labelClass = "text-xs font-black uppercase tracking-[0.16em] text-slate-500";
 const subtleButton =
-  "rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-200 transition hover:border-amber-300/40 hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-35";
+  "rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-35";
 const dangerButton =
-  "rounded-xl border border-red-300/30 bg-red-400/10 px-3 py-2 text-xs font-black uppercase tracking-widest text-red-100 transition hover:bg-red-400/15";
+  "rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-widest text-red-700 transition hover:bg-red-100";
 const acceptedMediaTypes = "image/*,video/*";
 
 function createEmptyForm(type: FlowItemType): FlowItemFormState {
@@ -289,7 +359,7 @@ function buildFlowItem(form: FlowItemFormState, state: GameState, existingItem?:
 }
 
 function FieldError({ message }: { message?: string }) {
-  return message ? <p className="mt-2 text-sm font-bold text-red-200">{message}</p> : null;
+  return message ? <p className="mt-2 text-sm font-bold text-red-600">{message}</p> : null;
 }
 
 async function uploadMediaFile(file: File) {
@@ -315,7 +385,7 @@ function MediaPreview({ mediaUrl }: { mediaUrl: string }) {
 
   if (!cleanUrl) {
     return (
-      <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm font-bold text-slate-300">
+      <div className="mt-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm font-bold text-slate-500">
         Medya seçilmedi.
       </div>
     );
@@ -323,14 +393,14 @@ function MediaPreview({ mediaUrl }: { mediaUrl: string }) {
 
   if (mediaType === "none") {
     return (
-      <div className="mt-3 rounded-2xl border border-red-300/30 bg-red-400/10 p-4 text-sm font-bold text-red-100">
+      <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
         Bu bağlantı desteklenen görsel, video veya YouTube formatı değil.
       </div>
     );
   }
 
   return (
-    <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-slate-950">
+    <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-sm">
       {mediaType === "image" ? (
         <img src={cleanUrl} alt="" className="max-h-52 w-full object-contain" />
       ) : mediaType === "video" ? (
@@ -345,6 +415,26 @@ function MediaPreview({ mediaUrl }: { mediaUrl: string }) {
         />
       )}
     </div>
+  );
+}
+
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-[1.25rem] border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-4">
+        <h4 className="text-base font-black text-slate-950">{title}</h4>
+        {description ? <p className="mt-1 text-sm font-semibold text-slate-500">{description}</p> : null}
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -373,10 +463,15 @@ export function ContentFlowEditor({
     setNotice("");
   };
 
-  const startAdd = (type: FlowItemType) => {
+  const startAdd = (type: FlowItemType, template: Partial<FlowItemFormState> = {}) => {
     setMode("add");
     setEditingItemId(null);
-    setForm(createEmptyForm(type));
+    const nextForm = createEmptyForm(type);
+    setForm({
+      ...nextForm,
+      ...template,
+      options: template.options ? { ...nextForm.options, ...template.options } : nextForm.options,
+    });
     setErrors({});
     setNotice("");
     setMediaMessage("");
@@ -455,66 +550,82 @@ export function ContentFlowEditor({
   };
 
   return (
-    <section className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
+    <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-bold uppercase tracking-[0.28em] text-emerald-200">Akış Editörü</p>
-          <h2 className="mt-2 text-3xl font-black text-white">Yarışma Akışı</h2>
-          <p className="mt-2 text-sm font-semibold text-slate-300">
+          <p className="text-sm font-bold uppercase tracking-[0.22em] text-blue-600">Akış Editörü</p>
+          <h2 className="mt-2 text-3xl font-black text-slate-950">Yarışma Akışı</h2>
+          <p className="mt-2 text-sm font-semibold text-slate-500">
             {state.flowItems.length} öğe · {quizCount} quiz
           </p>
         </div>
-        <p className="rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm font-bold text-amber-100">
-          Lider tablosu: admin butonuyla
-        </p>
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700">
+          İçerik seç, düzenle, canlı akışa al
+        </div>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {(["quiz", "infoSlide", "mediaSlide", "forkliftChallenge"] as FlowItemType[]).map((type) => (
+      <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">İçerik seç</p>
+            <h3 className="mt-1 text-lg font-black text-slate-950">Yeni öğe ekle</h3>
+          </div>
+          <p className="max-w-xl text-sm font-semibold text-slate-500">
+            Kartlardan birini seçin; aşağıda düzenlenebilir bir öğe taslağı açılır.
+          </p>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {addContentCards.map((card) => (
           <button
-            key={type}
+            key={card.id}
             type="button"
-            onClick={() => startAdd(type)}
-            className="rounded-2xl border border-emerald-300/25 bg-emerald-400/10 p-4 text-left transition hover:border-emerald-200/60 hover:bg-emerald-400/15"
+            onClick={() => startAdd(card.type, card.template)}
+            className={`group rounded-2xl border bg-gradient-to-br p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${card.accentClass}`}
           >
-            <span className="text-base font-black text-white">
-              {type === "quiz"
-                ? "Quiz Ekle"
-                : type === "infoSlide"
-                  ? "Bilgi Slaytı Ekle"
-                  : type === "mediaSlide"
-                    ? "Medya Slaytı Ekle"
-                    : "Forklift Etabı Ekle"}
+            <span className="inline-flex rounded-full bg-white/80 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-600 shadow-sm">
+              {card.badge}
             </span>
-            <span className="mt-2 block text-sm font-semibold text-slate-300">{typeDescriptions[type]}</span>
+            <span className="mt-3 block text-lg font-black text-slate-950">{card.label}</span>
+            <span className="mt-2 block text-sm font-semibold leading-relaxed text-slate-600">{card.description}</span>
           </button>
-        ))}
+          ))}
+        </div>
       </div>
 
       {notice ? (
-        <p className="mt-4 rounded-2xl border border-emerald-300/30 bg-emerald-400/10 p-4 text-sm font-black text-emerald-100">
+        <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-black text-emerald-700">
           {notice}
         </p>
       ) : null}
 
       {mode !== "idle" ? (
-        <div className="mt-5 rounded-[1.5rem] border border-amber-300/25 bg-slate-950/70 p-5">
+        <div className="mt-5 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 shadow-inner">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-amber-200">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-600">
                 {mode === "edit" ? "Düzenle" : "Yeni içerik"}
               </p>
-              <h3 className="mt-2 text-2xl font-black text-white">{typeLabels[form.type]}</h3>
+              <h3 className="mt-2 text-2xl font-black text-slate-950">{typeLabels[form.type]}</h3>
+              <p className="mt-1 text-sm font-semibold text-slate-500">{typeDescriptions[form.type]}</p>
             </div>
-            <button type="button" onClick={closeForm} className={subtleButton}>
-              Vazgeç
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={closeForm} className={subtleButton}>
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={submitForm}
+                className="rounded-xl bg-slate-950 px-5 py-3 text-xs font-black uppercase tracking-widest text-white shadow-sm transition hover:bg-slate-800"
+              >
+                {mode === "edit" ? "Kaydet" : "Ekle"}
+              </button>
+            </div>
           </div>
 
           {hasErrors(errors) ? (
-            <div className="mt-4 rounded-2xl border border-red-300/30 bg-red-400/10 p-4">
-              <p className="text-sm font-black uppercase tracking-[0.22em] text-red-100">Eksik alanlar</p>
-              <div className="mt-2 grid gap-1 text-sm font-bold text-red-100">
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-black uppercase tracking-[0.16em] text-red-700">Eksik alanlar</p>
+              <div className="mt-2 grid gap-1 text-sm font-bold text-red-700">
                 {Object.values(errors).filter(Boolean).map((error) => (
                   <p key={error}>{error}</p>
                 ))}
@@ -522,54 +633,74 @@ export function ContentFlowEditor({
             </div>
           ) : null}
 
-          <div className="mt-5 grid gap-4 lg:grid-cols-2">
-            <label className="block lg:col-span-2">
-              <span className={labelClass}>{form.type === "quiz" ? "Soru başlığı" : "Başlık"}</span>
-              <input value={form.title} onChange={(event) => patchForm({ title: event.target.value })} className={inputClass} />
-              <FieldError message={errors.title} />
-            </label>
+          <div className="mt-5 grid gap-4">
+            <FormSection title="Soru bilgileri" description="Başlık, kategori ve süre bilgilerini düzenleyin.">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <label className="block lg:col-span-2">
+                  <span className={labelClass}>{form.type === "quiz" ? "Soru başlığı" : "Başlık"}</span>
+                  <input
+                    value={form.title}
+                    onChange={(event) => patchForm({ title: event.target.value })}
+                    className={inputClass}
+                    placeholder={form.type === "quiz" ? "Sorunuzu buraya yazın" : "Öğe başlığı"}
+                  />
+                  <FieldError message={errors.title} />
+                </label>
 
-            <label className="block">
-              <span className={labelClass}>Kategori</span>
-              <input value={form.category} onChange={(event) => patchForm({ category: event.target.value })} className={inputClass} />
-            </label>
+                <label className="block">
+                  <span className={labelClass}>Kategori</span>
+                  <input
+                    value={form.category}
+                    onChange={(event) => patchForm({ category: event.target.value })}
+                    className={inputClass}
+                    placeholder="Örn. Saha farkındalığı"
+                  />
+                </label>
 
-            <label className="block">
-              <span className={labelClass}>Süre saniye{form.type === "infoSlide" || form.type === "mediaSlide" ? " optional" : ""}</span>
-              <input
-                value={form.timeLimitSeconds}
-                onChange={(event) => patchForm({ timeLimitSeconds: event.target.value })}
-                type="number"
-                min={1}
-                className={inputClass}
-              />
-              <FieldError message={errors.timeLimitSeconds} />
-            </label>
+                <label className="block">
+                  <span className={labelClass}>
+                    Süre saniye{form.type === "infoSlide" || form.type === "mediaSlide" ? " opsiyonel" : ""}
+                  </span>
+                  <input
+                    value={form.timeLimitSeconds}
+                    onChange={(event) => patchForm({ timeLimitSeconds: event.target.value })}
+                    type="number"
+                    min={1}
+                    className={inputClass}
+                  />
+                  <FieldError message={errors.timeLimitSeconds} />
+                </label>
+              </div>
+            </FormSection>
 
             {form.type === "quiz" ? (
               <>
-                {answerIds.map((optionId) => (
-                  <label key={optionId} className="block">
-                    <span className={labelClass}>{optionId} seçeneği</span>
-                    <input
-                      value={form.options[optionId]}
-                      onChange={(event) =>
-                        patchForm({
-                          options: {
-                            ...form.options,
-                            [optionId]: event.target.value,
-                          },
-                        })
-                      }
-                      className={inputClass}
-                    />
-                    <FieldError message={errors[optionId]} />
-                  </label>
-                ))}
+                <FormSection title="Cevaplar" description="A/B/C/D cevaplarını kısa ve okunabilir tutun.">
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {answerIds.map((optionId) => (
+                      <label key={optionId} className="block">
+                        <span className={labelClass}>{optionId} seçeneği</span>
+                        <input
+                          value={form.options[optionId]}
+                          onChange={(event) =>
+                            patchForm({
+                              options: {
+                                ...form.options,
+                                [optionId]: event.target.value,
+                              },
+                            })
+                          }
+                          className={inputClass}
+                          placeholder={`${optionId} cevabı`}
+                        />
+                        <FieldError message={errors[optionId]} />
+                      </label>
+                    ))}
+                  </div>
+                </FormSection>
 
-                <div className="lg:col-span-2">
-                  <p className={labelClass}>Doğru cevap</p>
-                  <div className="mt-2 grid grid-cols-4 gap-2">
+                <FormSection title="Doğru cevap" description="Skor ve sonuç ekranı bu seçimi kullanır.">
+                  <div className="grid grid-cols-4 gap-2">
                     {answerIds.map((optionId) => (
                       <button
                         key={optionId}
@@ -577,8 +708,8 @@ export function ContentFlowEditor({
                         onClick={() => patchForm({ correctOptionId: optionId })}
                         className={`rounded-2xl border px-4 py-3 text-lg font-black transition ${
                           form.correctOptionId === optionId
-                            ? "border-emerald-200 bg-emerald-300 text-slate-950"
-                            : "border-white/10 bg-white/[0.06] text-white hover:border-emerald-300/40"
+                            ? "border-emerald-300 bg-emerald-500 text-white shadow-md"
+                            : "border-slate-200 bg-slate-50 text-slate-700 hover:border-emerald-300 hover:bg-emerald-50"
                         }`}
                       >
                         {optionId}
@@ -586,143 +717,114 @@ export function ContentFlowEditor({
                     ))}
                   </div>
                   <FieldError message={errors.correctOptionId} />
-                </div>
+                </FormSection>
+              </>
+            ) : null}
 
-                <div className="lg:col-span-2">
-                  <p className={labelClass}>Medya Ekle optional</p>
-                  <label className="mt-2 block">
-                    <span className="text-sm font-black text-slate-300">Bilgisayardan Dosya Seç</span>
+            {form.type === "quiz" || form.type === "mediaSlide" ? (
+              <FormSection
+                title="Medya"
+                description={
+                  form.type === "quiz"
+                    ? "Quiz için opsiyonel görsel, video veya YouTube bağlantısı ekleyin."
+                    : "Medya slaytı için görsel, video veya YouTube bağlantısı seçin."
+                }
+              >
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <label className="block">
+                    <span className={labelClass}>Bilgisayardan Dosya Seç</span>
                     <input
                       type="file"
                       accept={acceptedMediaTypes}
                       onChange={(event) => void handleMediaFile(event)}
-                      className={`${inputClass} file:mr-4 file:rounded-xl file:border-0 file:bg-amber-300 file:px-4 file:py-2 file:text-sm file:font-black file:text-slate-950`}
+                      className={`${inputClass} file:mr-4 file:rounded-xl file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:font-black file:text-white`}
                     />
                   </label>
-                  <label className="mt-4 block">
-                    <span className="text-sm font-black text-slate-300">Link / YouTube URL</span>
+                  <label className="block">
+                    <span className={labelClass}>Link / YouTube URL</span>
                     <input
                       value={form.mediaUrl}
                       onChange={(event) => patchForm({ mediaUrl: event.target.value, uploadedImageDataUrl: "" })}
                       className={inputClass}
-                      placeholder="/images/warehouse-hazards.jpg veya https://youtu.be/..."
+                      placeholder={
+                        form.type === "quiz"
+                          ? "/images/warehouse-hazards.jpg veya https://youtu.be/..."
+                          : "/uploads/video.mp4 veya https://youtube.com/watch?v=..."
+                      }
                     />
                     <FieldError message={errors.mediaUrl} />
                   </label>
-                  {mediaMessage ? (
-                    <p className="mt-3 rounded-2xl border border-emerald-300/30 bg-emerald-400/10 p-3 text-sm font-black text-emerald-100">
-                      {mediaMessage}
-                    </p>
-                  ) : null}
-                  <p className="mt-4 text-xs font-black uppercase tracking-[0.22em] text-slate-400">Önizleme</p>
-                  <MediaPreview mediaUrl={form.mediaUrl} />
                 </div>
+                {mediaMessage ? (
+                  <p className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-black text-emerald-700">
+                    {mediaMessage}
+                  </p>
+                ) : null}
+                <p className="mt-4 text-xs font-black uppercase tracking-[0.16em] text-slate-500">Önizleme</p>
+                <MediaPreview mediaUrl={form.mediaUrl} />
+              </FormSection>
+            ) : null}
 
-                <label className="block lg:col-span-2">
-                  <span className={labelClass}>Açıklama / öğrenme notu optional</span>
+            <FormSection title="Açıklama/not" description="Projeksiyon veya sonuç sonrası hatırlatma metnini düzenleyin.">
+              {form.type === "quiz" ? (
+                <label className="block">
+                  <span className={labelClass}>Öğrenme notu opsiyonel</span>
                   <textarea
                     value={form.explanation}
                     onChange={(event) => patchForm({ explanation: event.target.value })}
                     className={`${inputClass} min-h-24 resize-none`}
+                    placeholder="Doğru cevap gösterildiğinde kullanılacak kısa açıklama"
                   />
                 </label>
-              </>
-            ) : null}
+              ) : null}
 
-            {form.type === "infoSlide" ? (
-              <label className="block lg:col-span-2">
-                <span className={labelClass}>İçerik metni</span>
-                <textarea
-                  value={form.description}
-                  onChange={(event) => patchForm({ description: event.target.value })}
-                  className={`${inputClass} min-h-32 resize-none`}
-                />
-                <FieldError message={errors.description} />
-              </label>
-            ) : null}
-
-            {form.type === "mediaSlide" ? (
-              <>
-                <label className="block lg:col-span-2">
-                  <span className={labelClass}>Açıklama</span>
+              {form.type === "infoSlide" || form.type === "mediaSlide" || form.type === "forkliftChallenge" ? (
+                <label className="block">
+                  <span className={labelClass}>
+                    {form.type === "infoSlide" ? "İçerik metni" : form.type === "mediaSlide" ? "Açıklama" : "Açıklama"}
+                  </span>
                   <textarea
                     value={form.description}
                     onChange={(event) => patchForm({ description: event.target.value })}
                     className={`${inputClass} min-h-28 resize-none`}
-                  />
-                </label>
-                <div className="lg:col-span-2">
-                  <p className={labelClass}>Medya Ekle</p>
-                  <label className="block">
-                    <span className="text-sm font-black text-slate-300">Bilgisayardan Dosya Seç</span>
-                    <input
-                      type="file"
-                      accept={acceptedMediaTypes}
-                      onChange={(event) => void handleMediaFile(event)}
-                      className={`${inputClass} file:mr-4 file:rounded-xl file:border-0 file:bg-amber-300 file:px-4 file:py-2 file:text-sm file:font-black file:text-slate-950`}
-                    />
-                  </label>
-                  <label className="mt-4 block">
-                    <span className="text-sm font-black text-slate-300">Link / YouTube URL</span>
-                    <input
-                      value={form.mediaUrl}
-                      onChange={(event) => patchForm({ mediaUrl: event.target.value, uploadedImageDataUrl: "" })}
-                      className={inputClass}
-                      placeholder="/uploads/video.mp4 veya https://youtube.com/watch?v=..."
-                    />
-                    <FieldError message={errors.mediaUrl} />
-                  </label>
-                  {mediaMessage ? (
-                    <p className="mt-3 rounded-2xl border border-emerald-300/30 bg-emerald-400/10 p-3 text-sm font-black text-emerald-100">
-                      {mediaMessage}
-                    </p>
-                  ) : null}
-                  <p className="mt-4 text-xs font-black uppercase tracking-[0.22em] text-slate-400">Önizleme</p>
-                  <MediaPreview mediaUrl={form.mediaUrl} />
-                </div>
-              </>
-            ) : null}
-
-            {form.type === "forkliftChallenge" ? (
-              <>
-                <label className="block lg:col-span-2">
-                  <span className={labelClass}>Açıklama</span>
-                  <textarea
-                    value={form.description}
-                    onChange={(event) => patchForm({ description: event.target.value })}
-                    className={`${inputClass} min-h-28 resize-none`}
+                    placeholder="Kısa ve okunabilir bir açıklama yazın"
                   />
                   <FieldError message={errors.description} />
                 </label>
-                <label className="block lg:col-span-2">
+              ) : null}
+
+              {form.type === "forkliftChallenge" ? (
+                <label className="mt-4 block">
                   <span className={labelClass}>Ekran mesajı</span>
-                  <input value={form.message} onChange={(event) => patchForm({ message: event.target.value })} className={inputClass} />
+                  <input
+                    value={form.message}
+                    onChange={(event) => patchForm({ message: event.target.value })}
+                    className={inputClass}
+                  />
                 </label>
-              </>
-            ) : null}
+              ) : null}
+            </FormSection>
           </div>
 
           <div className="mt-5 flex flex-wrap justify-end gap-3">
             <button type="button" onClick={closeForm} className={subtleButton}>
-              İptal
+              Vazgeç
             </button>
             <button
               type="button"
               onClick={submitForm}
-              className="rounded-2xl bg-amber-300 px-5 py-3 text-sm font-black uppercase tracking-widest text-slate-950 shadow-xl shadow-amber-500/20 transition hover:-translate-y-0.5"
+              className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black uppercase tracking-widest text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-700"
             >
-              {mode === "edit" ? "Güncelle" : "Ekle"}
+              {mode === "edit" ? "Kaydet" : "Ekle"}
             </button>
           </div>
         </div>
       ) : null}
 
       {!state.flowItems.length ? (
-        <div className="mt-5 rounded-[1.5rem] border border-red-300/30 bg-red-400/10 p-5">
-          <p className="text-lg font-black text-red-100">Akışta öğe yok.</p>
-          <p className="mt-2 text-sm font-semibold text-slate-200">
-            Yeni içerik ekleyebilir veya Kütüphane ekranından örnek yarışmayı açabilirsiniz.
-          </p>
+        <div className="mt-5 rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 p-5">
+          <p className="text-lg font-black text-slate-900">Akışta öğe yok.</p>
+          <p className="mt-2 text-sm font-semibold text-slate-500">Yukarıdaki içerik kartlarından birini seçerek başlayın.</p>
         </div>
       ) : null}
 
@@ -740,43 +842,43 @@ export function ContentFlowEditor({
               key={item.id}
               className={`rounded-2xl border p-4 transition ${
                 isActive
-                  ? "border-amber-300 bg-amber-300/15 ring-4 ring-amber-300/20"
-                  : "border-white/10 bg-slate-950/60 hover:border-amber-300/30"
+                  ? "border-blue-400 bg-blue-50 ring-4 ring-blue-100"
+                  : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50"
               }`}
             >
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-200">
+                    <span className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-600">
                       Sıra {index + 1}
                     </span>
-                    <span className="rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-black uppercase tracking-widest text-emerald-100">
+                    <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black uppercase tracking-widest text-emerald-700">
                       {typeLabels[item.type]}
                     </span>
                     {quizPosition ? (
-                      <span className="rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs font-black uppercase tracking-widest text-amber-100">
+                      <span className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black uppercase tracking-widest text-amber-700">
                         Soru {quizPosition.current} / {quizPosition.total}
                       </span>
                     ) : (
-                      <span className="rounded-xl border border-sky-300/25 bg-sky-400/10 px-3 py-2 text-xs font-black uppercase tracking-widest text-sky-100">
+                      <span className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-black uppercase tracking-widest text-sky-700">
                         {getQuestionLabel(item, state)}
                       </span>
                     )}
                   </div>
-                  <h3 className="mt-3 text-xl font-black leading-tight text-white">{item.title}</h3>
-                  <div className="mt-3 grid gap-2 text-sm font-bold text-slate-300 sm:grid-cols-3">
+                  <h3 className="mt-3 text-xl font-black leading-tight text-slate-950">{item.title}</h3>
+                  <div className="mt-3 grid gap-2 text-sm font-bold text-slate-500 sm:grid-cols-3">
                     <p>Kategori: {category}</p>
                     <p>Süre: {duration ? `${duration} sn` : "Yok"}</p>
                     <p>ID: {item.id}</p>
                   </div>
                   {item.type === "quiz" ? (
-                    <p className="mt-3 rounded-xl border border-emerald-300/20 bg-emerald-400/10 p-3 text-sm font-black text-emerald-100">
+                    <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-black text-emerald-700">
                       Doğru cevap: {item.correctOptionId}
                       {correctOption ? ` - ${correctOption.text}` : ""}
                     </p>
                   ) : null}
                   {media.mediaType !== "none" ? (
-                    <p className="mt-3 break-all rounded-xl border border-sky-300/20 bg-sky-400/10 p-3 text-sm font-bold text-sky-100">
+                    <p className="mt-3 break-all rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm font-bold text-sky-700">
                       Medya: {media.mediaType} · {media.mediaUrl}
                     </p>
                   ) : null}

@@ -581,23 +581,23 @@ export function AdminPageClient() {
       {activeTab === "competition" ? (
         <div className="flex flex-1 overflow-hidden">
           {/* Left — flow */}
-          <aside className="hidden w-80 shrink-0 flex-col border-r border-blue-200/30 bg-gradient-to-b from-white to-blue-50/30 shadow-lg lg:flex">
-            <div className="border-b border-blue-100/50 p-5">
+          <aside className="hidden w-[22rem] shrink-0 flex-col border-r border-blue-200/40 bg-gradient-to-b from-white to-slate-50 shadow-lg lg:flex">
+            <div className="border-b border-blue-100/60 p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-blue-600">Yarışma Akışı</p>
-                  <h2 className="mt-1 text-lg font-bold text-slate-950">{state.flowItems.length} öğe</h2>
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600">Yarışma Akışı</p>
+                  <h2 className="mt-1 text-xl font-black text-slate-950">{state.flowItems.length} öğe</h2>
                 </div>
-                <span className="rounded-full border border-blue-200 bg-gradient-to-r from-blue-100 to-indigo-100 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm">
+                <span className="rounded-full border border-blue-200 bg-gradient-to-r from-blue-100 to-indigo-100 px-3 py-1.5 text-xs font-bold text-blue-700 shadow-sm">
                   {phaseLabels[state.phase]}
                 </span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-blue-200/50 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 shadow-sm">
+                <div className="rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 shadow-sm">
                   <p className="text-xl font-bold text-blue-900">{quizItemCount}</p>
                   <p className="text-[11px] font-semibold text-blue-600">Soru</p>
                 </div>
-                <div className="rounded-xl border border-purple-200/50 bg-gradient-to-br from-purple-50 to-pink-50 p-4 shadow-sm">
+                <div className="rounded-2xl border border-purple-200/70 bg-gradient-to-br from-purple-50 to-pink-50 p-4 shadow-sm">
                   <p className="text-xl font-bold text-purple-900">{contentItemCount}</p>
                   <p className="text-[11px] font-semibold text-purple-600">İçerik</p>
                 </div>
@@ -605,52 +605,62 @@ export function AdminPageClient() {
               {timerHint ? <p className="mt-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2.5 text-xs font-semibold text-white shadow-lg">{timerHint}</p> : null}
             </div>
 
-            <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
               {state.flowItems.length ? (
                 state.flowItems.map((item, index) => {
                   const isActive = index === state.activeItemIndex;
+                  const quizPosition = item.type === "quiz" ? getQuizPosition(state, item) : null;
                   return (
-                    <div
+                    <article
                       key={item.id}
-                      className={`group rounded-xl border transition-all shadow-sm ${
-                        isActive ? "border-blue-400 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md" : "border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/30"
+                      className={`rounded-2xl border transition-all shadow-sm ${
+                        isActive
+                          ? "border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md ring-4 ring-blue-100"
+                          : "border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
                       }`}
                     >
-                      <button type="button" onClick={() => goToItem(index)} className="w-full p-4 text-left">
+                      <button type="button" onClick={() => goToItem(index)} className="block w-full p-4 text-left">
                         <div className="flex items-start gap-3">
                           <div
-                            className={`flex h-12 w-12 items-center justify-center rounded-xl border text-xl shadow-sm ${
+                            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-xl shadow-sm ${
                               isActive ? "border-blue-300 bg-white" : "border-slate-200 bg-slate-50"
                             }`}
                           >
                             {flowThumbnails[item.type]}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-xs font-bold ${isActive ? "text-blue-700" : "text-slate-400"}`}>
-                                {index + 1}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className={`rounded-full px-2.5 py-1 text-[11px] font-black ${
+                                  isActive ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
+                                }`}
+                              >
+                                {String(index + 1).padStart(2, "0")}
                               </span>
                               <span
-                                className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                  isActive ? "bg-blue-500 text-white" : "bg-slate-200 text-slate-600"
+                                className={`rounded-full px-2.5 py-1 text-[11px] font-black ${
+                                  isActive ? "bg-white text-blue-700 shadow-sm" : "bg-slate-100 text-slate-600"
                                 }`}
                               >
                                 {flowTypeLabels[item.type]}
                               </span>
                             </div>
-                            <p className={`mt-1.5 truncate text-sm font-semibold ${isActive ? "text-blue-900" : "text-slate-700"}`}>
+                            <p className={`mt-2 line-clamp-2 text-sm font-bold leading-snug ${isActive ? "text-blue-950" : "text-slate-800"}`}>
                               {item.title}
+                            </p>
+                            <p className={`mt-2 text-xs font-semibold ${isActive ? "text-blue-600" : "text-slate-400"}`}>
+                              {quizPosition ? `Soru ${quizPosition.current}/${quizPosition.total}` : getQuestionLabel(item, state)}
                             </p>
                           </div>
                         </div>
                       </button>
-                      <div className="flex gap-1 border-t border-slate-100/50 px-3 py-2">
+                      <div className="grid grid-cols-4 gap-1 border-t border-slate-100 px-3 py-2">
                         <button
                           type="button"
                           title="Yukarı"
                           disabled={index === 0}
                           onClick={() => moveFlowItem(item.id, -1)}
-                          className="flex-1 rounded-lg py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+                          className="rounded-lg py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
                         >
                           ↑
                         </button>
@@ -659,7 +669,7 @@ export function AdminPageClient() {
                           title="Aşağı"
                           disabled={index === state.flowItems.length - 1}
                           onClick={() => moveFlowItem(item.id, 1)}
-                          className="flex-1 rounded-lg py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+                          className="rounded-lg py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
                         >
                           ↓
                         </button>
@@ -667,7 +677,7 @@ export function AdminPageClient() {
                           type="button"
                           title="Çoğalt"
                           onClick={() => duplicateFlowItem(item.id)}
-                          className="flex-1 rounded-lg py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100"
+                          className="rounded-lg py-2 text-xs font-bold text-slate-500 hover:bg-slate-100"
                         >
                           ⧉
                         </button>
@@ -679,21 +689,22 @@ export function AdminPageClient() {
                               deleteFlowItem(item.id);
                             }
                           }}
-                          className="flex-1 rounded-md py-1 text-xs font-semibold text-red-500 hover:bg-red-50"
+                          className="rounded-lg py-2 text-xs font-bold text-red-500 hover:bg-red-50"
                         >
                           ✕
                         </button>
                       </div>
-                    </div>
+                    </article>
                   );
                 })
               ) : (
-                <div className="rounded-lg border border-dashed border-slate-300 p-4 text-center">
-                  <p className="text-sm font-medium text-slate-600">Akış boş</p>
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-center">
+                  <p className="text-sm font-bold text-slate-700">Akış boş</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">Ayarlar sekmesinden ilk içeriği ekleyin.</p>
                   <button
                     type="button"
                     onClick={() => setActiveTab("settings")}
-                    className="mt-3 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700"
+                    className="mt-4 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700"
                   >
                     Öğe ekle
                   </button>
@@ -701,11 +712,11 @@ export function AdminPageClient() {
               )}
             </div>
 
-            <div className="border-t border-slate-100 p-3">
+            <div className="border-t border-slate-100 bg-white/90 p-3">
               <button
                 type="button"
                 onClick={() => setActiveTab("settings")}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800"
               >
                 <span className="text-lg">+</span>
                 Öğe Ekle / Düzenle
