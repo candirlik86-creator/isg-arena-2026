@@ -292,26 +292,25 @@ export function AdminPageClient() {
     openSavedCompetition,
   } = useGameState();
 
-  const refreshSavedCompetitions = async () => {
-    const [saved, trashed] = await Promise.all([listSavedCompetitions(), listTrashedCompetitions()]);
-    setSavedCompetitions(saved);
-    setTrashedCompetitions(trashed);
+  const refreshSavedCompetitions = () => {
+    setSavedCompetitions(listSavedCompetitions());
+    setTrashedCompetitions(listTrashedCompetitions());
   };
 
   useEffect(() => {
     if (activeTab === "library") {
-      void refreshSavedCompetitions();
+      refreshSavedCompetitions();
     }
   }, [activeTab]);
 
-  const handleSaveCompetition = async () => {
+  const handleSaveCompetition = () => {
     try {
       const fallbackName = state.settings.welcomeTitle || `${state.settings.customerName} Yarışması`;
-      const savedCompetition = await saveCompetitionToLibrary(competitionSaveName.trim() || fallbackName, editingCompetitionId ?? undefined);
+      const savedCompetition = saveCompetitionToLibrary(competitionSaveName.trim() || fallbackName, editingCompetitionId ?? undefined);
       setEditingCompetitionId(savedCompetition.id);
       setCompetitionSaveName(savedCompetition.name);
       setLibraryMessage(editingCompetitionId ? "Yarışma güncellendi." : "Yarışma kaydedildi.");
-      await refreshSavedCompetitions();
+      refreshSavedCompetitions();
     } catch (error) {
       setLibraryMessage(error instanceof Error ? error.message : "Kayıt başarısız.");
     }
@@ -362,44 +361,44 @@ export function AdminPageClient() {
     }
   };
 
-  const handleDuplicateSavedCompetition = async (id: string) => {
+  const handleDuplicateSavedCompetition = (id: string) => {
     try {
-      await duplicateSavedCompetition(id);
+      duplicateSavedCompetition(id);
       setLibraryMessage("Yarışma kopyalandı.");
-      await refreshSavedCompetitions();
+      refreshSavedCompetitions();
     } catch (error) {
       setLibraryMessage(error instanceof Error ? error.message : "Kopyalama başarısız.");
     }
   };
 
-  const handleDeleteSavedCompetition = async (entry: SavedCompetition) => {
+  const handleDeleteSavedCompetition = (entry: SavedCompetition) => {
     if (!window.confirm(`"${entry.name}" Çöp Kutusu'na taşınsın mı?`)) {
       return;
     }
 
-    await moveSavedCompetitionToTrash(entry.id);
+    moveSavedCompetitionToTrash(entry.id);
     if (editingCompetitionId === entry.id) {
       setEditingCompetitionId(null);
       setCompetitionSaveName("");
     }
     setLibraryMessage("Yarışma Çöp Kutusu'na taşındı.");
-    await refreshSavedCompetitions();
+    refreshSavedCompetitions();
   };
 
-  const handleRestoreSavedCompetition = async (entry: SavedCompetition) => {
-    await restoreSavedCompetition(entry.id);
+  const handleRestoreSavedCompetition = (entry: SavedCompetition) => {
+    restoreSavedCompetition(entry.id);
     setLibraryMessage(`"${entry.name}" geri yüklendi.`);
-    await refreshSavedCompetitions();
+    refreshSavedCompetitions();
   };
 
-  const handlePermanentlyDeleteSavedCompetition = async (entry: SavedCompetition) => {
+  const handlePermanentlyDeleteSavedCompetition = (entry: SavedCompetition) => {
     if (!window.confirm(`"${entry.name}" kalıcı olarak silinsin mi? Bu işlem geri alınamaz.`)) {
       return;
     }
 
-    await permanentlyDeleteSavedCompetition(entry.id);
+    permanentlyDeleteSavedCompetition(entry.id);
     setLibraryMessage("Yarışma kalıcı olarak silindi.");
-    await refreshSavedCompetitions();
+    refreshSavedCompetitions();
   };
 
   const hasFlowItems = state.flowItems.length > 0;

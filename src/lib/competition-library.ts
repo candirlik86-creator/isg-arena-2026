@@ -13,82 +13,205 @@ export type SavedCompetition = {
   deletedAt?: number;
 };
 
-async function requestCompetitionApi<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/api/competitions${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
+type CompetitionLibraryStore = {
+  version: 1;
+  entries: SavedCompetition[];
+};
 
-  const body = (await response.json()) as { ok?: boolean; message?: string; data?: T };
+const LIBRARY_STORAGE_KEY = "isg-arena-2026-competition-library-v1";
+const LEGACY_DEMO_SEEDED_STORAGE_KEY = "isg-arena-2026-demo-competition-seeded-v1";
+const LEGACY_DEMO_COMPETITION_ID = "sample-isg-competition";
 
-  if (!response.ok || !body.ok) {
-    throw new Error(body.message ?? "Yarışma kütüphanesi işlemi başarısız.");
+function createEntryId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
   }
 
-  if (typeof body.data === "undefined") {
-    throw new Error("Sunucudan geçerli yarışma verisi alınamadı.");
+  return `competition-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function readLibraryStore(): CompetitionLibraryStore {
+  if (typeof window === "undefined" || typeof window.localStorage === "undefined") {
+    return { version: 1, entries: [] };
   }
 
-  return body.data;
+  const rawValue = window.localStorage.getItem(LIBRARY_STORAGE_KEY);
+  if (!rawValue) {
+    return { version: 1, entries: [] };
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as Partial<CompetitionLibraryStore>;
+    if (!Array.isArray(parsed.entries)) {
+      return { version: 1, entries: [] };
+    }
+
+    const entries = parsed.entries.filter((entry): entry is SavedCompetition => {
+      return Boolean(
+        entry &&
+          typeof entry === "object" &&
+          typeof entry.id === "string" &&
+          typeof entry.name === "string" &&
+          typeof entry.createdAt === "number" &&
+          typeof entry.updatedAt === "number" &&
+          (typeof entry.deletedAt === "undefined" || typeof entry.deletedAt === "number") &&
+          entry.settings &&
+          Array.isArray(entry.flowItems),
+      );
+    });
+
+    if (window.localStorage.getItem(LEGACY_DEMO_SEEDED_STORAGE_KEY) === "1") {
+      const filteredEntries = entries.filter((entry) => entry.id !== LEGACY_DEMO_COMPETITION_ID);
+      const migratedStore = { version: 1 as const, entries: filteredEntries };
+      writeLibraryStore(migratedStore);
+      window.localStorage.removeItem(LEGACY_DEMO_SEEDED_STORAGE_KEY);
+      return migratedStore;
+    }
+
+    return {
+      version: 1,
+      entries,
+    };
+  } catch {
+    return { version: 1, entries: [] };
+  }
 }
 
-export async function listSavedCompetitions(): Promise<SavedCompetition[]> {
-  return requestCompetitionApi<SavedCompetition[]>("?scope=active");
+function writeLibraryStore(store: CompetitionLibraryStore) {
+  if (typeof window === "undefined" || typeof window.localStorage === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(LIBRARY_STORAGE_KEY, JSON.stringify(store));
 }
 
-export async function listTrashedCompetitions(): Promise<SavedCompetition[]> {
-  return requestCompetitionApi<SavedCompetition[]>("?scope=trash");
+export function listSavedCompetitions(): SavedCompetition[] {
+  return readLibraryStore().entries.filter((entry) => !entry.deletedAt).sort((left, right) => right.updatedAt - left.updatedAt);
 }
 
-export async function loadSavedCompetition(id: string): Promise<SavedCompetition | null> {
-  const records = await requestCompetitionApi<SavedCompetition[]>(`?id=${encodeURIComponent(id)}`);
-  return records[0] ?? null;
+export function listTrashedCompetitions(): SavedCompetition[] {
+  return readLibraryStore().entries.filter((entry) => entry.deletedAt).sort((left, right) => (right.deletedAt ?? 0) - (left.deletedAt ?? 0));
 }
 
-export async function saveCurrentCompetition(state: GameState, name: string, existingId?: string): Promise<SavedCompetition> {
+export function loadSavedCompetition(id: string): SavedCompetition | null {
+  return readLibraryStore().entries.find((entry) => entry.id === id && !entry.deletedAt) ?? null;
+}
+
+export function saveCurrentCompetition(state: GameState, name: string, existingId?: string): SavedCompetition {
   const trimmedName = name.trim();
   if (!trimmedName) {
     throw new Error("Yarışma adı boş olamaz.");
   }
 
-  return requestCompetitionApi<SavedCompetition>("", {
-    method: existingId ? "PATCH" : "POST",
-    body: JSON.stringify({
-      id: existingId,
-      name: trimmedName,
-      settings: state.settings,
-      flowItems: state.flowItems,
+  const now = Date.now();
+  const store = readLibraryStore();
+
+  if (existingId) {
+    const existing = store.entries.find((entry) => entry.id === existingId && !entry.deletedAt);
+    if (existing) {
+      const updatedEntry: SavedCompetition = {
+        ...existing,
+        name: trimmedName,
+        updatedAt: now,
+        settings: { ...state.settings },
+        flowItems: state.flowItems.map((item) => cloneFlowItem(item)),
+      };
+
+      writeLibraryStore({
+        version: 1,
+        entries: store.entries.map((entry) => (entry.id === existingId ? updatedEntry : entry)),
+      });
+
+      return updatedEntry;
+    }
+  }
+
+  const entry: SavedCompetition = {
+    id: createEntryId(),
+    name: trimmedName,
+    createdAt: now,
+    updatedAt: now,
+    settings: { ...state.settings },
+    flowItems: state.flowItems.map((item) => cloneFlowItem(item)),
+  };
+
+  writeLibraryStore({
+    version: 1,
+    entries: [entry, ...store.entries],
+  });
+
+  return entry;
+}
+
+export function duplicateSavedCompetition(id: string): SavedCompetition {
+  const store = readLibraryStore();
+  const source = store.entries.find((entry) => entry.id === id && !entry.deletedAt);
+
+  if (!source) {
+    throw new Error("Kayıtlı yarışma bulunamadı.");
+  }
+
+  const now = Date.now();
+  const entry: SavedCompetition = {
+    id: createEntryId(),
+    name: source.name.endsWith(" Kopya") ? source.name : `${source.name} Kopya`,
+    createdAt: now,
+    updatedAt: now,
+    settings: { ...source.settings },
+    flowItems: source.flowItems.map((item) => cloneFlowItem(item)),
+  };
+
+  writeLibraryStore({
+    version: 1,
+    entries: [entry, ...store.entries],
+  });
+
+  return entry;
+}
+
+export function moveSavedCompetitionToTrash(id: string) {
+  const store = readLibraryStore();
+  const now = Date.now();
+
+  writeLibraryStore({
+    version: 1,
+    entries: store.entries.map((entry) =>
+      entry.id === id
+        ? {
+            ...entry,
+            deletedAt: now,
+            updatedAt: now,
+          }
+        : entry,
+    ),
+  });
+}
+
+export function restoreSavedCompetition(id: string) {
+  const store = readLibraryStore();
+  const now = Date.now();
+
+  writeLibraryStore({
+    version: 1,
+    entries: store.entries.map((entry) => {
+      if (entry.id !== id) {
+        return entry;
+      }
+
+      const { deletedAt: _deletedAt, ...restoredEntry } = entry;
+      return {
+        ...restoredEntry,
+        updatedAt: now,
+      };
     }),
   });
 }
 
-export async function duplicateSavedCompetition(id: string): Promise<SavedCompetition> {
-  return requestCompetitionApi<SavedCompetition>("/duplicate", {
-    method: "POST",
-    body: JSON.stringify({ id }),
-  });
-}
-
-export async function moveSavedCompetitionToTrash(id: string): Promise<void> {
-  await requestCompetitionApi<{ id: string }>("/trash", {
-    method: "POST",
-    body: JSON.stringify({ id }),
-  });
-}
-
-export async function restoreSavedCompetition(id: string): Promise<void> {
-  await requestCompetitionApi<{ id: string }>("/restore", {
-    method: "POST",
-    body: JSON.stringify({ id }),
-  });
-}
-
-export async function permanentlyDeleteSavedCompetition(id: string): Promise<void> {
-  await requestCompetitionApi<{ id: string }>(`?id=${encodeURIComponent(id)}`, {
-    method: "DELETE",
+export function permanentlyDeleteSavedCompetition(id: string) {
+  const store = readLibraryStore();
+  writeLibraryStore({
+    version: 1,
+    entries: store.entries.filter((entry) => entry.id !== id),
   });
 }
 
