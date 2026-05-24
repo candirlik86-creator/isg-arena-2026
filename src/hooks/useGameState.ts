@@ -241,14 +241,14 @@ export function useGameState() {
   }, []);
 
   const saveCompetitionToLibrary = useCallback(
-    (name: string, existingId?: string): SavedCompetition => {
+    async (name: string, existingId?: string): Promise<SavedCompetition> => {
       return saveCurrentCompetition(state, name, existingId);
     },
     [state],
   );
 
   const openSavedCompetition = useCallback(async (id: string) => {
-    const saved = loadSavedCompetition(id);
+    const saved = await loadSavedCompetition(id);
     if (!saved) {
       return { ok: false, message: "Kayıtlı yarışma bulunamadı." };
     }
