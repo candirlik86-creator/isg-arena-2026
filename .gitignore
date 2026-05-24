@@ -145,6 +145,3 @@ vite.config.ts.timestamp-*
 # Local uploaded media files
 public/uploads/*
 !public/uploads/.gitkeep
-
-.env.local
-.env*.local
