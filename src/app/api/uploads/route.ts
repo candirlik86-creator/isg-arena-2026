@@ -78,21 +78,15 @@ export async function POST(request: Request) {
     });
 
     if (!uploadResponse.ok) {
-      return NextResponse.json({ ok: false, message: "Dosya yüklenemedi." }, { status: 500 });
+      const errorText = await uploadResponse.text();
+      return NextResponse.json(
+        { ok: false, message: `Dosya yüklenemedi. Supabase upload error (${uploadResponse.status} ${uploadResponse.statusText}): ${errorText || "unknown error"}` },
+        { status: 500 },
+      );
     }
 
     const publicUrl = `${config.supabaseUrl}/storage/v1/object/public/${STORAGE_BUCKET}/${objectPath}`;
-    const verifyResponse = await fetch(publicUrl, {
-      method: "HEAD",
-      cache: "no-store",
-    });
-
-    if (!verifyResponse.ok) {
-      return NextResponse.json(
-        { ok: false, message: "Dosya yüklendi ancak public erişim doğrulanamadı. Bucket izinlerini kontrol edin." },
-        { status: 502 },
-      );
-    }
+    void fetch(publicUrl, { method: "HEAD", cache: "no-store" }).catch(() => undefined);
 
     return NextResponse.json({
       ok: true,

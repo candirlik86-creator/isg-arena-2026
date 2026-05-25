@@ -48,7 +48,7 @@ function ScreenMedia({ mediaUrl, title }: { mediaUrl: string; title: string }) {
     if (imageError) {
       return (
         <div className="flex h-full min-h-0 w-full items-center justify-center rounded-[clamp(0.75rem,1.5vw,1.4rem)] border border-amber-300/40 bg-amber-500/10 p-4 text-center">
-          <p className="text-base font-black text-amber-100 md:text-xl">Görsel yüklenemedi. URL kontrol edilmeli.</p>
+          <p className="text-base font-black text-amber-100 md:text-xl">Görsel yüklenemedi. URL: {mediaUrl}</p>
         </div>
       );
     }

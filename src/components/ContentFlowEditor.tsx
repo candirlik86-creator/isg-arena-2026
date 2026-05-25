@@ -408,7 +408,7 @@ function MediaPreview({ mediaUrl }: { mediaUrl: string }) {
       {mediaType === "image" ? (
         imageError ? (
           <div className="flex min-h-44 items-center justify-center p-4 text-center text-sm font-bold text-amber-200">
-            Görsel yüklenemedi. URL kontrol edilmeli.
+            Görsel yüklenemedi. URL: {cleanUrl}
           </div>
         ) : (
           <img src={cleanUrl} alt="" className="max-h-52 w-full object-contain" onError={() => setImageError(true)} />

@@ -166,7 +166,7 @@ function AdminMediaPreview({ mediaUrl, title }: { mediaUrl: string; title: strin
       {mediaType === "image" ? (
         imageError ? (
           <div className="flex min-h-56 items-center justify-center p-4 text-center text-sm font-semibold text-amber-200">
-            Görsel yüklenemedi. URL kontrol edilmeli.
+            Görsel yüklenemedi. URL: {cleanUrl}
           </div>
         ) : (
           <img src={cleanUrl} alt="" className="max-h-72 w-full object-contain" onError={() => setImageError(true)} />
