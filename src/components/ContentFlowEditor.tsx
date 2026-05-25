@@ -40,6 +40,7 @@ type FlowItemFormState = {
   description: string;
   mediaUrl: string;
   uploadedImageDataUrl: string;
+  uploadedMediaType?: "image" | "video";
   message: string;
   options: Record<AnswerId, string>;
   correctOptionId: AnswerId | "";
@@ -157,6 +158,7 @@ function createEmptyForm(type: FlowItemType): FlowItemFormState {
     description: "",
     mediaUrl: "",
     uploadedImageDataUrl: "",
+    uploadedMediaType: undefined,
     message: type === "forkliftChallenge" ? "Hızlı olan değil, güvenli süren kazanır." : "",
     options: { ...emptyOptions },
     correctOptionId: "",
@@ -178,6 +180,8 @@ function createFormFromItem(item: ContentFlowItem): FlowItemFormState {
       correctOptionId: item.correctOptionId,
       explanation: item.explanation ?? "",
       mediaUrl: item.mediaUrl ?? item.imageUrl ?? "",
+      uploadedImageDataUrl: item.imageUrl ?? "",
+      uploadedMediaType: item.mediaType === "image" || item.mediaType === "video" ? item.mediaType : undefined,
     };
   }
 
@@ -200,6 +204,7 @@ function createFormFromItem(item: ContentFlowItem): FlowItemFormState {
       description: item.description,
       mediaUrl: item.mediaUrl,
       uploadedImageDataUrl: item.uploadedImageDataUrl ?? "",
+      uploadedMediaType: item.mediaType === "image" || item.mediaType === "video" ? item.mediaType : undefined,
     };
   }
 
@@ -287,6 +292,9 @@ function buildFlowItem(form: FlowItemFormState, state: GameState, existingItem?:
 
   if (form.type === "quiz") {
     const existingQuiz = existingItem?.type === "quiz" ? existingItem : null;
+    const mediaUrl = form.mediaUrl.trim();
+    const mediaType = form.uploadedMediaType ?? inferMediaType(mediaUrl);
+    const mediaSource = form.uploadedMediaType ? "upload" : inferMediaSource(mediaUrl);
 
     return {
       id: existingQuiz?.id ?? createFlowItemId("quiz"),
@@ -298,10 +306,10 @@ function buildFlowItem(form: FlowItemFormState, state: GameState, existingItem?:
       stage: existingQuiz?.stage ?? "Admin Eklenen Quiz",
       timeLimitSeconds: duration ?? 30,
       maxScore: existingQuiz?.maxScore ?? 1000,
-      imageUrl: inferMediaType(form.mediaUrl) === "image" ? form.mediaUrl.trim() || undefined : undefined,
-      mediaUrl: form.mediaUrl.trim() || undefined,
-      mediaType: inferMediaType(form.mediaUrl),
-      mediaSource: inferMediaSource(form.mediaUrl),
+      imageUrl: mediaType === "image" ? mediaUrl || undefined : undefined,
+      mediaUrl: mediaUrl || undefined,
+      mediaType,
+      mediaSource,
       options: answerIds.map((optionId) => ({
         id: optionId,
         text: form.options[optionId].trim(),
@@ -328,7 +336,7 @@ function buildFlowItem(form: FlowItemFormState, state: GameState, existingItem?:
   if (form.type === "mediaSlide") {
     const existingMediaSlide = existingItem?.type === "mediaSlide" ? existingItem : null;
     const mediaUrl = form.mediaUrl.trim();
-    const mediaType = inferMediaType(mediaUrl);
+    const mediaType = form.uploadedMediaType ?? inferMediaType(mediaUrl);
 
     return {
       id: existingMediaSlide?.id ?? createFlowItemId("mediaSlide"),
@@ -370,16 +378,17 @@ async function uploadMediaFile(file: File) {
     method: "POST",
     body: formData,
   });
-  const body = (await response.json()) as { ok?: boolean; path?: string; message?: string };
+  const body = (await response.json()) as { ok?: boolean; path?: string; mediaType?: "image" | "video"; message?: string };
 
-  if (!response.ok || !body.ok || !body.path) {
+  if (!response.ok || !body.ok || !body.path || !body.mediaType) {
     throw new Error(body.message ?? "Dosya yüklenemedi.");
   }
 
-  return body.path;
+  return { path: body.path, mediaType: body.mediaType };
 }
 
 function MediaPreview({ mediaUrl }: { mediaUrl: string }) {
+  const [imageError, setImageError] = useState(false);
   const cleanUrl = mediaUrl.trim();
   const mediaType = inferMediaType(cleanUrl);
 
@@ -402,7 +411,13 @@ function MediaPreview({ mediaUrl }: { mediaUrl: string }) {
   return (
     <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-sm">
       {mediaType === "image" ? (
-        <img src={cleanUrl} alt="" className="max-h-52 w-full object-contain" />
+        imageError ? (
+          <div className="flex min-h-44 items-center justify-center p-4 text-center text-sm font-bold text-amber-200">
+            Görsel yüklenemedi. URL: {cleanUrl}
+          </div>
+        ) : (
+          <img src={cleanUrl} alt="" className="max-h-52 w-full object-contain" onError={() => setImageError(true)} />
+        )
       ) : mediaType === "video" ? (
         <video src={cleanUrl} controls className="max-h-52 w-full" />
       ) : (
@@ -512,8 +527,8 @@ export function ContentFlowEditor({
 
     setMediaMessage("Dosya yükleniyor...");
     try {
-      const mediaUrl = await uploadMediaFile(file);
-      patchForm({ mediaUrl, uploadedImageDataUrl: "" });
+      const uploaded = await uploadMediaFile(file);
+      patchForm({ mediaUrl: uploaded.path, uploadedImageDataUrl: "", uploadedMediaType: uploaded.mediaType });
       setErrors({});
       setMediaMessage("Dosya yüklendi.");
     } catch (error) {
@@ -744,7 +759,7 @@ export function ContentFlowEditor({
                     <span className={labelClass}>Link / YouTube URL</span>
                     <input
                       value={form.mediaUrl}
-                      onChange={(event) => patchForm({ mediaUrl: event.target.value, uploadedImageDataUrl: "" })}
+                      onChange={(event) => patchForm({ mediaUrl: event.target.value, uploadedImageDataUrl: "", uploadedMediaType: undefined })}
                       className={inputClass}
                       placeholder={
                         form.type === "quiz"
