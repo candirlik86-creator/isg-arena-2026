@@ -85,12 +85,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const publicUrl = `${config.supabaseUrl}/storage/v1/object/public/${STORAGE_BUCKET}/${objectPath}`;
-    void fetch(publicUrl, { method: "HEAD", cache: "no-store" }).catch(() => undefined);
+    const proxyPath = `/api/media/${objectPath}`;
 
     return NextResponse.json({
       ok: true,
-      path: publicUrl,
+      path: proxyPath,
       mediaType: file.type.startsWith("video/") ? "video" : "image",
     });
   } catch {
