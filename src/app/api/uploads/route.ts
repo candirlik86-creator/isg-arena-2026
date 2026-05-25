@@ -1,5 +1,3 @@
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
 import { ADMIN_SESSION_COOKIE, getCookieValue, isValidAdminSessionValue } from "@/lib/admin-auth";
 
@@ -7,17 +5,36 @@ export const runtime = "nodejs";
 
 const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
 const allowedMimePrefixes = ["image/", "video/"];
+const STORAGE_BUCKET = "game-media";
 
-function sanitizeFileName(name: string) {
-  const extension = path.extname(name).toLowerCase();
-  const baseName = path
-    .basename(name, extension)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48);
+function createSafeName(fileName: string) {
+  const normalized = fileName.toLowerCase().trim();
+  const dotIndex = normalized.lastIndexOf(".");
+  const extension = dotIndex > -1 ? normalized.slice(dotIndex).replace(/[^.a-z0-9]/g, "") : "";
+  const rawBase = dotIndex > -1 ? normalized.slice(0, dotIndex) : normalized;
+  const baseName = rawBase.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48);
+  return `${baseName || "media"}${extension}`;
+}
 
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${baseName || "media"}${extension}`;
+function createObjectPath(fileName: string) {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).slice(2, 8);
+  const safeName = createSafeName(fileName);
+  return `uploads/${timestamp}-${random}-${safeName}`;
+}
+
+function getSupabaseConfig() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return null;
+  }
+
+  return {
+    supabaseUrl: supabaseUrl.replace(/\/$/, ""),
+    serviceRoleKey,
+  };
 }
 
 export async function POST(request: Request) {
@@ -42,17 +59,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, message: "Dosya çok büyük. En fazla 30 MB yüklenebilir." }, { status: 400 });
     }
 
-    const uploadsDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadsDir, { recursive: true });
+    const config = getSupabaseConfig();
+    if (!config) {
+      return NextResponse.json({ ok: false, message: "Supabase yapılandırması eksik." }, { status: 503 });
+    }
 
-    const fileName = sanitizeFileName(file.name);
-    const filePath = path.join(uploadsDir, fileName);
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    await writeFile(filePath, bytes);
+    const objectPath = createObjectPath(file.name);
+    const uploadUrl = `${config.supabaseUrl}/storage/v1/object/${STORAGE_BUCKET}/${objectPath}`;
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`,
+        "Content-Type": file.type,
+        "x-upsert": "false",
+      },
+      body: new Uint8Array(await file.arrayBuffer()),
+    });
+
+    if (!uploadResponse.ok) {
+      return NextResponse.json({ ok: false, message: "Dosya yüklenemedi." }, { status: 500 });
+    }
+
+    const publicUrl = `${config.supabaseUrl}/storage/v1/object/public/${STORAGE_BUCKET}/${objectPath}`;
 
     return NextResponse.json({
       ok: true,
-      path: `/uploads/${fileName}`,
+      path: publicUrl,
       mediaType: file.type.startsWith("video/") ? "video" : "image",
     });
   } catch {
