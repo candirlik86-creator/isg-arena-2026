@@ -180,6 +180,8 @@ function createFormFromItem(item: ContentFlowItem): FlowItemFormState {
       correctOptionId: item.correctOptionId,
       explanation: item.explanation ?? "",
       mediaUrl: item.mediaUrl ?? item.imageUrl ?? "",
+      uploadedImageDataUrl: item.imageUrl ?? "",
+      uploadedMediaType: item.mediaType === "image" || item.mediaType === "video" ? item.mediaType : undefined,
     };
   }
 
@@ -290,6 +292,9 @@ function buildFlowItem(form: FlowItemFormState, state: GameState, existingItem?:
 
   if (form.type === "quiz") {
     const existingQuiz = existingItem?.type === "quiz" ? existingItem : null;
+    const mediaUrl = form.mediaUrl.trim();
+    const mediaType = form.uploadedMediaType ?? inferMediaType(mediaUrl);
+    const mediaSource = form.uploadedMediaType ? "upload" : inferMediaSource(mediaUrl);
 
     return {
       id: existingQuiz?.id ?? createFlowItemId("quiz"),
@@ -301,10 +306,10 @@ function buildFlowItem(form: FlowItemFormState, state: GameState, existingItem?:
       stage: existingQuiz?.stage ?? "Admin Eklenen Quiz",
       timeLimitSeconds: duration ?? 30,
       maxScore: existingQuiz?.maxScore ?? 1000,
-      imageUrl: inferMediaType(form.mediaUrl) === "image" ? form.mediaUrl.trim() || undefined : undefined,
-      mediaUrl: form.mediaUrl.trim() || undefined,
-      mediaType: inferMediaType(form.mediaUrl),
-      mediaSource: inferMediaSource(form.mediaUrl),
+      imageUrl: mediaType === "image" ? mediaUrl || undefined : undefined,
+      mediaUrl: mediaUrl || undefined,
+      mediaType,
+      mediaSource,
       options: answerIds.map((optionId) => ({
         id: optionId,
         text: form.options[optionId].trim(),
