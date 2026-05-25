@@ -120,7 +120,9 @@ function CheckIcon({ className }: { className: string }) {
   );
 }
 
-async function uploadMediaFile(file: File) {
+type UploadedMedia = { path: string; mediaType: "image" | "video" };
+
+async function uploadMediaFile(file: File): Promise<UploadedMedia> {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -128,16 +130,17 @@ async function uploadMediaFile(file: File) {
     method: "POST",
     body: formData,
   });
-  const body = (await response.json()) as { ok?: boolean; path?: string; message?: string };
+  const body = (await response.json()) as { ok?: boolean; path?: string; mediaType?: "image" | "video"; message?: string };
 
-  if (!response.ok || !body.ok || !body.path) {
+  if (!response.ok || !body.ok || !body.path || !body.mediaType) {
     throw new Error(body.message ?? "Dosya yüklenemedi.");
   }
 
-  return body.path;
+  return { path: body.path, mediaType: body.mediaType };
 }
 
 function AdminMediaPreview({ mediaUrl, title }: { mediaUrl: string; title: string }) {
+  const [imageError, setImageError] = useState(false);
   const cleanUrl = mediaUrl.trim();
   const mediaType = inferMediaType(cleanUrl);
 
@@ -161,7 +164,13 @@ function AdminMediaPreview({ mediaUrl, title }: { mediaUrl: string; title: strin
   return (
     <div className="overflow-hidden rounded-2xl border border-blue-200 bg-slate-950 shadow-lg">
       {mediaType === "image" ? (
-        <img src={cleanUrl} alt="" className="max-h-72 w-full object-contain" />
+        imageError ? (
+          <div className="flex min-h-56 items-center justify-center p-4 text-center text-sm font-semibold text-amber-200">
+            Görsel yüklenemedi. URL: {cleanUrl}
+          </div>
+        ) : (
+          <img src={cleanUrl} alt="" className="max-h-72 w-full object-contain" onError={() => setImageError(true)} />
+        )
       ) : mediaType === "video" ? (
         <video src={cleanUrl} controls className="max-h-72 w-full" />
       ) : (
@@ -425,14 +434,14 @@ export function AdminPageClient() {
     updateFlowItem({ ...activeItem, ...patch });
   };
 
-  const patchActiveQuizMedia = (mediaUrl: string) => {
+  const patchActiveQuizMedia = (mediaUrl: string, uploadedMediaType?: "image" | "video") => {
     const cleanUrl = mediaUrl.trim();
-    const mediaType = inferMediaType(cleanUrl);
+    const mediaType = uploadedMediaType ?? inferMediaType(cleanUrl);
 
     patchActiveQuiz({
       mediaUrl: cleanUrl || undefined,
       mediaType,
-      mediaSource: inferMediaSource(cleanUrl),
+      mediaSource: uploadedMediaType ? "upload" : inferMediaSource(cleanUrl),
       imageUrl: mediaType === "image" ? cleanUrl || undefined : undefined,
     });
   };
@@ -452,8 +461,8 @@ export function AdminPageClient() {
 
     setMediaMessage("Dosya yükleniyor...");
     try {
-      const mediaUrl = await uploadMediaFile(file);
-      patchActiveQuizMedia(mediaUrl);
+      const uploaded = await uploadMediaFile(file);
+      patchActiveQuizMedia(uploaded.path, uploaded.mediaType);
       setMediaMessage("Dosya yüklendi.");
     } catch (error) {
       setMediaMessage(error instanceof Error ? error.message : "Dosya yüklenemedi.");
