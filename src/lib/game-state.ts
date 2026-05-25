@@ -499,6 +499,8 @@ export function getItemDurationSeconds(item: ContentFlowItem) {
 
 const imageUrlPattern = /\.(jpe?g|png|webp|gif)(\?.*)?$/i;
 const videoUrlPattern = /\.(mp4|webm|mov)(\?.*)?$/i;
+const supabaseImageHintPattern = /\/storage\/v1\/object\/public\/.+\.(jpe?g|png|webp|gif)(\?.*)?$/i;
+const supabaseVideoHintPattern = /\/storage\/v1\/object\/public\/.+\.(mp4|webm|mov)(\?.*)?$/i;
 
 function isYoutubeUrl(url: string) {
   try {
@@ -565,15 +567,38 @@ export function getFlowItemMedia(item: ContentFlowItem) {
         ? item.uploadedImageDataUrl
         : undefined;
   const mediaUrl = (item.mediaUrl ?? legacyMediaUrl ?? "").trim();
+  const explicitType = item.mediaType;
   const inferredType = inferMediaType(mediaUrl);
+  const preferredType =
+    mediaUrl && (explicitType === "image" || explicitType === "video" || explicitType === "youtube")
+      ? explicitType
+      : inferredType;
 
-  if (!mediaUrl || inferredType === "none") {
+  let resolvedType = preferredType;
+
+  if (mediaUrl && resolvedType === "none") {
+    if (isYoutubeUrl(mediaUrl)) {
+      resolvedType = "youtube";
+    } else if (mediaUrl.startsWith("data:image/")) {
+      resolvedType = "image";
+    } else if (mediaUrl.startsWith("data:video/")) {
+      resolvedType = "video";
+    } else if (mediaUrl.startsWith("/uploads/")) {
+      resolvedType = "image";
+    } else if (supabaseImageHintPattern.test(mediaUrl)) {
+      resolvedType = "image";
+    } else if (supabaseVideoHintPattern.test(mediaUrl)) {
+      resolvedType = "video";
+    }
+  }
+
+  if (!mediaUrl || resolvedType === "none") {
     return { mediaUrl: "", mediaType: "none" as const, mediaSource: "none" as const };
   }
 
   return {
     mediaUrl,
-    mediaType: inferredType,
+    mediaType: resolvedType,
     mediaSource: item.mediaSource ?? inferMediaSource(mediaUrl),
   };
 }

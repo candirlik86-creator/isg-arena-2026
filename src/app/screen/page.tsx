@@ -18,6 +18,7 @@ import {
   getYoutubeEmbedUrl,
   inferMediaType,
 } from "@/lib/game-state";
+import { useState } from "react";
 
 const liveOptionStyles = {
   A: "border-yellow-100/65 bg-gradient-to-br from-amber-400 via-orange-400 to-yellow-500 shadow-amber-950/30",
@@ -40,10 +41,26 @@ const scoreRowStyles = [
 ] as const;
 
 function ScreenMedia({ mediaUrl, title }: { mediaUrl: string; title: string }) {
+  const [imageError, setImageError] = useState(false);
   const mediaType = inferMediaType(mediaUrl);
 
   if (mediaType === "image") {
-    return <img src={mediaUrl} alt="" className="h-full min-h-0 w-full rounded-[clamp(0.75rem,1.5vw,1.4rem)] object-contain" />;
+    if (imageError) {
+      return (
+        <div className="flex h-full min-h-0 w-full items-center justify-center rounded-[clamp(0.75rem,1.5vw,1.4rem)] border border-amber-300/40 bg-amber-500/10 p-4 text-center">
+          <p className="text-base font-black text-amber-100 md:text-xl">Görsel yüklenemedi. URL kontrol edilmeli.</p>
+        </div>
+      );
+    }
+
+    return (
+      <img
+        src={mediaUrl}
+        alt=""
+        className="h-full min-h-0 w-full rounded-[clamp(0.75rem,1.5vw,1.4rem)] object-contain"
+        onError={() => setImageError(true)}
+      />
+    );
   }
 
   if (mediaType === "video") {

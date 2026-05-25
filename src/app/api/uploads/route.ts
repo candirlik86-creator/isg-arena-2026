@@ -82,6 +82,17 @@ export async function POST(request: Request) {
     }
 
     const publicUrl = `${config.supabaseUrl}/storage/v1/object/public/${STORAGE_BUCKET}/${objectPath}`;
+    const verifyResponse = await fetch(publicUrl, {
+      method: "HEAD",
+      cache: "no-store",
+    });
+
+    if (!verifyResponse.ok) {
+      return NextResponse.json(
+        { ok: false, message: "Dosya yüklendi ancak public erişim doğrulanamadı. Bucket izinlerini kontrol edin." },
+        { status: 502 },
+      );
+    }
 
     return NextResponse.json({
       ok: true,
