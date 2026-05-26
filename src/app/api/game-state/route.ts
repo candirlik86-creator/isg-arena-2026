@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { applyGameAction, type GameAction } from "@/lib/game-actions";
-import { canUseSupabaseGameState, readSupabaseGameState, writeSupabaseGameState } from "@/lib/server/supabase-game-state";
+import { ADMIN_SESSION_COOKIE, getCookieValue, isValidAdminSessionValue } from "@/lib/admin-auth";
+import { applyGameAction, type GameAction, type GameActionResult } from "@/lib/game-actions";
+import { canUseSupabaseGameState, mutateSupabaseGameState, readSupabaseGameState } from "@/lib/server/supabase-game-state";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,6 +10,17 @@ const noStoreHeaders = {
   "Cache-Control": "no-store, max-age=0",
 };
 
+let gameStateMutationQueue = Promise.resolve();
+
+async function runQueuedGameStateMutation<T>(mutation: () => Promise<T>) {
+  const runMutation = gameStateMutationQueue.then(mutation, mutation);
+  gameStateMutationQueue = runMutation.then(
+    () => undefined,
+    () => undefined,
+  );
+  return runMutation;
+}
+
 function supabaseUnavailableResponse() {
   return NextResponse.json({ ok: false, message: "Supabase bağlantısı yapılandırılmamış." }, { status: 503, headers: noStoreHeaders });
 }
@@ -16,6 +28,20 @@ function supabaseUnavailableResponse() {
 function supabaseErrorResponse(error: unknown) {
   const message = error instanceof Error ? error.message : "Supabase işlemi başarısız.";
   return NextResponse.json({ ok: false, message }, { status: 503, headers: noStoreHeaders });
+}
+
+function isAdminRequest(request: Request) {
+  const sessionCookie = getCookieValue(request.headers.get("cookie"), ADMIN_SESSION_COOKIE);
+  return isValidAdminSessionValue(sessionCookie);
+}
+
+function isPublicGameAction(action: GameAction) {
+  return (
+    action.type === "joinTeam" ||
+    action.type === "submitQuizAnswer" ||
+    action.type === "submitForkliftRun" ||
+    action.type === "advanceQuizIntro"
+  );
 }
 
 export async function GET() {
@@ -37,6 +63,10 @@ export async function PUT(request: Request) {
   }
 
   try {
+    if (!isAdminRequest(request)) {
+      return NextResponse.json({ ok: false, message: "Admin girişi gerekli." }, { status: 401, headers: noStoreHeaders });
+    }
+
     const body = (await request.json()) as { state?: unknown };
 
     if (!("state" in body)) {
@@ -44,7 +74,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ ok: false, message: "state alanı gerekli.", state }, { status: 400, headers: noStoreHeaders });
     }
 
-    const state = await writeSupabaseGameState(body.state);
+    const state = await runQueuedGameStateMutation(() => mutateSupabaseGameState(() => body.state as never));
     return NextResponse.json({ ok: true, state }, { headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof SyntaxError) {
@@ -73,13 +103,37 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ ok: false, message: "action alanı gerekli.", state }, { status: 400, headers: noStoreHeaders });
     }
 
-    const currentState = await readSupabaseGameState();
-    const result = applyGameAction(currentState, body.action);
-    const state = await writeSupabaseGameState(result.state);
+    const action = body.action;
+    const result = await runQueuedGameStateMutation(async () => {
+      let actionResult: GameActionResult | null = null;
+      if (!isPublicGameAction(action) && !isAdminRequest(request)) {
+        return { unauthorized: true as const };
+      }
+
+      const state = await mutateSupabaseGameState((currentState) => {
+        actionResult = applyGameAction(currentState, action);
+        return actionResult.state;
+      });
+      if (!actionResult) {
+        throw new Error("Oyun aksiyonu uygulanamadı.");
+      }
+      const finalActionResult: GameActionResult = actionResult;
+
+      return {
+        ...finalActionResult,
+        state,
+      };
+    });
+
+    if ("unauthorized" in result) {
+      return NextResponse.json(
+        { ok: false, message: "Admin girişi gerekli." },
+        { status: 401, headers: noStoreHeaders },
+      );
+    }
 
     return NextResponse.json({
       ...result,
-      state,
     }, { headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof SyntaxError) {
