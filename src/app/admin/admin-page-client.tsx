@@ -1,21 +1,19 @@
 "use client";
 
-import { ContentFlowEditor } from "@/components/ContentFlowEditor";
 import { useGameState } from "@/hooks/useGameState";
 import {
-  calculateQuizIntroRemainingSeconds,
-  calculateRemainingSeconds,
+  createFlowItemId,
   getFlowItemMedia,
   getQuestionLabel,
   getQuizAnswerBreakdown,
   getQuizAnswerStatusLabel,
-  getQuizPosition,
   getYoutubeEmbedUrl,
   inferMediaSource,
   inferMediaType,
   type AnswerId,
   type ContentFlowItem,
   type GamePhase,
+  type GameSettings,
   type MediaType,
   type QuizAnswerBreakdown,
   type QuizFlowItem,
@@ -31,10 +29,16 @@ import {
   type SavedCompetition,
 } from "@/lib/competition-library";
 import { downloadResultsCsv } from "@/lib/game-store";
-import { useEffect, useState, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 
 const answerOptionIds: AnswerId[] = ["A", "B", "C", "D"];
 type AdminTab = "competition" | "settings" | "library";
+type QuizDraft = {
+  itemId: string;
+  title: string;
+  mediaUrl: string;
+  options: Record<AnswerId, string>;
+};
 
 const adminTabs: { id: AdminTab; label: string }[] = [
   { id: "competition", label: "Yarışma" },
@@ -97,6 +101,18 @@ const answerBlockStyles: Record<
   },
 };
 
+const emptyQuizDraft: QuizDraft = {
+  itemId: "",
+  title: "",
+  mediaUrl: "",
+  options: {
+    A: "",
+    B: "",
+    C: "",
+    D: "",
+  },
+};
+
 const correctAnswerChipStyles: Record<AnswerId, string> = {
   A: "bg-amber-500 text-white",
   B: "bg-blue-600 text-white",
@@ -146,9 +162,9 @@ function AdminMediaPreview({ mediaUrl, title }: { mediaUrl: string; title: strin
 
   if (!cleanUrl) {
     return (
-      <div className="rounded-2xl border-2 border-dashed border-blue-300/50 bg-gradient-to-br from-blue-50/30 to-indigo-50/30 p-8 text-center">
-        <p className="text-lg font-semibold text-slate-600">Medya alanı</p>
-        <p className="mt-2 text-base text-slate-400">Görsel, video veya YouTube bağlantısı ekleyin.</p>
+      <div className="rounded-2xl border-2 border-dashed border-blue-300/50 bg-gradient-to-br from-blue-50/30 to-indigo-50/30 p-4 text-center">
+        <p className="text-base font-semibold text-slate-600">Medya alanı</p>
+        <p className="mt-1 text-sm text-slate-400">Görsel, video veya YouTube bağlantısı ekleyin.</p>
       </div>
     );
   }
@@ -169,15 +185,15 @@ function AdminMediaPreview({ mediaUrl, title }: { mediaUrl: string; title: strin
             Görsel yüklenemedi. URL: {cleanUrl}
           </div>
         ) : (
-          <img src={cleanUrl} alt="" className="max-h-72 w-full object-contain" onError={() => setImageError(true)} />
+          <img src={cleanUrl} alt="" className="max-h-44 w-full object-contain" onError={() => setImageError(true)} />
         )
       ) : mediaType === "video" ? (
-        <video src={cleanUrl} controls className="max-h-72 w-full" />
+        <video src={cleanUrl} controls className="max-h-44 w-full" />
       ) : (
         <iframe
           title={title}
           src={getYoutubeEmbedUrl(cleanUrl)}
-          className="aspect-video max-h-72 w-full"
+          className="aspect-video max-h-44 w-full"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
         />
@@ -267,22 +283,23 @@ function formatSavedDate(timestamp: number) {
 
 export function AdminPageClient() {
   const [activeTab, setActiveTab] = useState<AdminTab>("library");
+  const [draggedFlowItemId, setDraggedFlowItemId] = useState<string | null>(null);
+  const [activeQuizDraft, setActiveQuizDraft] = useState<QuizDraft>(emptyQuizDraft);
   const [competitionSaveName, setCompetitionSaveName] = useState("");
   const [savedCompetitions, setSavedCompetitions] = useState<SavedCompetition[]>([]);
   const [trashedCompetitions, setTrashedCompetitions] = useState<SavedCompetition[]>([]);
   const [editingCompetitionId, setEditingCompetitionId] = useState<string | null>(null);
   const [libraryMessage, setLibraryMessage] = useState<string | null>(null);
   const [mediaMessage, setMediaMessage] = useState<string | null>(null);
+  const isSettingsDraftDirty = useRef(false);
 
   const {
     state,
-    now,
     activeItem,
     leaderboard,
     answeredCount,
     resetGame,
     updateSettings,
-    openLobby,
     startActiveItem,
     nextItem,
     lockAnswers,
@@ -294,12 +311,13 @@ export function AdminPageClient() {
     deleteFlowItem,
     duplicateFlowItem,
     moveFlowItem,
-    restoreDefaultFlow,
+    reorderFlowItem,
     createBlankCompetition,
     goToItem,
     saveCompetitionToLibrary,
     openSavedCompetition,
   } = useGameState();
+  const [settingsDraft, setSettingsDraft] = useState<GameSettings>(() => state.settings);
 
   const refreshSavedCompetitions = () => {
     setSavedCompetitions(listSavedCompetitions());
@@ -411,21 +429,158 @@ export function AdminPageClient() {
   };
 
   const hasFlowItems = state.flowItems.length > 0;
-  const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
-  const introRemainingSeconds = calculateQuizIntroRemainingSeconds(state, activeItem, now);
   const activeIndexLabel = hasFlowItems ? `${state.activeItemIndex + 1} / ${state.flowItems.length}` : "—";
-  const activeQuizPosition = getQuizPosition(state, activeItem);
   const activeQuizBreakdown = hasFlowItems && activeItem.type === "quiz" ? getQuizAnswerBreakdown(state, activeItem) : null;
   const displayedAnsweredCount = hasFlowItems ? activeQuizBreakdown?.answeredTeams ?? answeredCount : 0;
   const displayedTeamCount = hasFlowItems ? activeQuizBreakdown?.totalTeams ?? state.teams.length : state.teams.length;
   const waitingCount = Math.max(displayedTeamCount - displayedAnsweredCount, 0);
   const isLiveSession = state.phase !== "lobby" && state.phase !== "finished";
   const formattedPin = formatPin(state.settings.gamePin);
-  const brand = resolveBrandSettings(state.settings);
+  const brand = resolveBrandSettings(settingsDraft);
   const rankedLeaderboard = [...leaderboard].sort((a, b) => b.score - a.score).slice(0, 5);
   const quizItemCount = state.flowItems.filter((item) => item.type === "quiz").length;
   const contentItemCount = state.flowItems.length - quizItemCount;
   const activeItemMedia = hasFlowItems ? getFlowItemMedia(activeItem) : { mediaUrl: "", mediaType: "none" as MediaType, mediaSource: "none" as const };
+  const activeQuizMediaUrl = hasFlowItems && activeItem.type === "quiz" && activeQuizDraft.itemId === activeItem.id ? activeQuizDraft.mediaUrl : activeItemMedia.mediaUrl;
+  const activeQuizMediaType = inferMediaType(activeQuizMediaUrl);
+
+  useEffect(() => {
+    if (!isSettingsDraftDirty.current) {
+      setSettingsDraft(state.settings);
+    }
+  }, [state.settings]);
+
+  useEffect(() => {
+    if (!isSettingsDraftDirty.current) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      updateSettings(settingsDraft);
+      isSettingsDraftDirty.current = false;
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [settingsDraft, updateSettings]);
+
+  useEffect(() => {
+    if (!hasFlowItems || activeItem.type !== "quiz") {
+      setActiveQuizDraft(emptyQuizDraft);
+      return;
+    }
+
+    setActiveQuizDraft({
+      itemId: activeItem.id,
+      title: activeItem.title,
+      mediaUrl: activeItem.mediaUrl ?? activeItem.imageUrl ?? "",
+      options: Object.fromEntries(activeItem.options.map((option) => [option.id, option.text])) as Record<AnswerId, string>,
+    });
+  }, [hasFlowItems, activeItem.id]);
+
+  useEffect(() => {
+    if (!hasFlowItems || activeItem.type !== "quiz" || activeQuizDraft.itemId !== activeItem.id) {
+      return;
+    }
+
+    const hasTitleChange = activeQuizDraft.title !== activeItem.title;
+    const hasMediaChange = activeQuizDraft.mediaUrl !== (activeItem.mediaUrl ?? activeItem.imageUrl ?? "");
+    const hasOptionChange = activeItem.options.some((option) => activeQuizDraft.options[option.id] !== option.text);
+
+    if (!hasTitleChange && !hasMediaChange && !hasOptionChange) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      const cleanUrl = activeQuizDraft.mediaUrl.trim();
+      const mediaType = inferMediaType(cleanUrl);
+      updateFlowItem({
+        ...activeItem,
+        title: activeQuizDraft.title,
+        mediaUrl: cleanUrl || undefined,
+        mediaType,
+        mediaSource: inferMediaSource(cleanUrl),
+        imageUrl: mediaType === "image" ? cleanUrl || undefined : undefined,
+        options: activeItem.options.map((option) => ({
+          ...option,
+          text: activeQuizDraft.options[option.id],
+        })),
+      });
+    }, 450);
+
+    return () => window.clearTimeout(timer);
+  }, [activeItem, activeQuizDraft, hasFlowItems, updateFlowItem]);
+
+  const addQuickFlowItem = (type: ContentFlowItem["type"]) => {
+    if (type === "quiz") {
+      addFlowItem({
+        id: createFlowItemId("quiz"),
+        type: "quiz",
+        quizNumber: quizItemCount + 1,
+        title: "Yeni soru",
+        topic: "Genel",
+        stage: "Admin Eklenen Quiz",
+        timeLimitSeconds: 30,
+        maxScore: 1000,
+        mediaType: "none",
+        mediaSource: "none",
+        options: [
+          { id: "A", text: "A seçeneği" },
+          { id: "B", text: "B seçeneği" },
+          { id: "C", text: "C seçeneği" },
+          { id: "D", text: "D seçeneği" },
+        ],
+        correctOptionId: "A",
+      });
+      return;
+    }
+
+    if (type === "infoSlide") {
+      addFlowItem({
+        id: createFlowItemId("infoSlide"),
+        type: "infoSlide",
+        title: "Yeni bilgi slaytı",
+        category: "Genel",
+        description: "Kısa açıklama yazın.",
+        timeLimitSeconds: 20,
+      });
+      return;
+    }
+
+    if (type === "mediaSlide") {
+      addFlowItem({
+        id: createFlowItemId("mediaSlide"),
+        type: "mediaSlide",
+        title: "Yeni medya slaytı",
+        category: "Genel",
+        description: "Medya açıklaması yazın.",
+        mediaUrl: "/images/warehouse-hazards.jpg",
+        mediaType: "image",
+        mediaSource: "public-path",
+        timeLimitSeconds: 20,
+      });
+      return;
+    }
+
+    addFlowItem({
+      id: createFlowItemId("forkliftChallenge"),
+      type: "forkliftChallenge",
+      title: "Forklift finali",
+      category: "Final",
+      description: "Final etabı açıklaması.",
+      timeLimitSeconds: 60,
+      maxScore: 1000,
+      message: "Hızlı olan değil, güvenli süren kazanır.",
+    });
+  };
+
+  const handleDropFlowItem = (targetIndex: number) => {
+    if (!draggedFlowItemId) {
+      return;
+    }
+
+    reorderFlowItem(draggedFlowItemId, targetIndex);
+    setDraggedFlowItemId(null);
+  };
 
   const patchActiveQuiz = (patch: Partial<QuizFlowItem>) => {
     if (!hasFlowItems || activeItem.type !== "quiz") {
@@ -435,15 +590,15 @@ export function AdminPageClient() {
   };
 
   const patchActiveQuizMedia = (mediaUrl: string, uploadedMediaType?: "image" | "video") => {
-    const cleanUrl = mediaUrl.trim();
-    const mediaType = uploadedMediaType ?? inferMediaType(cleanUrl);
+    if (!hasFlowItems || activeItem.type !== "quiz") {
+      return;
+    }
 
-    patchActiveQuiz({
-      mediaUrl: cleanUrl || undefined,
-      mediaType,
-      mediaSource: uploadedMediaType ? "upload" : inferMediaSource(cleanUrl),
-      imageUrl: mediaType === "image" ? cleanUrl || undefined : undefined,
-    });
+    setActiveQuizDraft((current) => ({
+      ...current,
+      itemId: activeItem.id,
+      mediaUrl,
+    }));
   };
 
   const handleActiveQuizMediaUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -459,11 +614,11 @@ export function AdminPageClient() {
       return;
     }
 
-    setMediaMessage("Dosya yükleniyor...");
+    setMediaMessage(null);
     try {
       const uploaded = await uploadMediaFile(file);
       patchActiveQuizMedia(uploaded.path, uploaded.mediaType);
-      setMediaMessage("Dosya yüklendi.");
+      setMediaMessage(null);
     } catch (error) {
       setMediaMessage(error instanceof Error ? error.message : "Dosya yüklenemedi.");
     } finally {
@@ -475,21 +630,23 @@ export function AdminPageClient() {
     if (!hasFlowItems || activeItem.type !== "quiz") {
       return;
     }
-    updateFlowItem({
-      ...activeItem,
-      options: activeItem.options.map((option) => (option.id === optionId ? { ...option, text } : option)),
-    });
+    setActiveQuizDraft((current) => ({
+      ...current,
+      itemId: activeItem.id,
+      options: {
+        ...current.options,
+        [optionId]: text,
+      },
+    }));
   };
 
-  const timerHint =
-    remainingSeconds !== null
-      ? `Süre: ${remainingSeconds} sn`
-      : introRemainingSeconds !== null
-        ? `Hazırlık: ${introRemainingSeconds} sn`
-        : null;
+  const updateSettingsDraft = (patch: Partial<GameSettings>) => {
+    isSettingsDraftDirty.current = true;
+    setSettingsDraft((current) => ({ ...current, ...patch }));
+  };
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 text-slate-950">
+    <div className="flex h-screen overflow-hidden flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 text-slate-950">
       <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-blue-200/50 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 px-4 py-3 shadow-xl backdrop-blur lg:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/20 shadow-lg backdrop-blur-sm">
@@ -549,13 +706,6 @@ export function AdminPageClient() {
           </button>
           <button
             type="button"
-            onClick={openLobby}
-            className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-blue-700 shadow-xl transition hover:bg-blue-50"
-          >
-            Lobiyi Aç
-          </button>
-          <button
-            type="button"
             onClick={() => downloadResultsCsv(state)}
             className="hidden rounded-xl px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white xl:block"
           >
@@ -588,50 +738,50 @@ export function AdminPageClient() {
       </nav>
 
       {activeTab === "competition" ? (
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
           {/* Left — flow */}
-          <aside className="hidden w-[22rem] shrink-0 flex-col border-r border-blue-200/40 bg-gradient-to-b from-white to-slate-50 shadow-lg lg:flex">
-            <div className="border-b border-blue-100/60 p-5">
+          <aside className="hidden h-full w-[20rem] shrink-0 overflow-hidden flex-col border-r border-blue-200/40 bg-gradient-to-b from-white to-slate-50 shadow-lg lg:flex">
+            <div className="border-b border-blue-100/60 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600">Yarışma Akışı</p>
                   <h2 className="mt-1 text-xl font-black text-slate-950">{state.flowItems.length} öğe</h2>
                 </div>
-                <span className="rounded-full border border-blue-200 bg-gradient-to-r from-blue-100 to-indigo-100 px-3 py-1.5 text-xs font-bold text-blue-700 shadow-sm">
-                  {phaseLabels[state.phase]}
-                </span>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 shadow-sm">
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50 to-indigo-50 p-3 shadow-sm">
                   <p className="text-xl font-bold text-blue-900">{quizItemCount}</p>
                   <p className="text-[11px] font-semibold text-blue-600">Soru</p>
                 </div>
-                <div className="rounded-2xl border border-purple-200/70 bg-gradient-to-br from-purple-50 to-pink-50 p-4 shadow-sm">
+                <div className="rounded-2xl border border-purple-200/70 bg-gradient-to-br from-purple-50 to-pink-50 p-3 shadow-sm">
                   <p className="text-xl font-bold text-purple-900">{contentItemCount}</p>
                   <p className="text-[11px] font-semibold text-purple-600">İçerik</p>
                 </div>
               </div>
-              {timerHint ? <p className="mt-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2.5 text-xs font-semibold text-white shadow-lg">{timerHint}</p> : null}
             </div>
 
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
               {state.flowItems.length ? (
                 state.flowItems.map((item, index) => {
                   const isActive = index === state.activeItemIndex;
-                  const quizPosition = item.type === "quiz" ? getQuizPosition(state, item) : null;
                   return (
                     <article
                       key={item.id}
-                      className={`rounded-2xl border transition-all shadow-sm ${
+                      draggable
+                      onDragStart={() => setDraggedFlowItemId(item.id)}
+                      onDragEnd={() => setDraggedFlowItemId(null)}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={() => handleDropFlowItem(index)}
+                      className={`cursor-grab rounded-2xl border transition-all shadow-sm active:cursor-grabbing ${
                         isActive
                           ? "border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md ring-4 ring-blue-100"
                           : "border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
                       }`}
                     >
-                      <button type="button" onClick={() => goToItem(index)} className="block w-full p-4 text-left">
+                      <button type="button" onClick={() => goToItem(index)} className="block w-full p-3 text-left">
                         <div className="flex items-start gap-3">
                           <div
-                            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-xl shadow-sm ${
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-lg shadow-sm ${
                               isActive ? "border-blue-300 bg-white" : "border-slate-200 bg-slate-50"
                             }`}
                           >
@@ -657,13 +807,10 @@ export function AdminPageClient() {
                             <p className={`mt-2 line-clamp-2 text-sm font-bold leading-snug ${isActive ? "text-blue-950" : "text-slate-800"}`}>
                               {item.title}
                             </p>
-                            <p className={`mt-2 text-xs font-semibold ${isActive ? "text-blue-600" : "text-slate-400"}`}>
-                              {quizPosition ? `Soru ${quizPosition.current}/${quizPosition.total}` : getQuestionLabel(item, state)}
-                            </p>
                           </div>
                         </div>
                       </button>
-                      <div className="grid grid-cols-4 gap-1 border-t border-slate-100 px-3 py-2">
+                      <div className="grid grid-cols-4 gap-1 border-t border-slate-100 px-2 py-1.5">
                         <button
                           type="button"
                           title="Yukarı"
@@ -709,67 +856,78 @@ export function AdminPageClient() {
               ) : (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-center">
                   <p className="text-sm font-bold text-slate-700">Akış boş</p>
-                  <p className="mt-1 text-xs font-semibold text-slate-500">Ayarlar sekmesinden ilk içeriği ekleyin.</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">Yarışma sekmesinden ilk içeriği ekleyin.</p>
                   <button
                     type="button"
-                    onClick={() => setActiveTab("settings")}
+                    onClick={() => addQuickFlowItem("quiz")}
                     className="mt-4 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700"
                   >
-                    Öğe ekle
+                    Soru ekle
                   </button>
                 </div>
               )}
             </div>
 
             <div className="border-t border-slate-100 bg-white/90 p-3">
-              <button
-                type="button"
-                onClick={() => setActiveTab("settings")}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800"
-              >
-                <span className="text-lg">+</span>
-                Öğe Ekle / Düzenle
-              </button>
+              <div className="mb-2 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => addQuickFlowItem("quiz")}
+                  className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700"
+                >
+                  + Soru
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addQuickFlowItem("infoSlide")}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                >
+                  + Slayt
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addQuickFlowItem("mediaSlide")}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                >
+                  + Medya
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addQuickFlowItem("forkliftChallenge")}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                >
+                  + Final
+                </button>
+              </div>
             </div>
           </aside>
 
           {/* Center — canvas */}
-          <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 p-4 lg:p-6">
-            <div className="mx-auto max-w-5xl">
+          <main className="min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 p-2 lg:p-3">
+            <div className="mx-auto flex h-full max-w-5xl flex-col">
               {!hasFlowItems ? (
                 <div className="rounded-2xl border border-blue-200/50 bg-gradient-to-br from-white to-blue-50/30 p-12 text-center shadow-xl">
                   <h2 className="text-2xl font-bold text-slate-950">Yarışma akışında içerik yok</h2>
-                  <p className="mt-3 text-base text-slate-500">Ayarlar sekmesinden öğe ekleyin veya Kütüphane ekranından örnek yarışmayı açın.</p>
+                  <p className="mt-3 text-base text-slate-500">Yarışma sekmesinden öğe ekleyin veya Kütüphane ekranından örnek yarışmayı açın.</p>
                 </div>
               ) : activeItem.type === "quiz" ? (
                 <>
-                  <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-blue-600">Editör Canvas</p>
-                      <h2 className="mt-1 text-2xl font-bold text-slate-950">{getQuestionLabel(activeItem, state)}</h2>
-                    </div>
-                    <div className="flex items-center gap-3 rounded-xl border border-blue-200/50 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2.5 text-sm font-semibold text-blue-700 shadow-md">
-                      <span>Akış {activeIndexLabel}</span>
-                      <span className="text-blue-300">/</span>
-                      <span>{activeItem.timeLimitSeconds} sn</span>
-                    </div>
+                  <div className="mb-2 shrink-0">
+                    <h2 className="text-lg font-bold text-slate-950">{getQuestionLabel(activeItem, state)}</h2>
                   </div>
 
-                  <div className="mb-6 rounded-2xl border border-blue-200/50 bg-gradient-to-br from-white to-blue-50/20 p-7 shadow-lg">
-                    <div className="mb-4 flex flex-wrap items-center gap-3">
-                      <span className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 px-3 py-1.5 text-xs font-bold text-white shadow-md">
-                        {activeQuizPosition ? `SORU ${activeQuizPosition.current}` : getQuestionLabel(activeItem, state).toUpperCase()}
-                      </span>
-                      <span className="text-xs text-slate-400">•</span>
-                      <span className="text-xs font-semibold text-slate-600">{activeItem.topic}</span>
-                      <span className="text-xs text-slate-400">•</span>
-                      <span className="text-xs font-semibold text-slate-600">Akış {activeIndexLabel}</span>
-                    </div>
+                  <div className="mb-2 shrink-0 rounded-2xl border border-blue-200/50 bg-gradient-to-br from-white to-blue-50/20 p-3 shadow-lg">
                     <input
                       type="text"
-                      value={activeItem.title}
-                      onChange={(event) => patchActiveQuiz({ title: event.target.value })}
-                      className="w-full border-none bg-transparent text-3xl font-bold leading-tight text-slate-950 outline-none placeholder:text-slate-400"
+                      value={activeQuizDraft.itemId === activeItem.id ? activeQuizDraft.title : activeItem.title}
+                      onChange={(event) =>
+                        setActiveQuizDraft((current) => ({
+                          ...current,
+                          itemId: activeItem.id,
+                          title: event.target.value,
+                        }))
+                      }
+                      className="w-full border-none bg-transparent text-2xl font-bold leading-tight text-slate-950 outline-none placeholder:text-slate-400"
                       placeholder="Sorunuzu buraya yazın..."
                     />
                     {activeItem.explanation && state.showCorrectAnswer ? (
@@ -779,43 +937,43 @@ export function AdminPageClient() {
                     ) : null}
                   </div>
 
-                  <div className="mb-6 rounded-2xl border border-blue-200/50 bg-gradient-to-br from-white to-blue-50/20 p-6 shadow-lg">
-                    <div className="rounded-2xl border-2 border-dashed border-blue-300/50 bg-gradient-to-br from-blue-50/30 to-indigo-50/30 p-4">
-                      <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="mb-2 shrink-0 rounded-2xl border border-blue-200/50 bg-gradient-to-br from-white to-blue-50/20 p-2 shadow-lg">
+                    <div className="rounded-2xl border-2 border-dashed border-blue-300/50 bg-gradient-to-br from-blue-50/30 to-indigo-50/30 p-2">
+                      <div className="mb-2 flex items-center justify-between gap-3">
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wide text-blue-600">Medya Ekle</p>
-                          <p className="mt-1 text-sm font-semibold text-slate-500">
+                          <p className="mt-1 text-xs font-semibold text-slate-500">
                             Görsel, video veya YouTube bağlantısı
                           </p>
                         </div>
                         <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 shadow-sm">
-                          {activeItemMedia.mediaType === "none" ? "Medya yok" : activeItemMedia.mediaType}
+                          {activeQuizMediaType === "none" ? "Medya yok" : activeQuizMediaType}
                         </span>
                       </div>
-                      <AdminMediaPreview mediaUrl={activeItemMedia.mediaUrl} title={activeItem.title} />
-                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <AdminMediaPreview mediaUrl={activeQuizMediaUrl} title={activeQuizDraft.title || activeItem.title} />
+                      <div className="mt-3 grid gap-2 md:grid-cols-2">
                         <label className="block">
                           <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-blue-600">Bilgisayardan Dosya Seç</span>
                           <input
                             type="file"
                             accept="image/*,video/*"
                             onChange={(event) => void handleActiveQuizMediaUpload(event)}
-                            className="w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none transition file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1 file:text-sm file:font-bold file:text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                           />
                         </label>
                         <label className="block">
                           <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-blue-600">Link / YouTube URL</span>
                           <input
                             type="text"
-                            value={activeItemMedia.mediaUrl}
+                            value={activeQuizMediaUrl}
                             onChange={(event) => patchActiveQuizMedia(event.target.value)}
                             placeholder="/images/warehouse-hazards.jpg"
-                            className="w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                           />
                         </label>
                       </div>
-                      {mediaMessage ? <p className="mt-3 rounded-xl bg-white/80 px-3 py-2 text-sm font-semibold text-slate-600">{mediaMessage}</p> : null}
-                      {activeItemMedia.mediaType === "none" && activeItemMedia.mediaUrl ? (
+                      {mediaMessage ? <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{mediaMessage}</p> : null}
+                      {activeQuizMediaType === "none" && activeQuizMediaUrl ? (
                         <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
                           Bağlantı desteklenen görsel, video veya YouTube formatı değil.
                         </p>
@@ -823,15 +981,18 @@ export function AdminPageClient() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-2">
                     {answerOptionIds.map((optionId) => {
-                      const option = activeItem.options.find((entry) => entry.id === optionId);
+                      const optionText =
+                        activeQuizDraft.itemId === activeItem.id
+                          ? activeQuizDraft.options[optionId]
+                          : activeItem.options.find((entry) => entry.id === optionId)?.text;
                       const isCorrect = activeItem.correctOptionId === optionId;
                       const styles = answerBlockStyles[optionId];
                       return (
                         <div
                           key={optionId}
-                          className={`relative min-h-32 rounded-2xl p-6 text-left shadow-lg transition-all ${isCorrect ? styles.active : styles.base}`}
+                          className={`relative min-h-20 rounded-2xl p-4 text-left shadow-lg transition-all ${isCorrect ? styles.active : styles.base}`}
                         >
                           {isCorrect ? (
                             <div className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-lg">
@@ -842,15 +1003,15 @@ export function AdminPageClient() {
                             <button
                               type="button"
                               onClick={() => patchActiveQuiz({ correctOptionId: optionId })}
-                              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-2xl font-bold text-white shadow-lg"
+                              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-xl font-bold text-white shadow-lg"
                             >
                               {optionId}
                             </button>
                             <input
                               type="text"
-                              value={option?.text ?? ""}
+                              value={optionText ?? ""}
                               onChange={(event) => setQuizOptionText(optionId, event.target.value)}
-                              className="flex-1 border-none bg-transparent text-xl font-semibold text-white outline-none placeholder:text-white/60"
+                              className="flex-1 border-none bg-transparent text-lg font-semibold text-white outline-none placeholder:text-white/60"
                               placeholder={`${optionId} seçeneği`}
                             />
                           </div>
@@ -884,7 +1045,7 @@ export function AdminPageClient() {
                     ) : null}
                   </div>
                   <p className="text-center text-sm text-slate-500">
-                    Detaylı düzenleme için <button type="button" onClick={() => setActiveTab("settings")} className="font-medium text-blue-600 hover:underline">Ayarlar</button> sekmesindeki akış editörünü kullanın.
+                    Sol panelden yeni öğe ekleyebilir, sıralamayı sürükleyerek değiştirebilirsiniz.
                   </p>
                 </div>
               )}
@@ -892,7 +1053,7 @@ export function AdminPageClient() {
           </main>
 
           {/* Right — inspector */}
-          <aside className="hidden w-96 shrink-0 flex-col overflow-y-auto border-l border-blue-200/30 bg-gradient-to-b from-white to-blue-50/20 shadow-lg xl:flex">
+          <aside className="hidden h-full min-h-0 w-96 shrink-0 flex-col overflow-y-auto border-l border-blue-200/30 bg-gradient-to-b from-white to-blue-50/20 shadow-lg xl:flex">
             {hasFlowItems && activeItem.type === "quiz" ? (
               <div className="border-b border-blue-100/50 p-6">
                 <div className="mb-5">
@@ -964,13 +1125,13 @@ export function AdminPageClient() {
                     <label className="mb-2.5 block text-xs font-semibold text-slate-600">Medya linki</label>
                     <input
                       type="text"
-                      value={activeItemMedia.mediaUrl}
+                      value={activeQuizMediaUrl}
                       onChange={(event) => patchActiveQuizMedia(event.target.value)}
                       placeholder="/images/warehouse-hazards.jpg veya https://youtu.be/..."
                       className="w-full rounded-xl border border-blue-200/60 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     />
                     <p className="mt-2 text-xs font-semibold text-slate-500">
-                      Tür: {activeItemMedia.mediaType === "none" ? "medya yok" : activeItemMedia.mediaType}
+                      Tür: {activeQuizMediaType === "none" ? "medya yok" : activeQuizMediaType}
                     </p>
                   </div>
                 </div>
@@ -1099,7 +1260,7 @@ export function AdminPageClient() {
           </aside>
         </div>
       ) : activeTab === "library" ? (
-        <main className="flex-1 overflow-y-auto bg-[#f5f7fb] p-4 lg:p-8">
+        <main className="min-h-0 flex-1 overflow-y-auto bg-[#f5f7fb] p-4 lg:p-8">
           <div className="mx-auto max-w-7xl space-y-6">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
@@ -1320,7 +1481,7 @@ export function AdminPageClient() {
           </div>
         </main>
       ) : (
-        <div className="flex-1 overflow-y-auto bg-[#f5f7fb] p-6 lg:p-8">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-[#f5f7fb] p-6 lg:p-8">
           <div className="mx-auto max-w-5xl space-y-6">
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div>
@@ -1332,7 +1493,7 @@ export function AdminPageClient() {
                   <span className="text-xs font-medium text-slate-500">Ürün markası</span>
                   <input
                     value={brand.productBrandName}
-                    onChange={(event) => updateSettings({ productBrandName: event.target.value })}
+                    onChange={(event) => updateSettingsDraft({ productBrandName: event.target.value })}
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   />
                 </label>
@@ -1340,7 +1501,7 @@ export function AdminPageClient() {
                   <span className="text-xs font-medium text-slate-500">Müşteri adı</span>
                   <input
                     value={brand.customerName}
-                    onChange={(event) => updateSettings({ customerName: event.target.value })}
+                    onChange={(event) => updateSettingsDraft({ customerName: event.target.value })}
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   />
                 </label>
@@ -1348,7 +1509,7 @@ export function AdminPageClient() {
                   <span className="text-xs font-medium text-slate-500">Watermark metni</span>
                   <input
                     value={brand.watermarkText}
-                    onChange={(event) => updateSettings({ watermarkText: event.target.value })}
+                    onChange={(event) => updateSettingsDraft({ watermarkText: event.target.value })}
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   />
                 </label>
@@ -1356,7 +1517,7 @@ export function AdminPageClient() {
                   <span className="text-xs font-medium text-slate-500">Müşteri logo metni (opsiyonel)</span>
                   <input
                     value={brand.customerLogoText ?? ""}
-                    onChange={(event) => updateSettings({ customerLogoText: event.target.value })}
+                    onChange={(event) => updateSettingsDraft({ customerLogoText: event.target.value })}
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   />
                 </label>
@@ -1364,7 +1525,7 @@ export function AdminPageClient() {
                   <span className="text-xs font-medium text-slate-500">Müşteri logo URL (opsiyonel)</span>
                   <input
                     value={brand.customerLogoUrl ?? ""}
-                    onChange={(event) => updateSettings({ customerLogoUrl: event.target.value })}
+                    onChange={(event) => updateSettingsDraft({ customerLogoUrl: event.target.value })}
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   />
                 </label>
@@ -1372,7 +1533,7 @@ export function AdminPageClient() {
                   <span className="text-xs font-medium text-slate-500">Tema</span>
                   <select
                     value={brand.themeId}
-                    onChange={(event) => updateSettings({ themeId: event.target.value })}
+                    onChange={(event) => updateSettingsDraft({ themeId: event.target.value })}
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   >
                     {THEME_OPTIONS.map((option) => (
@@ -1404,8 +1565,8 @@ export function AdminPageClient() {
                 <label className="block sm:col-span-2">
                   <span className="text-xs font-medium text-slate-500">Yarışma başlığı</span>
                   <textarea
-                    value={state.settings.welcomeTitle}
-                    onChange={(event) => updateSettings({ welcomeTitle: event.target.value })}
+                    value={settingsDraft.welcomeTitle}
+                    onChange={(event) => updateSettingsDraft({ welcomeTitle: event.target.value })}
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                     rows={3}
                   />
@@ -1413,8 +1574,8 @@ export function AdminPageClient() {
                 <label className="block">
                   <span className="text-xs font-medium text-slate-500">Maksimum takım</span>
                   <input
-                    value={state.settings.maxTeams}
-                    onChange={(event) => updateSettings({ maxTeams: Number(event.target.value) })}
+                    value={settingsDraft.maxTeams}
+                    onChange={(event) => updateSettingsDraft({ maxTeams: Number(event.target.value) })}
                     type="number"
                     min={1}
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
@@ -1423,8 +1584,8 @@ export function AdminPageClient() {
                 <label className="block">
                   <span className="text-xs font-medium text-slate-500">Takım kişi sayısı</span>
                   <input
-                    value={state.settings.teamSize}
-                    onChange={(event) => updateSettings({ teamSize: Number(event.target.value) })}
+                    value={settingsDraft.teamSize}
+                    onChange={(event) => updateSettingsDraft({ teamSize: Number(event.target.value) })}
                     type="number"
                     min={1}
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
@@ -1433,8 +1594,8 @@ export function AdminPageClient() {
                 <label className="block">
                   <span className="text-xs font-medium text-slate-500">1. ödül</span>
                   <input
-                    value={state.settings.prizeFirst}
-                    onChange={(event) => updateSettings({ prizeFirst: Number(event.target.value) })}
+                    value={settingsDraft.prizeFirst}
+                    onChange={(event) => updateSettingsDraft({ prizeFirst: Number(event.target.value) })}
                     type="number"
                     min={0}
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
@@ -1443,8 +1604,8 @@ export function AdminPageClient() {
                 <label className="block">
                   <span className="text-xs font-medium text-slate-500">2. ödül</span>
                   <input
-                    value={state.settings.prizeSecond}
-                    onChange={(event) => updateSettings({ prizeSecond: Number(event.target.value) })}
+                    value={settingsDraft.prizeSecond}
+                    onChange={(event) => updateSettingsDraft({ prizeSecond: Number(event.target.value) })}
                     type="number"
                     min={0}
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
@@ -1453,8 +1614,8 @@ export function AdminPageClient() {
                 <label className="block">
                   <span className="text-xs font-medium text-slate-500">3. ödül</span>
                   <input
-                    value={state.settings.prizeThird}
-                    onChange={(event) => updateSettings({ prizeThird: Number(event.target.value) })}
+                    value={settingsDraft.prizeThird}
+                    onChange={(event) => updateSettingsDraft({ prizeThird: Number(event.target.value) })}
                     type="number"
                     min={0}
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
@@ -1463,8 +1624,8 @@ export function AdminPageClient() {
                 <label className="block">
                   <span className="text-xs font-medium text-slate-500">Para birimi</span>
                   <input
-                    value={state.settings.currency}
-                    onChange={(event) => updateSettings({ currency: event.target.value.toLocaleUpperCase("tr-TR") })}
+                    value={settingsDraft.currency}
+                    onChange={(event) => updateSettingsDraft({ currency: event.target.value.toLocaleUpperCase("tr-TR") })}
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   />
                 </label>
@@ -1476,16 +1637,6 @@ export function AdminPageClient() {
               </div>
             </section>
 
-            <ContentFlowEditor
-              state={state}
-              onSelectItem={goToItem}
-              onAddItem={addFlowItem}
-              onUpdateItem={updateFlowItem}
-              onDeleteItem={deleteFlowItem}
-              onDuplicateItem={duplicateFlowItem}
-              onMoveItem={moveFlowItem}
-              onRestoreDefaultFlow={restoreDefaultFlow}
-            />
           </div>
         </div>
       )}

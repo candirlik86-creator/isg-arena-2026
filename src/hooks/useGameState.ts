@@ -224,6 +224,13 @@ export function useGameState() {
     [runAction],
   );
 
+  const reorderFlowItem = useCallback(
+    (itemId: string, targetIndex: number) => {
+      void runAction({ type: "reorderFlowItem", itemId, targetIndex });
+    },
+    [runAction],
+  );
+
   const restoreDefaultFlow = useCallback(() => {
     void runAction({ type: "restoreDefaultFlow" });
   }, [runAction]);
@@ -328,6 +335,7 @@ export function useGameState() {
     deleteFlowItem,
     duplicateFlowItem,
     moveFlowItem,
+    reorderFlowItem,
     restoreDefaultFlow,
     createBlankCompetition,
     saveCompetitionToLibrary,
