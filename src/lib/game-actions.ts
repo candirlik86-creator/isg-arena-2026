@@ -38,6 +38,7 @@ export type GameAction =
   | { type: "deleteFlowItem"; itemId: string }
   | { type: "duplicateFlowItem"; itemId: string }
   | { type: "moveFlowItem"; itemId: string; direction: -1 | 1 }
+  | { type: "reorderFlowItem"; itemId: string; targetIndex: number }
   | { type: "restoreDefaultFlow" }
   | { type: "advanceQuizIntro"; itemId: string }
   | { type: "joinTeam"; pin: string; teamName: string }
@@ -311,6 +312,21 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
     const targetIndex = itemIndex + action.direction;
 
     if (itemIndex < 0 || targetIndex < 0 || targetIndex >= currentState.flowItems.length) {
+      return success(currentState);
+    }
+
+    const nextFlowItems = [...currentState.flowItems];
+    const [movedItem] = nextFlowItems.splice(itemIndex, 1);
+    nextFlowItems.splice(targetIndex, 0, movedItem);
+
+    return success(reconcileFlowState(currentState, nextFlowItems));
+  }
+
+  if (action.type === "reorderFlowItem") {
+    const itemIndex = currentState.flowItems.findIndex((item) => item.id === action.itemId);
+    const targetIndex = Math.max(0, Math.min(action.targetIndex, currentState.flowItems.length - 1));
+
+    if (itemIndex < 0 || itemIndex === targetIndex) {
       return success(currentState);
     }
 
