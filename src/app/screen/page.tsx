@@ -401,27 +401,48 @@ export default function ScreenPage() {
       ) : null}
 
       {state.phase === "infoSlide" && activeItem.type === "infoSlide" ? (
-        <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden xl:grid xl:grid-cols-[1fr_0.85fr] xl:items-center xl:gap-6">
-          <div className="min-h-0 shrink-0 xl:overflow-y-auto xl:pr-1">
-            <StageBadge label="Bilgilendirme" tone="blue" />
-            <h2
-              className="mt-3 font-black leading-tight text-white md:mt-4"
-              style={{ fontSize: "clamp(1.35rem, 3.5vw, 4.5rem)" }}
-            >
-              {activeItem.title}
-            </h2>
-            <p className="mt-4 text-base font-semibold leading-relaxed text-slate-200 md:mt-5 md:text-xl lg:text-2xl">{activeItem.description}</p>
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[clamp(1.25rem,2.5vw,3rem)] border border-sky-100/30 bg-white/[0.12] p-4 shadow-2xl shadow-blue-950/20 backdrop-blur md:p-6">
-            {activeItem.imageUrl ? (
-              <img src={activeItem.imageUrl} alt="" className="max-h-[42dvh] w-full flex-1 rounded-[clamp(1rem,2vw,2rem)] object-contain md:max-h-[45dvh]" />
-            ) : (
+        activeItemMedia.mediaType !== "none" ? (
+          <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.95fr)] xl:items-center xl:gap-6">
+            <div className="min-h-0 shrink-0 xl:overflow-y-auto xl:pr-1">
+              <StageBadge label="Bilgilendirme" tone="blue" />
+              <h2
+                className="mt-3 font-black leading-tight text-white md:mt-4"
+                style={{ fontSize: "clamp(1.35rem, 3.5vw, 4.5rem)" }}
+              >
+                {activeItem.title}
+              </h2>
+              <p className="mt-4 text-base font-semibold leading-relaxed text-slate-200 md:mt-5 md:text-xl lg:text-2xl">{activeItem.description}</p>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden md:gap-4 xl:h-[62dvh] xl:min-h-[28rem] xl:max-h-[42rem] xl:flex-none xl:self-center">
+              <div className="shrink-0 rounded-[clamp(0.9rem,1.7vw,1.4rem)] border border-sky-100/25 bg-white/[0.12] px-4 py-3 text-center shadow-xl shadow-blue-950/15 backdrop-blur md:px-5 md:py-4">
+                <p className="text-base font-black leading-tight text-amber-200 md:text-xl lg:text-2xl">Bil, Fark Et, Güvenli Karar Ver</p>
+              </div>
+              <div className="flex min-h-[16rem] min-w-0 flex-1 overflow-hidden rounded-[clamp(1rem,2vw,2.25rem)] border border-white/20 bg-white/[0.10] p-2 shadow-2xl shadow-blue-950/20 backdrop-blur md:min-h-[22rem] md:p-3 xl:min-h-0">
+                <div className="flex min-h-0 w-full overflow-hidden rounded-[clamp(0.85rem,1.6vw,1.8rem)] border border-white/10 bg-slate-950/35">
+                  <ScreenMedia mediaUrl={activeItemMedia.mediaUrl} title={activeItem.title} />
+                </div>
+              </div>
+            </div>
+          </section>
+        ) : (
+          <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden xl:grid xl:grid-cols-[1fr_0.85fr] xl:items-center xl:gap-6">
+            <div className="min-h-0 shrink-0 xl:overflow-y-auto xl:pr-1">
+              <StageBadge label="Bilgilendirme" tone="blue" />
+              <h2
+                className="mt-3 font-black leading-tight text-white md:mt-4"
+                style={{ fontSize: "clamp(1.35rem, 3.5vw, 4.5rem)" }}
+              >
+                {activeItem.title}
+              </h2>
+              <p className="mt-4 text-base font-semibold leading-relaxed text-slate-200 md:mt-5 md:text-xl lg:text-2xl">{activeItem.description}</p>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[clamp(1.25rem,2.5vw,3rem)] border border-sky-100/30 bg-white/[0.12] p-4 shadow-2xl shadow-blue-950/20 backdrop-blur md:p-6">
               <div className="flex min-h-[12rem] flex-1 items-center justify-center rounded-[clamp(1rem,2vw,2rem)] border border-white/20 bg-white/[0.12] p-4 text-center md:min-h-[14rem] md:p-6">
                 <p className="text-2xl font-black leading-tight text-amber-200 md:text-4xl">Bil, Fark Et, Güvenli Karar Ver</p>
               </div>
-            )}
-          </div>
-        </section>
+            </div>
+          </section>
+        )
       ) : null}
 
       {state.phase === "mediaSlide" && activeItem.type === "mediaSlide" ? (
@@ -430,16 +451,6 @@ export default function ScreenPage() {
             <StageBadge label="Medya Slaytı" tone="blue" />
             <h2 className="mt-2 text-3xl font-black text-white md:mt-3 md:text-4xl lg:text-5xl">{activeItem.title}</h2>
             <p className="mt-2 text-base font-semibold text-slate-300 md:text-lg lg:text-xl">{activeItem.description}</p>
-            {activeItemMedia.mediaUrl && activeItemMedia.mediaType !== "none" ? (
-              <a
-                href={activeItemMedia.mediaUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 block break-all rounded-xl border border-sky-300/25 bg-sky-400/10 p-3 text-sm font-black text-sky-100 md:mt-3 md:rounded-2xl md:p-4 md:text-base"
-              >
-                Medya URL: {activeItemMedia.mediaUrl}
-              </a>
-            ) : null}
           </div>
           <div className="flex min-h-0 flex-1 overflow-hidden rounded-[clamp(1rem,2vw,2.5rem)] border border-white/10 bg-slate-950 p-2 shadow-2xl md:p-3">
             <ScreenMedia mediaUrl={activeItemMedia.mediaUrl} title={activeItem.title} />

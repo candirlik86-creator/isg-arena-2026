@@ -93,18 +93,10 @@ const addContentCards: AddContentCard[] = [
   {
     id: "info-slide",
     label: "Bilgi Slaytı",
-    description: "Katılımcılara kısa eğitim, not veya yönlendirme gösterin.",
+    description: "Katılımcılara kısa eğitim, not veya opsiyonel medya gösterin.",
     type: "infoSlide",
     badge: "İçerik",
     accentClass: "from-emerald-50 to-teal-50 border-emerald-200 hover:border-emerald-400",
-  },
-  {
-    id: "media-slide",
-    label: "Medya Slaytı",
-    description: "Görsel, video veya YouTube içeriğini büyük ekranda sunun.",
-    type: "mediaSlide",
-    badge: "Ekran",
-    accentClass: "from-violet-50 to-fuchsia-50 border-violet-200 hover:border-violet-400",
   },
   {
     id: "true-false",
@@ -192,6 +184,9 @@ function createFormFromItem(item: ContentFlowItem): FlowItemFormState {
       category: getItemCategory(item),
       timeLimitSeconds: duration ? String(duration) : "",
       description: item.description,
+      mediaUrl: item.mediaUrl ?? item.imageUrl ?? "",
+      uploadedImageDataUrl: item.imageUrl ?? "",
+      uploadedMediaType: item.mediaType === "image" || item.mediaType === "video" ? item.mediaType : undefined,
     };
   }
 
@@ -250,6 +245,10 @@ function validateForm(form: FlowItemFormState) {
     if (form.mediaUrl.trim() && inferMediaType(form.mediaUrl) === "none") {
       errors.mediaUrl = "Desteklenen görsel, video veya YouTube bağlantısı girin.";
     }
+  }
+
+  if (form.type === "infoSlide" && form.mediaUrl.trim() && inferMediaType(form.mediaUrl) === "none") {
+    errors.mediaUrl = "Desteklenen görsel, video veya YouTube bağlantısı girin.";
   }
 
   if ((form.type === "infoSlide" || form.type === "mediaSlide") && form.timeLimitSeconds.trim() && !duration) {
@@ -321,6 +320,9 @@ function buildFlowItem(form: FlowItemFormState, state: GameState, existingItem?:
 
   if (form.type === "infoSlide") {
     const existingInfoSlide = existingItem?.type === "infoSlide" ? existingItem : null;
+    const mediaUrl = form.mediaUrl.trim();
+    const mediaType = form.uploadedMediaType ?? inferMediaType(mediaUrl);
+    const mediaSource = form.uploadedMediaType ? "upload" : inferMediaSource(mediaUrl);
 
     return {
       id: existingInfoSlide?.id ?? createFlowItemId("infoSlide"),
@@ -328,7 +330,10 @@ function buildFlowItem(form: FlowItemFormState, state: GameState, existingItem?:
       title,
       category: category || undefined,
       description: form.description.trim(),
-      imageUrl: existingInfoSlide?.imageUrl,
+      imageUrl: mediaType === "image" ? mediaUrl || undefined : undefined,
+      mediaUrl: mediaUrl || undefined,
+      mediaType,
+      mediaSource,
       timeLimitSeconds: duration ?? undefined,
     };
   }
@@ -736,13 +741,15 @@ export function ContentFlowEditor({
               </>
             ) : null}
 
-            {form.type === "quiz" || form.type === "mediaSlide" ? (
+            {form.type === "quiz" || form.type === "infoSlide" || form.type === "mediaSlide" ? (
               <FormSection
                 title="Medya"
                 description={
                   form.type === "quiz"
                     ? "Quiz için opsiyonel görsel, video veya YouTube bağlantısı ekleyin."
-                    : "Medya slaytı için görsel, video veya YouTube bağlantısı seçin."
+                    : form.type === "infoSlide"
+                      ? "Bilgi slaytı için opsiyonel görsel, video veya YouTube bağlantısı ekleyin."
+                      : "Medya slaytı için görsel, video veya YouTube bağlantısı seçin."
                 }
               >
                 <div className="grid gap-4 lg:grid-cols-2">
@@ -764,7 +771,7 @@ export function ContentFlowEditor({
                       placeholder={
                         form.type === "quiz"
                           ? "/images/warehouse-hazards.jpg veya https://youtu.be/..."
-                          : "/uploads/video.mp4 veya https://youtube.com/watch?v=..."
+                          : "/api/media/uploads/video.mp4 veya https://youtube.com/watch?v=..."
                       }
                     />
                     <FieldError message={errors.mediaUrl} />
