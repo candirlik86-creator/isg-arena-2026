@@ -39,6 +39,13 @@ type QuizDraft = {
   mediaUrl: string;
   options: Record<AnswerId, string>;
 };
+type SlideDraft = {
+  itemId: string;
+  title: string;
+  description: string;
+  mediaUrl: string;
+  message: string;
+};
 
 const adminTabs: { id: AdminTab; label: string }[] = [
   { id: "competition", label: "Yarışma" },
@@ -111,6 +118,13 @@ const emptyQuizDraft: QuizDraft = {
     C: "",
     D: "",
   },
+};
+const emptySlideDraft: SlideDraft = {
+  itemId: "",
+  title: "",
+  description: "",
+  mediaUrl: "",
+  message: "",
 };
 
 const correctAnswerChipStyles: Record<AnswerId, string> = {
@@ -285,6 +299,7 @@ export function AdminPageClient() {
   const [activeTab, setActiveTab] = useState<AdminTab>("library");
   const [draggedFlowItemId, setDraggedFlowItemId] = useState<string | null>(null);
   const [activeQuizDraft, setActiveQuizDraft] = useState<QuizDraft>(emptyQuizDraft);
+  const [activeSlideDraft, setActiveSlideDraft] = useState<SlideDraft>(emptySlideDraft);
   const [competitionSaveName, setCompetitionSaveName] = useState("");
   const [savedCompetitions, setSavedCompetitions] = useState<SavedCompetition[]>([]);
   const [trashedCompetitions, setTrashedCompetitions] = useState<SavedCompetition[]>([]);
@@ -443,6 +458,9 @@ export function AdminPageClient() {
   const activeItemMedia = hasFlowItems ? getFlowItemMedia(activeItem) : { mediaUrl: "", mediaType: "none" as MediaType, mediaSource: "none" as const };
   const activeQuizMediaUrl = hasFlowItems && activeItem.type === "quiz" && activeQuizDraft.itemId === activeItem.id ? activeQuizDraft.mediaUrl : activeItemMedia.mediaUrl;
   const activeQuizMediaType = inferMediaType(activeQuizMediaUrl);
+  const activeSlideMediaUrl =
+    hasFlowItems && activeItem.type !== "quiz" && activeSlideDraft.itemId === activeItem.id ? activeSlideDraft.mediaUrl : activeItemMedia.mediaUrl;
+  const activeSlideMediaType = inferMediaType(activeSlideMediaUrl);
 
   useEffect(() => {
     if (!isSettingsDraftDirty.current) {
@@ -509,6 +527,80 @@ export function AdminPageClient() {
 
     return () => window.clearTimeout(timer);
   }, [activeItem, activeQuizDraft, hasFlowItems, updateFlowItem]);
+
+  useEffect(() => {
+    if (!hasFlowItems || activeItem.type === "quiz") {
+      setActiveSlideDraft(emptySlideDraft);
+      return;
+    }
+
+    setActiveSlideDraft({
+      itemId: activeItem.id,
+      title: activeItem.title,
+      description: "description" in activeItem ? activeItem.description : "",
+      mediaUrl: activeItemMedia.mediaUrl,
+      message: activeItem.type === "forkliftChallenge" ? activeItem.message : "",
+    });
+  }, [hasFlowItems, activeItem.id]);
+
+  useEffect(() => {
+    if (!hasFlowItems || activeItem.type === "quiz" || activeSlideDraft.itemId !== activeItem.id) {
+      return;
+    }
+
+    const currentDescription = "description" in activeItem ? activeItem.description : "";
+    const currentMessage = activeItem.type === "forkliftChallenge" ? activeItem.message : "";
+    const hasTitleChange = activeSlideDraft.title !== activeItem.title;
+    const hasDescriptionChange = activeSlideDraft.description !== currentDescription;
+    const hasMediaChange =
+      (activeItem.type === "infoSlide" || activeItem.type === "mediaSlide") &&
+      activeSlideDraft.mediaUrl !== activeItemMedia.mediaUrl;
+    const hasMessageChange = activeItem.type === "forkliftChallenge" && activeSlideDraft.message !== currentMessage;
+
+    if (!hasTitleChange && !hasDescriptionChange && !hasMediaChange && !hasMessageChange) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      if (activeItem.type === "infoSlide") {
+        const cleanUrl = activeSlideDraft.mediaUrl.trim();
+        const mediaType = inferMediaType(cleanUrl);
+        updateFlowItem({
+          ...activeItem,
+          title: activeSlideDraft.title,
+          description: activeSlideDraft.description,
+          imageUrl: mediaType === "image" ? cleanUrl || undefined : undefined,
+          mediaUrl: cleanUrl || undefined,
+          mediaType,
+          mediaSource: inferMediaSource(cleanUrl),
+        });
+        return;
+      }
+
+      if (activeItem.type === "mediaSlide") {
+        const cleanUrl = activeSlideDraft.mediaUrl.trim();
+        const mediaType = inferMediaType(cleanUrl);
+        updateFlowItem({
+          ...activeItem,
+          title: activeSlideDraft.title,
+          description: activeSlideDraft.description,
+          mediaUrl: cleanUrl,
+          mediaType,
+          mediaSource: inferMediaSource(cleanUrl),
+        });
+        return;
+      }
+
+      updateFlowItem({
+        ...activeItem,
+        title: activeSlideDraft.title,
+        description: activeSlideDraft.description,
+        message: activeSlideDraft.message,
+      });
+    }, 450);
+
+    return () => window.clearTimeout(timer);
+  }, [activeItem, activeSlideDraft, hasFlowItems, updateFlowItem]);
 
   const addQuickFlowItem = (type: ContentFlowItem["type"]) => {
     if (type === "quiz") {
@@ -618,6 +710,35 @@ export function AdminPageClient() {
     try {
       const uploaded = await uploadMediaFile(file);
       patchActiveQuizMedia(uploaded.path, uploaded.mediaType);
+      setMediaMessage(null);
+    } catch (error) {
+      setMediaMessage(error instanceof Error ? error.message : "Dosya yüklenemedi.");
+    } finally {
+      event.currentTarget.value = "";
+    }
+  };
+
+  const handleActiveSlideMediaUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+
+    if (!file || !hasFlowItems || (activeItem.type !== "infoSlide" && activeItem.type !== "mediaSlide")) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      setMediaMessage("Sadece görsel veya video dosyası seçilebilir.");
+      event.currentTarget.value = "";
+      return;
+    }
+
+    setMediaMessage(null);
+    try {
+      const uploaded = await uploadMediaFile(file);
+      setActiveSlideDraft((current) => ({
+        ...current,
+        itemId: activeItem.id,
+        mediaUrl: uploaded.path,
+      }));
       setMediaMessage(null);
     } catch (error) {
       setMediaMessage(error instanceof Error ? error.message : "Dosya yüklenemedi.");
@@ -886,13 +1007,6 @@ export function AdminPageClient() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => addQuickFlowItem("mediaSlide")}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                >
-                  + Medya
-                </button>
-                <button
-                  type="button"
                   onClick={() => addQuickFlowItem("forkliftChallenge")}
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
                 >
@@ -1021,31 +1135,108 @@ export function AdminPageClient() {
                   </div>
                 </>
               ) : (
-                <div className="space-y-6">
-                  <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex min-h-0 flex-1 flex-col gap-3">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="mb-4 flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
                         {flowTypeLabels[activeItem.type]}
                       </span>
                       <span className="text-xs text-slate-400">Akış {activeIndexLabel}</span>
                     </div>
-                    <h2 className="text-2xl font-bold text-slate-950">{activeItem.title}</h2>
-                    <p className="mt-4 text-base leading-relaxed text-slate-600">
-                      {"description" in activeItem ? activeItem.description : "Final etap hazır."}
-                    </p>
-                    {activeItem.type === "forkliftChallenge" ? (
-                      <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-base font-semibold text-amber-800">
-                        {activeItem.message}
-                      </p>
+                    <input
+                      type="text"
+                      value={activeSlideDraft.itemId === activeItem.id ? activeSlideDraft.title : activeItem.title}
+                      onChange={(event) =>
+                        setActiveSlideDraft((current) => ({
+                          ...current,
+                          itemId: activeItem.id,
+                          title: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-2xl font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      placeholder="Başlık yazın"
+                    />
+                    {"description" in activeItem ? (
+                      <textarea
+                        value={activeSlideDraft.itemId === activeItem.id ? activeSlideDraft.description : activeItem.description}
+                        onChange={(event) =>
+                          setActiveSlideDraft((current) => ({
+                            ...current,
+                            itemId: activeItem.id,
+                            description: event.target.value,
+                          }))
+                        }
+                        className="mt-3 min-h-28 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base font-semibold leading-relaxed text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        placeholder="Açıklama yazın"
+                      />
                     ) : null}
-                    {activeItemMedia.mediaType !== "none" ? (
-                      <p className="mt-4 break-all rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-                        {activeItemMedia.mediaType} · {activeItemMedia.mediaUrl}
-                      </p>
+                    {activeItem.type === "forkliftChallenge" ? (
+                      <input
+                        type="text"
+                        value={activeSlideDraft.itemId === activeItem.id ? activeSlideDraft.message : activeItem.message}
+                        onChange={(event) =>
+                          setActiveSlideDraft((current) => ({
+                            ...current,
+                            itemId: activeItem.id,
+                            message: event.target.value,
+                          }))
+                        }
+                        className="mt-3 w-full rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-base font-semibold text-amber-800 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                        placeholder="Final ekran mesajı"
+                      />
+                    ) : null}
+                    {activeItem.type === "infoSlide" || activeItem.type === "mediaSlide" ? (
+                      <div className="mt-4 rounded-2xl border-2 border-dashed border-blue-300/50 bg-gradient-to-br from-blue-50/30 to-indigo-50/30 p-3">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-wide text-blue-600">Medya Ekle</p>
+                            <p className="mt-1 text-xs font-semibold text-slate-500">
+                              {activeItem.type === "infoSlide" ? "Bilgi slaytı için opsiyonel görsel, video veya YouTube bağlantısı" : "Görsel, video veya YouTube bağlantısı"}
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 shadow-sm">
+                            {activeSlideMediaType === "none" ? "Medya yok" : activeSlideMediaType}
+                          </span>
+                        </div>
+                        <AdminMediaPreview mediaUrl={activeSlideMediaUrl} title={activeSlideDraft.title || activeItem.title} />
+                        <div className="mt-3 grid gap-2 md:grid-cols-2">
+                          <label className="block">
+                            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-blue-600">Bilgisayardan Dosya Seç</span>
+                            <input
+                              type="file"
+                              accept="image/*,video/*"
+                              onChange={(event) => void handleActiveSlideMediaUpload(event)}
+                              className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none transition file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1 file:text-sm file:font-bold file:text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-blue-600">Link / YouTube URL</span>
+                            <input
+                              type="text"
+                              value={activeSlideMediaUrl}
+                              onChange={(event) =>
+                                setActiveSlideDraft((current) => ({
+                                  ...current,
+                                  itemId: activeItem.id,
+                                  mediaUrl: event.target.value,
+                                }))
+                              }
+                              placeholder="/api/media/uploads/video.mp4 veya https://youtu.be/..."
+                              className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            />
+                          </label>
+                        </div>
+                        {mediaMessage ? <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{mediaMessage}</p> : null}
+                        {activeSlideMediaType === "none" && activeSlideMediaUrl ? (
+                          <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+                            Bağlantı desteklenen görsel, video veya YouTube formatı değil.
+                          </p>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                   <p className="text-center text-sm text-slate-500">
-                    Sol panelden yeni öğe ekleyebilir, sıralamayı sürükleyerek değiştirebilirsiniz.
+                    Değişiklikler kısa süre içinde otomatik kaydedilir.
                   </p>
                 </div>
               )}
