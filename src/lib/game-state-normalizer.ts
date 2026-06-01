@@ -68,6 +68,10 @@ function isMediaSource(value: unknown): value is MediaSource {
   return value === "upload" || value === "url" || value === "youtube" || value === "public-path" || value === "none";
 }
 
+function normalizeInfoSlideVariant(value: unknown) {
+  return value === "finalRoundIntro" ? "finalRoundIntro" : undefined;
+}
+
 function normalizeFlowItem(value: unknown, usedIds: Set<string>, quizNumber: number): ContentFlowItem | null {
   if (!isRecord(value)) {
     return null;
@@ -117,6 +121,7 @@ function normalizeFlowItem(value: unknown, usedIds: Set<string>, quizNumber: num
       id: createSafeId("infoSlide", usedIds, value.id),
       type: "infoSlide",
       title: asString(value.title, "Adsız bilgi slaytı"),
+      variant: normalizeInfoSlideVariant(value.variant),
       category: asString(value.category),
       description: asString(value.description),
       imageUrl: asString(value.imageUrl) || undefined,
