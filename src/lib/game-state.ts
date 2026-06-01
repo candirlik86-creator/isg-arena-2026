@@ -32,6 +32,7 @@ export type QuizFlowItem = BaseFlowItem & {
 
 export type InfoSlideFlowItem = BaseFlowItem & {
   type: "infoSlide";
+  variant?: "finalRoundIntro";
   description: string;
   imageUrl?: string;
   timeLimitSeconds?: number;
