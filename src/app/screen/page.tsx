@@ -401,29 +401,7 @@ export default function ScreenPage() {
       ) : null}
 
       {state.phase === "infoSlide" && activeItem.type === "infoSlide" ? (
-        activeItem.variant === "finalRoundIntro" ? (
-          <section className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[clamp(1.25rem,2.5vw,2.75rem)] border border-red-200/40 bg-[radial-gradient(circle_at_50%_45%,rgba(251,146,60,0.42),rgba(127,29,29,0.66)_38%,rgba(15,23,42,0.88)_75%)] p-4 text-center shadow-2xl shadow-red-950/40 md:p-6">
-            <div aria-hidden className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_18%_20%,rgba(239,68,68,0.48),transparent_28%),radial-gradient(circle_at_82%_18%,rgba(251,191,36,0.42),transparent_26%),radial-gradient(circle_at_50%_86%,rgba(248,113,113,0.32),transparent_34%)]" />
-            <div aria-hidden className="absolute inset-x-0 top-0 h-4 animate-pulse bg-gradient-to-r from-red-600 via-amber-300 to-red-600 shadow-[0_0_48px_rgba(248,113,113,0.95)]" />
-            <div aria-hidden className="absolute inset-x-0 bottom-0 h-4 animate-pulse bg-gradient-to-r from-amber-300 via-red-600 to-amber-300 shadow-[0_0_48px_rgba(251,146,60,0.9)]" />
-            <div aria-hidden className="absolute -left-24 top-1/2 h-[150%] w-32 -translate-y-1/2 rotate-12 animate-pulse bg-gradient-to-b from-transparent via-red-300/30 to-transparent blur-sm" />
-            <div aria-hidden className="absolute -right-24 top-1/2 h-[150%] w-32 -translate-y-1/2 -rotate-12 animate-pulse bg-gradient-to-b from-transparent via-amber-200/30 to-transparent blur-sm" />
-            <div aria-hidden className="absolute inset-5 rounded-[clamp(1rem,2vw,2.25rem)] border border-amber-100/25 shadow-[inset_0_0_56px_rgba(251,146,60,0.28)]" />
-            <div className="relative mx-auto flex min-h-[58dvh] w-full max-w-7xl flex-col items-center justify-center px-2 py-8 md:min-h-[64dvh] md:px-6 md:py-10">
-              <div className="rounded-[clamp(1.25rem,2.4vw,2.75rem)] border border-white/20 bg-slate-950/25 px-4 py-6 shadow-[0_0_80px_rgba(239,68,68,0.45)] backdrop-blur-sm md:px-8 md:py-8">
-                <h2
-                  className="font-black leading-none text-white drop-shadow-[0_0_34px_rgba(254,215,170,0.75)]"
-                  style={{ fontSize: "clamp(4rem, 13vw, 13rem)" }}
-                >
-                  {activeItem.title}
-                </h2>
-                <p className="mx-auto mt-6 max-w-5xl text-xl font-black leading-relaxed text-amber-100 drop-shadow-[0_0_18px_rgba(127,29,29,0.9)] md:mt-8 md:text-3xl lg:text-4xl">
-                  {activeItem.description}
-                </p>
-              </div>
-            </div>
-          </section>
-        ) : activeItemMedia.mediaType !== "none" ? (
+        activeItemMedia.mediaType !== "none" ? (
           <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.95fr)] xl:items-center xl:gap-6">
             <div className="min-h-0 shrink-0 xl:overflow-y-auto xl:pr-1">
               <StageBadge label="Bilgilendirme" tone="blue" />
