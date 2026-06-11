@@ -183,57 +183,48 @@ export default function ScreenPage() {
         className={`${screenSurface.className} relative box-border h-[100dvh] max-h-[100dvh] overflow-hidden p-2 text-white md:p-3`}
       >
         <ScreenProductMark productBrandName={brand.productBrandName} />
-        <section className="relative mx-auto flex h-full max-h-full min-h-0 max-w-[1720px] flex-col justify-center gap-2 overflow-y-auto overflow-x-hidden md:gap-4">
-          <div className="grid shrink-0 gap-2 md:grid-cols-[1fr_420px] md:gap-4">
-            <div className="rounded-[clamp(1rem,2vw,2rem)] border border-white/35 bg-white/[0.20] p-3 shadow-2xl shadow-blue-950/25 backdrop-blur md:p-5">
-              <div className="flex items-end justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-100 md:text-sm">Kalan süre</p>
-                  <p
-                    className="mt-1 font-black leading-none tabular-nums text-white md:mt-2"
-                    style={{ fontSize: "clamp(3rem, 11vw, 7.5rem)" }}
-                  >
-                    {liveRemainingSeconds}
-                  </p>
-                </div>
-                <p className="pb-1 text-xl font-black text-amber-100 md:pb-2 md:text-2xl">saniye</p>
-              </div>
-              <div className="mt-3 h-4 overflow-hidden rounded-full border border-white/25 bg-white/25 shadow-inner md:mt-5 md:h-5">
+        <section className="relative mx-auto grid h-full max-h-full min-h-0 max-w-[1720px] grid-rows-[80px_140px_minmax(0,1fr)] gap-3 overflow-hidden px-2 pb-6 pt-[56px] md:px-3">
+          <header className="flex min-w-0 items-center gap-3 rounded-[clamp(0.85rem,1.5vw,1.4rem)] border border-white/30 bg-white/[0.18] px-3 py-2 shadow-2xl shadow-blue-950/25 backdrop-blur md:gap-4 md:px-4">
+            <StageBadge label={`Soru ${activeQuizPosition?.current ?? activeItem.quizNumber} / ${activeQuizPosition?.total ?? activeItem.quizNumber}`} />
+            <div className="min-w-0 flex-1">
+              <div className="h-3 overflow-hidden rounded-full border border-white/25 bg-white/25 shadow-inner">
                 <div className="h-full rounded-full bg-gradient-to-r from-emerald-300 via-yellow-300 to-rose-500 shadow-lg transition-all" style={{ width: `${liveProgress}%` }} />
               </div>
             </div>
-
-            <div className="rounded-[clamp(1rem,2vw,2rem)] border border-cyan-100/40 bg-gradient-to-br from-cyan-300/25 via-white/[0.16] to-indigo-300/20 p-3 text-center shadow-2xl shadow-blue-950/25 backdrop-blur md:p-5">
-              <p className="text-xs font-black uppercase tracking-[0.28em] text-emerald-100 md:text-sm">Cevap sayısı</p>
-              <p className="mt-2 text-4xl font-black leading-none text-white md:mt-3 md:text-6xl">{answeredCount}</p>
-              <p className="mt-2 text-xl font-black text-slate-100 md:mt-3 md:text-2xl">
-                {answeredCount} / {state.teams.length} takım
-              </p>
+            <div className="shrink-0 text-center">
+              <p className="text-[0.6rem] font-black uppercase tracking-[0.18em] text-cyan-100 md:text-xs">Süre</p>
+              <p className="text-[clamp(1.75rem,3vw,2.5rem)] font-black leading-none tabular-nums text-white">{liveRemainingSeconds}</p>
             </div>
+            <div className="shrink-0 border-l border-white/25 pl-3 text-center md:pl-4">
+              <p className="text-[0.6rem] font-black uppercase tracking-[0.18em] text-emerald-100 md:text-xs">Cevap</p>
+              <p className="text-[clamp(1.5rem,2.5vw,2rem)] font-black leading-none text-white">{answeredCount}</p>
+            </div>
+          </header>
+
+          <div className="flex min-h-0 items-center justify-center overflow-hidden px-3">
+            <h1
+              className="mx-auto line-clamp-2 max-w-[1500px] break-words text-center font-black leading-tight text-white drop-shadow-2xl"
+              style={{ fontSize: "clamp(2rem, 4vw, 4rem)" }}
+            >
+              {activeItem.title}
+            </h1>
           </div>
 
-          <h1
-            className="mx-auto max-w-[1440px] shrink-0 text-center font-black leading-tight text-white drop-shadow-2xl"
-            style={{ fontSize: "clamp(1.35rem, 3.8vw, 4.5rem)" }}
-          >
-            {activeItem.title}
-          </h1>
-
-          <div className="grid min-h-0 shrink-0 grid-cols-1 gap-2 md:grid-cols-2 md:gap-3">
+          <div className="grid min-h-0 grid-cols-2 grid-rows-[repeat(2,minmax(0,153px))] content-end gap-3 overflow-hidden md:gap-4">
             {activeItem.options.map((option) => (
               <article
                 key={option.id}
-                className={`rounded-[clamp(1rem,2vw,2rem)] border p-3 shadow-2xl backdrop-blur md:p-5 ${liveOptionStyles[option.id]}`}
+                className={`flex h-full min-h-0 overflow-hidden rounded-[clamp(1rem,2vw,2rem)] border p-3 shadow-2xl backdrop-blur md:p-4 ${liveOptionStyles[option.id]}`}
               >
-                <div className="flex items-center gap-3 md:gap-4">
+                <div className="flex min-h-0 w-full items-center gap-3 md:gap-4">
                   <div
-                    className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl font-black shadow-xl md:h-20 md:w-20 md:text-4xl ${liveOptionBadgeStyles[option.id]}`}
+                    className={`flex h-[clamp(3.5rem,5vw,4.5rem)] w-[clamp(3.5rem,5vw,4.5rem)] shrink-0 items-center justify-center rounded-2xl text-[clamp(1.5rem,2.25vw,2.25rem)] font-black shadow-xl ${liveOptionBadgeStyles[option.id]}`}
                   >
                     {option.id}
                   </div>
                   <p
-                    className="min-w-0 break-words font-black leading-tight text-white drop-shadow-lg"
-                    style={{ fontSize: "clamp(1rem, 2.2vw, 2.75rem)" }}
+                    className="line-clamp-2 min-w-0 break-words font-black leading-tight text-white drop-shadow-lg"
+                    style={{ fontSize: "clamp(1.25rem, 2.2vw, 2.25rem)" }}
                   >
                     {option.text}
                   </p>
