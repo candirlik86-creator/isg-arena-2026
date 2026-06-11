@@ -55,11 +55,32 @@ export type ForkliftChallengeFlowItem = BaseFlowItem & {
   message: string;
 };
 
+export type FinalRoundQuestion = {
+  id: string;
+  scenarioText: string;
+  scenarioDurationSeconds: number;
+  questionText: string;
+  options: AnswerOption[];
+  correctOptionId: AnswerId;
+  timeLimitSeconds: number;
+  mediaUrl?: string;
+  mediaType?: MediaType;
+  mediaSource?: MediaSource;
+};
+
+export type FinalRoundFlowItem = BaseFlowItem & {
+  type: "finalRound";
+  introTitle: string;
+  introMessage: string;
+  questions: [FinalRoundQuestion, FinalRoundQuestion, FinalRoundQuestion];
+};
+
 export type ContentFlowItem =
   | QuizFlowItem
   | InfoSlideFlowItem
   | MediaSlideFlowItem
-  | ForkliftChallengeFlowItem;
+  | ForkliftChallengeFlowItem
+  | FinalRoundFlowItem;
 
 export type GamePhase =
   | "lobby"
@@ -69,7 +90,18 @@ export type GamePhase =
   | "mediaSlide"
   | "leaderboard"
   | "forkliftChallenge"
+  | "finalRound"
   | "finished";
+
+export type FinalRoundStep = "intro" | "scenario" | "question" | "risk" | "results";
+
+export type FinalRoundRuntime = {
+  itemId: string;
+  step: FinalRoundStep;
+  questionIndex: 0 | 1 | 2;
+  stepStartedAt: number | null;
+  riskLevel: 70 | 50 | 25 | 0;
+};
 
 export type GameSettings = {
   welcomeTitle: string;
@@ -400,6 +432,16 @@ export function cloneFlowItem<T extends ContentFlowItem>(item: T): T {
     };
   }
 
+  if (item.type === "finalRound") {
+    return {
+      ...item,
+      questions: item.questions.map((question) => ({
+        ...question,
+        options: question.options.map((option) => ({ ...option })),
+      })) as FinalRoundFlowItem["questions"],
+    };
+  }
+
   return { ...item };
 }
 
@@ -413,6 +455,7 @@ export function createFlowItemId(type: ContentFlowItem["type"]) {
     infoSlide: "info",
     mediaSlide: "media",
     forkliftChallenge: "forklift",
+    finalRound: "final",
   };
 
   return `${prefixByType[type]}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

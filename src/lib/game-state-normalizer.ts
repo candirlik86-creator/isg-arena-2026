@@ -8,6 +8,8 @@ import {
   pruneResponsesForFlowItems,
   type AnswerId,
   type ContentFlowItem,
+  type FinalRoundFlowItem,
+  type FinalRoundQuestion,
   type GamePhase,
   type GameSettings,
   type GameState,
@@ -45,6 +47,7 @@ function createSafeId(type: ContentFlowItem["type"], usedIds: Set<string>, reque
     infoSlide: "info",
     mediaSlide: "media",
     forkliftChallenge: "forklift",
+    finalRound: "final",
   };
   let nextId = baseId || `${prefixByType[type]}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -66,6 +69,62 @@ function isMediaType(value: unknown): value is MediaType {
 
 function isMediaSource(value: unknown): value is MediaSource {
   return value === "upload" || value === "url" || value === "youtube" || value === "public-path" || value === "none";
+}
+
+function createDefaultFinalRoundQuestion(index: number): FinalRoundQuestion {
+  return {
+    id: `final-question-${index + 1}`,
+    scenarioText: `Final senaryo ${index + 1}`,
+    scenarioDurationSeconds: 10,
+    questionText: `Final soru ${index + 1}`,
+    options: answerIds.map((id) => ({ id, text: `${id} seçeneği` })),
+    correctOptionId: "A",
+    timeLimitSeconds: 30,
+    mediaType: "none",
+    mediaSource: "none",
+  };
+}
+
+function normalizeFinalRoundQuestion(value: unknown, index: number, usedIds: Set<string>): FinalRoundQuestion {
+  const fallback = createDefaultFinalRoundQuestion(index);
+  const question = isRecord(value) ? value : {};
+  const requestedId = asString(question.id).trim();
+  let id = requestedId || fallback.id;
+
+  while (usedIds.has(id)) {
+    id = `${fallback.id}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+  usedIds.add(id);
+
+  const rawOptions = Array.isArray(question.options) ? question.options : [];
+  const options = answerIds.map((optionId) => {
+    const rawOption = rawOptions.find((option) => isRecord(option) && option.id === optionId);
+    return {
+      id: optionId,
+      text: isRecord(rawOption) ? asString(rawOption.text, `${optionId} seçeneği`) : `${optionId} seçeneği`,
+    };
+  });
+  const mediaUrl = asString(question.mediaUrl).trim();
+
+  return {
+    id,
+    scenarioText: asString(question.scenarioText, fallback.scenarioText),
+    scenarioDurationSeconds: asPositiveNumber(question.scenarioDurationSeconds, fallback.scenarioDurationSeconds),
+    questionText: asString(question.questionText, fallback.questionText),
+    options,
+    correctOptionId: isAnswerId(question.correctOptionId) ? question.correctOptionId : fallback.correctOptionId,
+    timeLimitSeconds: asPositiveNumber(question.timeLimitSeconds, fallback.timeLimitSeconds),
+    mediaUrl: mediaUrl || undefined,
+    mediaType: isMediaType(question.mediaType) ? question.mediaType : inferMediaType(mediaUrl),
+    mediaSource: isMediaSource(question.mediaSource) ? question.mediaSource : inferMediaSource(mediaUrl),
+  };
+}
+
+function normalizeFinalRoundQuestions(value: unknown): FinalRoundFlowItem["questions"] {
+  const rawQuestions = Array.isArray(value) ? value : [];
+  const usedIds = new Set<string>();
+
+  return [0, 1, 2].map((index) => normalizeFinalRoundQuestion(rawQuestions[index], index, usedIds)) as FinalRoundFlowItem["questions"];
 }
 
 function normalizeFlowItem(value: unknown, usedIds: Set<string>, quizNumber: number): ContentFlowItem | null {
@@ -159,6 +218,28 @@ function normalizeFlowItem(value: unknown, usedIds: Set<string>, quizNumber: num
     };
   }
 
+  if (type === "finalRound") {
+    const mediaUrl = asString(value.mediaUrl).trim();
+    const mediaType = isMediaType(value.mediaType) ? value.mediaType : inferMediaType(mediaUrl);
+    const mediaSource = isMediaSource(value.mediaSource) ? value.mediaSource : inferMediaSource(mediaUrl);
+
+    return {
+      id: createSafeId("finalRound", usedIds, value.id),
+      type: "finalRound",
+      title: asString(value.title, "Final Round"),
+      category: asString(value.category, "Final"),
+      mediaUrl: mediaUrl || undefined,
+      mediaType,
+      mediaSource,
+      introTitle: asString(value.introTitle, "FINAL ROUND"),
+      introMessage: asString(
+        value.introMessage,
+        "Artık bireysel hız değil, takımların ortak doğru karar alma gücü ölçülüyor.",
+      ),
+      questions: normalizeFinalRoundQuestions(value.questions),
+    };
+  }
+
   return null;
 }
 
@@ -190,6 +271,7 @@ function isGamePhase(value: unknown): value is GamePhase {
     value === "mediaSlide" ||
     value === "leaderboard" ||
     value === "forkliftChallenge" ||
+    value === "finalRound" ||
     value === "finished"
   );
 }
