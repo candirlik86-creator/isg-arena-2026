@@ -64,6 +64,7 @@ const typeLabels: Record<FlowItemType, string> = {
   infoSlide: "Bilgi",
   mediaSlide: "Medya",
   forkliftChallenge: "Forklift",
+  finalRound: "Final Round",
 };
 
 const typeDescriptions: Record<FlowItemType, string> = {
@@ -71,6 +72,7 @@ const typeDescriptions: Record<FlowItemType, string> = {
   infoSlide: "Eğitim veya açıklama",
   mediaSlide: "Medya bağlantılı içerik",
   forkliftChallenge: "Özel güvenli sürüş etabı",
+  finalRound: "Ayrı final modu",
 };
 
 const addContentCards: AddContentCard[] = [
@@ -200,6 +202,14 @@ function createFormFromItem(item: ContentFlowItem): FlowItemFormState {
       mediaUrl: item.mediaUrl,
       uploadedImageDataUrl: item.uploadedImageDataUrl ?? "",
       uploadedMediaType: item.mediaType === "image" || item.mediaType === "video" ? item.mediaType : undefined,
+    };
+  }
+
+  if (item.type === "finalRound") {
+    return {
+      ...baseForm,
+      title: item.title,
+      category: getItemCategory(item),
     };
   }
 
@@ -355,6 +365,10 @@ function buildFlowItem(form: FlowItemFormState, state: GameState, existingItem?:
       timeLimitSeconds: duration ?? undefined,
       uploadedImageDataUrl: undefined,
     };
+  }
+
+  if (form.type === "finalRound" && existingItem?.type === "finalRound") {
+    return existingItem;
   }
 
   const existingForkliftChallenge = existingItem?.type === "forkliftChallenge" ? existingItem : null;

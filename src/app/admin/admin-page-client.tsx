@@ -61,6 +61,7 @@ const phaseLabels: Record<GamePhase, string> = {
   mediaSlide: "Medya slaytı",
   leaderboard: "Lider tablosu",
   forkliftChallenge: "Forklift finali",
+  finalRound: "Final Round",
   finished: "Oturum bitti",
 };
 
@@ -69,6 +70,7 @@ const flowTypeLabels: Record<ContentFlowItem["type"], string> = {
   infoSlide: "Bilgi Slaytı",
   mediaSlide: "Medya Slaytı",
   forkliftChallenge: "Forklift Etabı",
+  finalRound: "Final Round",
 };
 
 const flowThumbnails: Record<ContentFlowItem["type"], string> = {
@@ -76,6 +78,7 @@ const flowThumbnails: Record<ContentFlowItem["type"], string> = {
   infoSlide: "📋",
   mediaSlide: "🎬",
   forkliftChallenge: "🏁",
+  finalRound: "FINAL",
 };
 
 const answerBlockStyles: Record<
@@ -529,7 +532,7 @@ export function AdminPageClient() {
   }, [activeItem, activeQuizDraft, hasFlowItems, updateFlowItem]);
 
   useEffect(() => {
-    if (!hasFlowItems || activeItem.type === "quiz") {
+    if (!hasFlowItems || activeItem.type === "quiz" || activeItem.type === "finalRound") {
       setActiveSlideDraft(emptySlideDraft);
       return;
     }
@@ -544,7 +547,12 @@ export function AdminPageClient() {
   }, [hasFlowItems, activeItem.id]);
 
   useEffect(() => {
-    if (!hasFlowItems || activeItem.type === "quiz" || activeSlideDraft.itemId !== activeItem.id) {
+    if (
+      !hasFlowItems ||
+      activeItem.type === "quiz" ||
+      activeItem.type === "finalRound" ||
+      activeSlideDraft.itemId !== activeItem.id
+    ) {
       return;
     }
 
