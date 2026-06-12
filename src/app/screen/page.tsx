@@ -1,6 +1,7 @@
 "use client";
 
 import { AnswerDistributionChart } from "@/components/AnswerDistributionChart";
+import { FinalRoundScreen } from "@/components/FinalRoundScreen";
 import { Leaderboard } from "@/components/Leaderboard";
 import { Podium } from "@/components/Podium";
 import { ProjectionFrame } from "@/components/ProjectionFrame";
@@ -98,6 +99,10 @@ export default function ScreenPage() {
   const shouldShowQuizDistribution = activeItem.type === "quiz" && quizTimeExpired;
   const quizInProgress = state.phase === "quiz" && activeItem.type === "quiz" && !quizTimeExpired;
   const activeItemMedia = getFlowItemMedia(activeItem);
+
+  if (state.phase === "finalRound" && activeItem.type === "finalRound") {
+    return <FinalRoundScreen item={activeItem} settings={state.settings} />;
+  }
 
   if (quizInProgress && activeItem.type === "quiz") {
     const liveRemainingSeconds = remainingSeconds ?? activeItem.timeLimitSeconds;
