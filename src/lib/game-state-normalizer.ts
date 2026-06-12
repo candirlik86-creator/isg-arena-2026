@@ -10,6 +10,7 @@ import {
   type ContentFlowItem,
   type FinalRoundFlowItem,
   type FinalRoundQuestion,
+  type FinalRoundRuntime,
   type GamePhase,
   type GameSettings,
   type GameState,
@@ -276,6 +277,37 @@ function isGamePhase(value: unknown): value is GamePhase {
   );
 }
 
+function normalizeFinalRoundRuntime(value: unknown, flowItems: ContentFlowItem[]): FinalRoundRuntime | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const itemId = asString(value.itemId).trim();
+  const item = flowItems.find((flowItem) => flowItem.id === itemId);
+  const step =
+    value.step === "intro" ||
+    value.step === "scenario" ||
+    value.step === "question" ||
+    value.step === "risk" ||
+    value.step === "results"
+      ? value.step
+      : null;
+  const questionIndex = value.questionIndex === 0 || value.questionIndex === 1 || value.questionIndex === 2 ? value.questionIndex : null;
+  const riskLevel = value.riskLevel === 70 || value.riskLevel === 50 || value.riskLevel === 25 || value.riskLevel === 0 ? value.riskLevel : null;
+
+  if (item?.type !== "finalRound" || !step || questionIndex === null || riskLevel === null) {
+    return null;
+  }
+
+  return {
+    itemId,
+    step,
+    questionIndex,
+    stepStartedAt: typeof value.stepStartedAt === "number" ? value.stepStartedAt : null,
+    riskLevel,
+  };
+}
+
 export function normalizeGameState(value: unknown): GameState {
   if (!value || typeof value !== "object") {
     return createInitialGameState();
@@ -314,6 +346,7 @@ export function normalizeGameState(value: unknown): GameState {
     phase,
     activeItemIndex,
     activeItemStartedAt: candidate.activeItemStartedAt ?? null,
+    finalRoundRuntime: phase === "finalRound" ? normalizeFinalRoundRuntime(candidate.finalRoundRuntime, flowItems) : null,
     answersLocked: Boolean(candidate.answersLocked),
     showCorrectAnswer: Boolean(candidate.showCorrectAnswer),
     teams: Array.isArray(candidate.teams) ? candidate.teams : [],

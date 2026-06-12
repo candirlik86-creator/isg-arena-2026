@@ -19,7 +19,7 @@ import {
   getYoutubeEmbedUrl,
   inferMediaType,
 } from "@/lib/game-state";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const liveOptionStyles = {
   A: "border-yellow-100/65 bg-gradient-to-br from-amber-400 via-orange-400 to-yellow-500 shadow-amber-950/30",
@@ -88,7 +88,7 @@ function ScreenMedia({ mediaUrl, title }: { mediaUrl: string; title: string }) {
 }
 
 export default function ScreenPage() {
-  const { state, now, activeItem, leaderboard } = useGameState();
+  const { state, now, activeItem, leaderboard, advanceFinalRoundTimedStep } = useGameState();
   const brand = resolveBrandSettings(state.settings);
   const screenSurface = getScreenSurfaceAttributes(state.settings);
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
@@ -100,8 +100,30 @@ export default function ScreenPage() {
   const quizInProgress = state.phase === "quiz" && activeItem.type === "quiz" && !quizTimeExpired;
   const activeItemMedia = getFlowItemMedia(activeItem);
 
+  useEffect(() => {
+    const runtime = state.finalRoundRuntime;
+
+    if (
+      state.phase !== "finalRound" ||
+      activeItem.type !== "finalRound" ||
+      runtime?.itemId !== activeItem.id ||
+      (runtime.step !== "scenario" && runtime.step !== "question")
+    ) {
+      return;
+    }
+
+    const question = activeItem.questions[runtime.questionIndex];
+    const durationSeconds = runtime.step === "scenario" ? question.scenarioDurationSeconds : question.timeLimitSeconds;
+
+    if (!runtime.stepStartedAt || now - runtime.stepStartedAt < durationSeconds * 1000) {
+      return;
+    }
+
+    advanceFinalRoundTimedStep(activeItem.id, runtime.step, runtime.questionIndex);
+  }, [activeItem, advanceFinalRoundTimedStep, now, state.finalRoundRuntime, state.phase]);
+
   if (state.phase === "finalRound" && activeItem.type === "finalRound") {
-    return <FinalRoundScreen item={activeItem} settings={state.settings} />;
+    return <FinalRoundScreen item={activeItem} settings={state.settings} runtime={state.finalRoundRuntime} now={now} />;
   }
 
   if (quizInProgress && activeItem.type === "quiz") {

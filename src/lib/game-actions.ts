@@ -13,6 +13,7 @@ import {
   type AnswerId,
   type ContentFlowItem,
   type ForkliftRun,
+  type FinalRoundRuntime,
   type GameSettings,
   type GameState,
 } from "./game-state";
@@ -41,6 +42,8 @@ export type GameAction =
   | { type: "reorderFlowItem"; itemId: string; targetIndex: number }
   | { type: "restoreDefaultFlow" }
   | { type: "advanceQuizIntro"; itemId: string }
+  | { type: "advanceFinalRound" }
+  | { type: "advanceFinalRoundTimedStep"; itemId: string; expectedStep: "scenario" | "question"; questionIndex: 0 | 1 | 2 }
   | { type: "joinTeam"; pin: string; teamName: string }
   | { type: "submitQuizAnswer"; teamId: string; gamePin: string; optionId: AnswerId }
   | { type: "submitForkliftRun"; teamId: string; gamePin: string; run: Omit<ForkliftRun, "submittedAt"> };
@@ -54,11 +57,22 @@ export type GameActionResult = {
 
 function getStartedItemState(item: ContentFlowItem, now: number) {
   const phase = getItemStartPhase(item);
+  const finalRoundRuntime: FinalRoundRuntime | null =
+    item.type === "finalRound"
+      ? {
+          itemId: item.id,
+          step: "intro",
+          questionIndex: 0,
+          stepStartedAt: now,
+          riskLevel: 70,
+        }
+      : null;
 
   return {
     phase,
     activeItemStartedAt: now,
-    answersLocked: phase === "quizIntro",
+    finalRoundRuntime,
+    answersLocked: phase === "quizIntro" || item.type === "finalRound",
     showCorrectAnswer: false,
   };
 }
@@ -82,6 +96,7 @@ function reconcileFlowState(currentState: GameState, flowItems: ContentFlowItem[
     responses: pruneResponsesForFlowItems(currentState.responses, flowItems),
     phase: flowItems.length ? (shouldPreservePhase ? currentState.phase : getItemStartPhase(nextActiveItem)) : "lobby",
     activeItemStartedAt: activeItemWasPreserved ? currentState.activeItemStartedAt : null,
+    finalRoundRuntime: activeItemWasPreserved ? currentState.finalRoundRuntime : null,
     answersLocked: activeItemWasPreserved ? currentState.answersLocked : false,
     showCorrectAnswer: activeItemWasPreserved ? currentState.showCorrectAnswer : false,
   };
@@ -148,6 +163,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
       ...currentState,
       phase: "lobby",
       activeItemStartedAt: null,
+      finalRoundRuntime: null,
       answersLocked: false,
       showCorrectAnswer: false,
     });
@@ -160,6 +176,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
         phase: "lobby",
         activeItemIndex: 0,
         activeItemStartedAt: null,
+        finalRoundRuntime: null,
         answersLocked: false,
         showCorrectAnswer: false,
       });
@@ -180,6 +197,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
         phase: "lobby",
         activeItemIndex: 0,
         activeItemStartedAt: null,
+        finalRoundRuntime: null,
         answersLocked: false,
         showCorrectAnswer: false,
       });
@@ -202,6 +220,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
         phase: "lobby",
         activeItemIndex: 0,
         activeItemStartedAt: null,
+        finalRoundRuntime: null,
         answersLocked: false,
         showCorrectAnswer: false,
       });
@@ -220,6 +239,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
         ...currentState,
         phase: "leaderboard",
         activeItemStartedAt: null,
+        finalRoundRuntime: null,
         answersLocked: true,
         showCorrectAnswer: false,
       });
@@ -232,6 +252,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
         ...currentState,
         phase: "finished",
         activeItemStartedAt: null,
+        finalRoundRuntime: null,
         answersLocked: true,
         showCorrectAnswer: false,
       });
@@ -258,6 +279,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
       ...currentState,
       phase: "leaderboard",
       activeItemStartedAt: null,
+      finalRoundRuntime: null,
       answersLocked: true,
       showCorrectAnswer: false,
     });
@@ -268,6 +290,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
       ...currentState,
       phase: "finished",
       activeItemStartedAt: null,
+      finalRoundRuntime: null,
       answersLocked: true,
       showCorrectAnswer: false,
     });
@@ -343,6 +366,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
       phase: "lobby",
       activeItemIndex: 0,
       activeItemStartedAt: null,
+      finalRoundRuntime: null,
       answersLocked: false,
       showCorrectAnswer: false,
     });
@@ -367,6 +391,86 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
       activeItemStartedAt: now,
       answersLocked: false,
       showCorrectAnswer: false,
+    });
+  }
+
+  if (action.type === "advanceFinalRound") {
+    const item = getActiveItem(currentState);
+    const runtime = currentState.finalRoundRuntime;
+
+    if (currentState.phase !== "finalRound" || item.type !== "finalRound" || runtime?.itemId !== item.id) {
+      return success(currentState);
+    }
+
+    if (runtime.step === "intro") {
+      return success({
+        ...currentState,
+        activeItemStartedAt: now,
+        finalRoundRuntime: { ...runtime, step: "scenario", stepStartedAt: now },
+      });
+    }
+
+    if (runtime.step === "risk" && runtime.questionIndex < 2) {
+      const questionIndex = (runtime.questionIndex + 1) as 1 | 2;
+      return success({
+        ...currentState,
+        activeItemStartedAt: now,
+        finalRoundRuntime: { ...runtime, step: "scenario", questionIndex, stepStartedAt: now },
+      });
+    }
+
+    if (runtime.step === "risk" && runtime.questionIndex === 2) {
+      return success({
+        ...currentState,
+        activeItemStartedAt: null,
+        finalRoundRuntime: { ...runtime, step: "results", stepStartedAt: now },
+      });
+    }
+
+    if (runtime.step === "results") {
+      return applyGameAction(currentState, { type: "nextItem" }, now);
+    }
+
+    return success(currentState);
+  }
+
+  if (action.type === "advanceFinalRoundTimedStep") {
+    const item = getActiveItem(currentState);
+    const runtime = currentState.finalRoundRuntime;
+
+    if (
+      currentState.phase !== "finalRound" ||
+      item.type !== "finalRound" ||
+      item.id !== action.itemId ||
+      runtime?.itemId !== item.id ||
+      runtime.step !== action.expectedStep ||
+      runtime.questionIndex !== action.questionIndex ||
+      !runtime.stepStartedAt
+    ) {
+      return success(currentState);
+    }
+
+    const question = item.questions[runtime.questionIndex];
+    const durationSeconds = runtime.step === "scenario" ? question.scenarioDurationSeconds : question.timeLimitSeconds;
+
+    if (now - runtime.stepStartedAt < durationSeconds * 1000) {
+      return success(currentState);
+    }
+
+    if (runtime.step === "scenario") {
+      return success({
+        ...currentState,
+        activeItemStartedAt: now,
+        answersLocked: false,
+        finalRoundRuntime: { ...runtime, step: "question", stepStartedAt: now },
+      });
+    }
+
+    return success({
+      ...currentState,
+      activeItemStartedAt: null,
+      answersLocked: true,
+      finalRoundRuntime: { ...runtime, step: "risk", stepStartedAt: now },
     });
   }
 

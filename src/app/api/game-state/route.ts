@@ -40,7 +40,8 @@ function isPublicGameAction(action: GameAction) {
     action.type === "joinTeam" ||
     action.type === "submitQuizAnswer" ||
     action.type === "submitForkliftRun" ||
-    action.type === "advanceQuizIntro"
+    action.type === "advanceQuizIntro" ||
+    action.type === "advanceFinalRoundTimedStep"
   );
 }
 
