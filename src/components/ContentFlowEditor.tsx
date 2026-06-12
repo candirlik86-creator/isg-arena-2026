@@ -929,6 +929,7 @@ export function ContentFlowEditor({
                   </button>
                   <button
                     type="button"
+                    disabled={item.type === "finalRound"}
                     onClick={() => {
                       onDuplicateItem(item.id);
                       setNotice("Akış öğesi çoğaltıldı.");

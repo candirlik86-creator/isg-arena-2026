@@ -12,6 +12,7 @@ import {
   inferMediaType,
   type AnswerId,
   type ContentFlowItem,
+  type FinalRoundFlowItem,
   type GamePhase,
   type GameSettings,
   type MediaType,
@@ -129,6 +130,30 @@ const emptySlideDraft: SlideDraft = {
   mediaUrl: "",
   message: "",
 };
+
+function createDefaultFinalRound(): FinalRoundFlowItem {
+  const itemId = createFlowItemId("finalRound");
+
+  return {
+    id: itemId,
+    type: "finalRound",
+    title: "Final Round",
+    category: "Final",
+    introTitle: "FINAL ROUND",
+    introMessage: "Artık bireysel hız değil, takımların ortak doğru karar alma gücü ölçülüyor.",
+    questions: [0, 1, 2].map((index) => ({
+      id: `${itemId}-question-${index + 1}`,
+      scenarioText: `Final senaryo ${index + 1}`,
+      scenarioDurationSeconds: 10,
+      questionText: `Final soru ${index + 1}`,
+      options: answerOptionIds.map((id) => ({ id, text: `${id} seçeneği` })),
+      correctOptionId: "A",
+      timeLimitSeconds: 30,
+      mediaType: "none",
+      mediaSource: "none",
+    })) as FinalRoundFlowItem["questions"],
+  };
+}
 
 const correctAnswerChipStyles: Record<AnswerId, string> = {
   A: "bg-amber-500 text-white",
@@ -303,6 +328,8 @@ export function AdminPageClient() {
   const [draggedFlowItemId, setDraggedFlowItemId] = useState<string | null>(null);
   const [activeQuizDraft, setActiveQuizDraft] = useState<QuizDraft>(emptyQuizDraft);
   const [activeSlideDraft, setActiveSlideDraft] = useState<SlideDraft>(emptySlideDraft);
+  const [activeFinalRoundDraft, setActiveFinalRoundDraft] = useState<FinalRoundFlowItem | null>(null);
+  const [finalRoundAddRequested, setFinalRoundAddRequested] = useState(false);
   const [competitionSaveName, setCompetitionSaveName] = useState("");
   const [savedCompetitions, setSavedCompetitions] = useState<SavedCompetition[]>([]);
   const [trashedCompetitions, setTrashedCompetitions] = useState<SavedCompetition[]>([]);
@@ -458,12 +485,28 @@ export function AdminPageClient() {
   const rankedLeaderboard = [...leaderboard].sort((a, b) => b.score - a.score).slice(0, 5);
   const quizItemCount = state.flowItems.filter((item) => item.type === "quiz").length;
   const contentItemCount = state.flowItems.length - quizItemCount;
+  const hasFinalRound = state.flowItems.some((item) => item.type === "finalRound");
+  const isFinalRoundSelected = hasFlowItems && activeItem.type === "finalRound";
   const activeItemMedia = hasFlowItems ? getFlowItemMedia(activeItem) : { mediaUrl: "", mediaType: "none" as MediaType, mediaSource: "none" as const };
   const activeQuizMediaUrl = hasFlowItems && activeItem.type === "quiz" && activeQuizDraft.itemId === activeItem.id ? activeQuizDraft.mediaUrl : activeItemMedia.mediaUrl;
   const activeQuizMediaType = inferMediaType(activeQuizMediaUrl);
   const activeSlideMediaUrl =
     hasFlowItems && activeItem.type !== "quiz" && activeSlideDraft.itemId === activeItem.id ? activeSlideDraft.mediaUrl : activeItemMedia.mediaUrl;
   const activeSlideMediaType = inferMediaType(activeSlideMediaUrl);
+
+  useEffect(() => {
+    if (hasFinalRound) {
+      setFinalRoundAddRequested(false);
+      return;
+    }
+
+    if (!finalRoundAddRequested) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setFinalRoundAddRequested(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [finalRoundAddRequested, hasFinalRound]);
 
   useEffect(() => {
     if (!isSettingsDraftDirty.current) {
@@ -610,6 +653,36 @@ export function AdminPageClient() {
     return () => window.clearTimeout(timer);
   }, [activeItem, activeSlideDraft, hasFlowItems, updateFlowItem]);
 
+  useEffect(() => {
+    if (!hasFlowItems || activeItem.type !== "finalRound") {
+      setActiveFinalRoundDraft(null);
+      return;
+    }
+
+    setActiveFinalRoundDraft({
+      ...activeItem,
+      questions: activeItem.questions.map((question) => ({
+        ...question,
+        options: question.options.map((option) => ({ ...option })),
+      })) as FinalRoundFlowItem["questions"],
+    });
+  }, [hasFlowItems, activeItem.id]);
+
+  useEffect(() => {
+    if (
+      !hasFlowItems ||
+      activeItem.type !== "finalRound" ||
+      !activeFinalRoundDraft ||
+      activeFinalRoundDraft.id !== activeItem.id ||
+      JSON.stringify(activeFinalRoundDraft) === JSON.stringify(activeItem)
+    ) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => updateFlowItem(activeFinalRoundDraft), 450);
+    return () => window.clearTimeout(timer);
+  }, [activeFinalRoundDraft, activeItem, hasFlowItems, updateFlowItem]);
+
   const addQuickFlowItem = (type: ContentFlowItem["type"]) => {
     if (type === "quiz") {
       addFlowItem({
@@ -658,6 +731,14 @@ export function AdminPageClient() {
         mediaSource: "public-path",
         timeLimitSeconds: 20,
       });
+      return;
+    }
+
+    if (type === "finalRound") {
+      if (!hasFinalRound && !finalRoundAddRequested) {
+        setFinalRoundAddRequested(true);
+        addFlowItem(createDefaultFinalRound());
+      }
       return;
     }
 
@@ -767,6 +848,48 @@ export function AdminPageClient() {
         [optionId]: text,
       },
     }));
+  };
+
+  const patchActiveFinalRound = (patch: Partial<FinalRoundFlowItem>) => {
+    setActiveFinalRoundDraft((current) => (current ? { ...current, ...patch } : current));
+  };
+
+  const patchFinalRoundQuestion = (
+    questionIndex: number,
+    patch: Partial<FinalRoundFlowItem["questions"][number]>,
+  ) => {
+    setActiveFinalRoundDraft((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        questions: current.questions.map((question, index) =>
+          index === questionIndex ? { ...question, ...patch } : question,
+        ) as FinalRoundFlowItem["questions"],
+      };
+    });
+  };
+
+  const setFinalRoundOptionText = (questionIndex: number, optionId: AnswerId, text: string) => {
+    setActiveFinalRoundDraft((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        questions: current.questions.map((question, index) =>
+          index === questionIndex
+            ? {
+                ...question,
+                options: question.options.map((option) => (option.id === optionId ? { ...option, text } : option)),
+              }
+            : question,
+        ) as FinalRoundFlowItem["questions"],
+      };
+    });
   };
 
   const updateSettingsDraft = (patch: Partial<GameSettings>) => {
@@ -961,8 +1084,9 @@ export function AdminPageClient() {
                         <button
                           type="button"
                           title="Çoğalt"
+                          disabled={item.type === "finalRound"}
                           onClick={() => duplicateFlowItem(item.id)}
-                          className="rounded-lg py-2 text-xs font-bold text-slate-500 hover:bg-slate-100"
+                          className="rounded-lg py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
                         >
                           ⧉
                         </button>
@@ -1018,7 +1142,15 @@ export function AdminPageClient() {
                   onClick={() => addQuickFlowItem("forkliftChallenge")}
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
                 >
-                  + Final
+                  + Forklift
+                </button>
+                <button
+                  type="button"
+                  disabled={hasFinalRound || finalRoundAddRequested}
+                  onClick={() => addQuickFlowItem("finalRound")}
+                  className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {hasFinalRound || finalRoundAddRequested ? "Final Round eklendi" : "+ Final Round"}
                 </button>
               </div>
             </div>
@@ -1142,6 +1274,156 @@ export function AdminPageClient() {
                     })}
                   </div>
                 </>
+              ) : activeItem.type === "finalRound" && activeFinalRoundDraft ? (
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+                  <section className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5 shadow-sm">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">Final Round</p>
+                        <h2 className="mt-1 text-2xl font-black text-slate-950">Intro içeriği</h2>
+                      </div>
+                      <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-amber-800 shadow-sm">
+                        3 final sorusu
+                      </span>
+                    </div>
+                    <div className="grid gap-3">
+                      <label className="block">
+                        <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Akış başlığı</span>
+                        <input
+                          type="text"
+                          value={activeFinalRoundDraft.title}
+                          onChange={(event) => patchActiveFinalRound({ title: event.target.value })}
+                          className="mt-2 w-full rounded-xl border border-amber-200 bg-white px-4 py-3 text-lg font-bold text-slate-950 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Intro başlığı</span>
+                        <input
+                          type="text"
+                          value={activeFinalRoundDraft.introTitle}
+                          onChange={(event) => patchActiveFinalRound({ introTitle: event.target.value })}
+                          className="mt-2 w-full rounded-xl border border-amber-200 bg-white px-4 py-3 text-lg font-bold text-slate-950 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Intro mesajı</span>
+                        <textarea
+                          value={activeFinalRoundDraft.introMessage}
+                          onChange={(event) => patchActiveFinalRound({ introMessage: event.target.value })}
+                          className="mt-2 min-h-24 w-full resize-none rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                        />
+                      </label>
+                    </div>
+                  </section>
+
+                  {activeFinalRoundDraft.questions.map((question, questionIndex) => (
+                    <section key={question.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <h3 className="text-xl font-black text-slate-950">Final Soru {questionIndex + 1}</h3>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                          {question.id}
+                        </span>
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <label className="block md:col-span-2">
+                          <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Senaryo metni</span>
+                          <textarea
+                            value={question.scenarioText}
+                            onChange={(event) => patchFinalRoundQuestion(questionIndex, { scenarioText: event.target.value })}
+                            className="mt-2 min-h-24 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Senaryo süresi</span>
+                          <input
+                            type="number"
+                            min={1}
+                            value={question.scenarioDurationSeconds}
+                            onChange={(event) =>
+                              patchFinalRoundQuestion(questionIndex, {
+                                scenarioDurationSeconds: Math.max(1, Number(event.target.value) || 1),
+                              })
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Soru süresi</span>
+                          <input
+                            type="number"
+                            min={1}
+                            value={question.timeLimitSeconds}
+                            onChange={(event) =>
+                              patchFinalRoundQuestion(questionIndex, {
+                                timeLimitSeconds: Math.max(1, Number(event.target.value) || 1),
+                              })
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          />
+                        </label>
+                        <label className="block md:col-span-2">
+                          <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Soru metni</span>
+                          <textarea
+                            value={question.questionText}
+                            onChange={(event) => patchFinalRoundQuestion(questionIndex, { questionText: event.target.value })}
+                            className="mt-2 min-h-20 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          />
+                        </label>
+                        {question.options.map((option) => (
+                          <label key={option.id} className="block">
+                            <span className="text-xs font-bold uppercase tracking-wide text-slate-600">{option.id} şıkkı</span>
+                            <input
+                              type="text"
+                              value={option.text}
+                              onChange={(event) => setFinalRoundOptionText(questionIndex, option.id, event.target.value)}
+                              className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            />
+                          </label>
+                        ))}
+                        <div className="md:col-span-2">
+                          <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Doğru cevap</span>
+                          <div className="mt-2 flex gap-2">
+                            {answerOptionIds.map((optionId) => (
+                              <button
+                                key={optionId}
+                                type="button"
+                                onClick={() => patchFinalRoundQuestion(questionIndex, { correctOptionId: optionId })}
+                                className={`h-11 w-11 rounded-xl text-sm font-black transition ${
+                                  question.correctOptionId === optionId
+                                    ? correctAnswerChipStyles[optionId]
+                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                }`}
+                              >
+                                {optionId}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <label className="block md:col-span-2">
+                          <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Medya linki</span>
+                          <input
+                            type="text"
+                            value={question.mediaUrl ?? ""}
+                            onChange={(event) => {
+                              const mediaUrl = event.target.value;
+                              patchFinalRoundQuestion(questionIndex, {
+                                mediaUrl: mediaUrl || undefined,
+                                mediaType: inferMediaType(mediaUrl),
+                                mediaSource: inferMediaSource(mediaUrl),
+                              });
+                            }}
+                            placeholder="/api/media/uploads/gorsel.jpg veya https://youtu.be/..."
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          />
+                          <span className="mt-1 block text-xs font-semibold text-slate-500">
+                            Tür: {question.mediaType === "none" || !question.mediaType ? "medya yok" : question.mediaType}
+                          </span>
+                        </label>
+                      </div>
+                    </section>
+                  ))}
+                </div>
               ) : (
                 <div className="flex min-h-0 flex-1 flex-col gap-3">
                   <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -1351,24 +1633,29 @@ export function AdminPageClient() {
                   {phaseLabels[state.phase]}
                 </span>
               </div>
+              {isFinalRoundSelected ? (
+                <p className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold leading-relaxed text-amber-900">
+                  Final Round ekran davranışı sonraki PR&apos;de eklenecek. Bu içerik şu anda sadece hazırlanabilir.
+                </p>
+              ) : null}
               <div className="space-y-2.5">
-                <ControlButton variant="primary" onClick={startActiveItem} disabled={!hasFlowItems}>
+                <ControlButton variant="primary" onClick={startActiveItem} disabled={!hasFlowItems || isFinalRoundSelected}>
                   Soruyu / Slaytı Başlat
                 </ControlButton>
-                <ControlButton variant="secondary" onClick={nextItem} disabled={!hasFlowItems}>
+                <ControlButton variant="secondary" onClick={nextItem} disabled={!hasFlowItems || isFinalRoundSelected}>
                   Sonraki Öğe
                 </ControlButton>
-                <ControlButton variant="secondary" onClick={lockAnswers} disabled={!hasFlowItems}>
+                <ControlButton variant="secondary" onClick={lockAnswers} disabled={!hasFlowItems || isFinalRoundSelected}>
                   Cevapları Kilitle
                 </ControlButton>
                 <ControlButton
                   variant="secondary"
                   onClick={revealCorrectAnswer}
-                  disabled={!hasFlowItems || activeItem.type !== "quiz"}
+                  disabled={!hasFlowItems || activeItem.type !== "quiz" || isFinalRoundSelected}
                 >
                   Doğru Cevabı Göster
                 </ControlButton>
-                <ControlButton variant="secondary" onClick={showLeaderboard}>
+                <ControlButton variant="secondary" onClick={showLeaderboard} disabled={isFinalRoundSelected}>
                   Lider Tablosu
                 </ControlButton>
                 <ControlButton variant="success" onClick={finishGame}>
