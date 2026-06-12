@@ -13,6 +13,7 @@ type FinalRoundScreenProps = {
   item: FinalRoundFlowItem;
   settings: GameSettings;
   runtime?: FinalRoundRuntime | null;
+  now?: number;
 };
 
 const optionStyles = {
@@ -49,13 +50,18 @@ function FinalRoundMedia({ mediaUrl, title }: { mediaUrl?: string; title: string
   return null;
 }
 
-export function FinalRoundScreen({ item, settings, runtime }: FinalRoundScreenProps) {
+export function FinalRoundScreen({ item, settings, runtime, now = Date.now() }: FinalRoundScreenProps) {
   const surface = getScreenSurfaceAttributes(settings);
   const brand = resolveBrandSettings(settings);
   const step = runtime?.itemId === item.id ? runtime.step : "intro";
   const questionIndex = runtime?.itemId === item.id ? Math.max(0, Math.min(2, runtime.questionIndex)) : 0;
   const question = item.questions[questionIndex];
   const hasMedia = inferMediaType(question.mediaUrl ?? "") !== "none";
+  const stepDurationSeconds = step === "scenario" ? question.scenarioDurationSeconds : step === "question" ? question.timeLimitSeconds : null;
+  const remainingSeconds =
+    stepDurationSeconds !== null && runtime?.stepStartedAt
+      ? Math.max(0, stepDurationSeconds - Math.floor((now - runtime.stepStartedAt) / 1000))
+      : stepDurationSeconds;
 
   return (
     <main
@@ -86,42 +92,56 @@ export function FinalRoundScreen({ item, settings, runtime }: FinalRoundScreenPr
           </h1>
           <div className="mt-8 rounded-3xl border border-amber-200/40 bg-amber-300/15 px-8 py-5 shadow-2xl backdrop-blur">
             <p className="text-sm font-black uppercase tracking-[0.28em] text-amber-100">Senaryo süresi</p>
-            <p className="mt-2 text-6xl font-black tabular-nums text-white md:text-8xl">{question.scenarioDurationSeconds} sn</p>
+            <p className="mt-2 text-6xl font-black tabular-nums text-white md:text-8xl">{remainingSeconds} sn</p>
           </div>
         </section>
       ) : null}
 
       {step === "question" ? (
-        <section className="mx-auto flex h-full max-w-[1720px] flex-col gap-3 overflow-hidden pt-8">
-          <header className="shrink-0 rounded-2xl border border-white/25 bg-white/[0.16] p-4 shadow-2xl backdrop-blur">
+        <section className="mx-auto flex h-full max-w-[1720px] flex-col gap-2 overflow-hidden pt-7">
+          <header className="shrink-0 rounded-2xl border border-white/25 bg-white/[0.16] px-4 py-3 shadow-2xl backdrop-blur">
             <div className="flex items-center justify-between gap-4">
               <StageBadge label={`Final Soru ${questionIndex + 1} / 3`} tone="red" />
               <p className="rounded-xl border border-white/20 bg-white/[0.12] px-4 py-2 text-xl font-black tabular-nums text-white">
-                {question.timeLimitSeconds} sn
+                {remainingSeconds} sn
               </p>
             </div>
-            <h1 className="mt-3 line-clamp-2 font-black leading-tight text-white" style={{ fontSize: "clamp(1.5rem, 3vw, 3.5rem)" }}>
+            <h1 className="mt-2 line-clamp-2 font-black leading-tight text-white" style={{ fontSize: "clamp(1.35rem, 2.7vw, 3.25rem)" }}>
               {question.questionText}
             </h1>
           </header>
 
-          <div className={`grid min-h-0 flex-1 gap-3 ${hasMedia ? "grid-cols-[minmax(0,1fr)_minmax(22rem,0.9fr)]" : ""}`}>
-            {hasMedia ? (
-              <div className="flex min-h-0 overflow-hidden rounded-2xl border border-white/20 bg-slate-950/45 p-3 shadow-2xl">
-                <FinalRoundMedia mediaUrl={question.mediaUrl} title={question.questionText} />
+          {hasMedia ? (
+            <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.72fr)] gap-2 overflow-hidden lg:grid-cols-[minmax(0,1.6fr)_minmax(23rem,0.72fr)]">
+              <div className="flex min-h-0 overflow-hidden rounded-2xl border border-white/25 bg-slate-950/55 p-2 shadow-2xl shadow-blue-950/30 backdrop-blur">
+                <div className="flex min-h-0 w-full overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                  <FinalRoundMedia mediaUrl={question.mediaUrl} title={question.questionText} />
+                </div>
               </div>
-            ) : null}
-            <div className="grid min-h-0 grid-cols-2 grid-rows-2 gap-3">
+
+              <div className="grid min-h-0 grid-rows-4 gap-2 overflow-hidden">
+                {question.options.map((option) => (
+                  <article key={option.id} className={`flex min-h-0 items-center gap-3 overflow-hidden rounded-2xl border p-3 shadow-2xl ${optionStyles[option.id]}`}>
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-xl font-black text-slate-950 shadow-xl lg:h-14 lg:w-14 lg:rounded-2xl lg:text-2xl">
+                      {option.id}
+                    </span>
+                    <p className="line-clamp-3 min-w-0 break-words text-lg font-black leading-tight text-white lg:text-2xl">{option.text}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-3 overflow-hidden">
               {question.options.map((option) => (
-                <article key={option.id} className={`flex min-h-0 items-center gap-4 rounded-2xl border p-4 shadow-2xl ${optionStyles[option.id]}`}>
+                <article key={option.id} className={`flex min-h-0 items-center gap-4 overflow-hidden rounded-2xl border p-4 shadow-2xl ${optionStyles[option.id]}`}>
                   <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-2xl font-black text-slate-950 shadow-xl">
                     {option.id}
                   </span>
-                  <p className="line-clamp-3 text-xl font-black leading-tight text-white md:text-2xl lg:text-3xl">{option.text}</p>
+                  <p className="line-clamp-3 min-w-0 break-words text-xl font-black leading-tight text-white md:text-2xl lg:text-3xl">{option.text}</p>
                 </article>
               ))}
             </div>
-          </div>
+          )}
         </section>
       ) : null}
 
@@ -129,8 +149,9 @@ export function FinalRoundScreen({ item, settings, runtime }: FinalRoundScreenPr
         <section className="mx-auto flex h-full max-w-6xl flex-col items-center justify-center text-center">
           <StageBadge label={`Final Soru ${questionIndex + 1} tamamlandı`} tone="red" />
           <h1 className="mt-7 text-5xl font-black text-white md:text-7xl">Risk Değerlendirmesi</h1>
+          <p className="mt-6 text-3xl font-black text-white md:text-5xl">Mevcut risk seviyesi: %{runtime?.riskLevel ?? 70}</p>
           <p className="mt-7 rounded-3xl border border-amber-200/35 bg-amber-300/15 px-8 py-6 text-2xl font-black leading-relaxed text-amber-100 shadow-2xl backdrop-blur md:text-4xl">
-            Risk değerlendirmesi sonraki PR&apos;de aktif olacak
+            Cevap değerlendirme sistemi sonraki PR&apos;de bağlanacak
           </p>
         </section>
       ) : null}

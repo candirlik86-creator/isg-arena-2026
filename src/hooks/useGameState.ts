@@ -173,6 +173,17 @@ export function useGameState() {
     void runAction({ type: "nextItem" });
   }, [runAction]);
 
+  const advanceFinalRound = useCallback(() => {
+    void runAction({ type: "advanceFinalRound" });
+  }, [runAction]);
+
+  const advanceFinalRoundTimedStep = useCallback(
+    (itemId: string, expectedStep: "scenario" | "question", questionIndex: 0 | 1 | 2) => {
+      void runAction({ type: "advanceFinalRoundTimedStep", itemId, expectedStep, questionIndex });
+    },
+    [runAction],
+  );
+
   const lockAnswers = useCallback(() => {
     void runAction({ type: "lockAnswers" });
   }, [runAction]);
@@ -326,6 +337,8 @@ export function useGameState() {
     startActiveItem,
     goToItem,
     nextItem,
+    advanceFinalRound,
+    advanceFinalRoundTimedStep,
     lockAnswers,
     revealCorrectAnswer,
     showLeaderboard,

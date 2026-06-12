@@ -347,6 +347,7 @@ export function AdminPageClient() {
     updateSettings,
     startActiveItem,
     nextItem,
+    advanceFinalRound,
     lockAnswers,
     revealCorrectAnswer,
     showLeaderboard,
@@ -487,6 +488,20 @@ export function AdminPageClient() {
   const contentItemCount = state.flowItems.length - quizItemCount;
   const hasFinalRound = state.flowItems.some((item) => item.type === "finalRound");
   const isFinalRoundSelected = hasFlowItems && activeItem.type === "finalRound";
+  const activeFinalRoundRuntime =
+    isFinalRoundSelected && state.phase === "finalRound" && state.finalRoundRuntime?.itemId === activeItem.id
+      ? state.finalRoundRuntime
+      : null;
+  const finalRoundAdvanceLabel =
+    activeFinalRoundRuntime?.step === "intro"
+      ? "Senaryo 1'e Geç"
+      : activeFinalRoundRuntime?.step === "risk" && activeFinalRoundRuntime.questionIndex < 2
+        ? `Senaryo ${activeFinalRoundRuntime.questionIndex + 2}'ye Geç`
+        : activeFinalRoundRuntime?.step === "risk"
+          ? "Final Sonuçlarına Geç"
+          : activeFinalRoundRuntime?.step === "results"
+            ? "Sonraki Akış Öğesine Geç"
+            : "Süreli Adım Devam Ediyor";
   const activeItemMedia = hasFlowItems ? getFlowItemMedia(activeItem) : { mediaUrl: "", mediaType: "none" as MediaType, mediaSource: "none" as const };
   const activeQuizMediaUrl = hasFlowItems && activeItem.type === "quiz" && activeQuizDraft.itemId === activeItem.id ? activeQuizDraft.mediaUrl : activeItemMedia.mediaUrl;
   const activeQuizMediaType = inferMediaType(activeQuizMediaUrl);
@@ -1634,30 +1649,57 @@ export function AdminPageClient() {
                 </span>
               </div>
               {isFinalRoundSelected ? (
-                <p className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold leading-relaxed text-amber-900">
-                  Final Round ekran davranışı sonraki PR&apos;de eklenecek. Bu içerik şu anda sadece hazırlanabilir.
-                </p>
+                <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold leading-relaxed text-amber-900">
+                  <p>Final Round runtime aktif. Senaryo ve soru süreleri dolduğunda projeksiyon ekranı otomatik ilerler.</p>
+                  {activeFinalRoundRuntime ? (
+                    <p className="mt-2 text-xs uppercase tracking-wide text-amber-700">
+                      Adım: {activeFinalRoundRuntime.step} · Soru: {activeFinalRoundRuntime.questionIndex + 1} · Risk: %
+                      {activeFinalRoundRuntime.riskLevel}
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
               <div className="space-y-2.5">
-                <ControlButton variant="primary" onClick={startActiveItem} disabled={!hasFlowItems || isFinalRoundSelected}>
-                  Soruyu / Slaytı Başlat
-                </ControlButton>
-                <ControlButton variant="secondary" onClick={nextItem} disabled={!hasFlowItems || isFinalRoundSelected}>
-                  Sonraki Öğe
-                </ControlButton>
-                <ControlButton variant="secondary" onClick={lockAnswers} disabled={!hasFlowItems || isFinalRoundSelected}>
-                  Cevapları Kilitle
-                </ControlButton>
-                <ControlButton
-                  variant="secondary"
-                  onClick={revealCorrectAnswer}
-                  disabled={!hasFlowItems || activeItem.type !== "quiz" || isFinalRoundSelected}
-                >
-                  Doğru Cevabı Göster
-                </ControlButton>
-                <ControlButton variant="secondary" onClick={showLeaderboard} disabled={isFinalRoundSelected}>
-                  Lider Tablosu
-                </ControlButton>
+                {isFinalRoundSelected ? (
+                  <>
+                    <ControlButton variant="primary" onClick={startActiveItem} disabled={Boolean(activeFinalRoundRuntime)}>
+                      Final Round'u Başlat
+                    </ControlButton>
+                    <ControlButton
+                      variant="secondary"
+                      onClick={advanceFinalRound}
+                      disabled={
+                        !activeFinalRoundRuntime ||
+                        activeFinalRoundRuntime.step === "scenario" ||
+                        activeFinalRoundRuntime.step === "question"
+                      }
+                    >
+                      {finalRoundAdvanceLabel}
+                    </ControlButton>
+                  </>
+                ) : (
+                  <>
+                    <ControlButton variant="primary" onClick={startActiveItem} disabled={!hasFlowItems}>
+                      Soruyu / Slaytı Başlat
+                    </ControlButton>
+                    <ControlButton variant="secondary" onClick={nextItem} disabled={!hasFlowItems}>
+                      Sonraki Öğe
+                    </ControlButton>
+                    <ControlButton variant="secondary" onClick={lockAnswers} disabled={!hasFlowItems}>
+                      Cevapları Kilitle
+                    </ControlButton>
+                    <ControlButton
+                      variant="secondary"
+                      onClick={revealCorrectAnswer}
+                      disabled={!hasFlowItems || activeItem.type !== "quiz"}
+                    >
+                      Doğru Cevabı Göster
+                    </ControlButton>
+                    <ControlButton variant="secondary" onClick={showLeaderboard}>
+                      Lider Tablosu
+                    </ControlButton>
+                  </>
+                )}
                 <ControlButton variant="success" onClick={finishGame}>
                   Final Sonuçları
                 </ControlButton>

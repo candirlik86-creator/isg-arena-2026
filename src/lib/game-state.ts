@@ -163,6 +163,7 @@ export type GameState = {
   phase: GamePhase;
   activeItemIndex: number;
   activeItemStartedAt: number | null;
+  finalRoundRuntime: FinalRoundRuntime | null;
   answersLocked: boolean;
   showCorrectAnswer: boolean;
   teams: Team[];
@@ -477,6 +478,7 @@ export function createInitialGameState(settings: Partial<GameSettings> = {}): Ga
     phase: "lobby",
     activeItemIndex: 0,
     activeItemStartedAt: null,
+    finalRoundRuntime: null,
     answersLocked: false,
     showCorrectAnswer: false,
     teams: [],

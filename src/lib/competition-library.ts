@@ -226,6 +226,7 @@ export function createGameStateFromSavedCompetition(saved: SavedCompetition): Ga
     phase: "lobby",
     activeItemIndex: 0,
     activeItemStartedAt: null,
+    finalRoundRuntime: null,
     answersLocked: false,
     showCorrectAnswer: false,
     teams: [],
