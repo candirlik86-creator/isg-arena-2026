@@ -887,6 +887,38 @@ export function AdminPageClient() {
     });
   };
 
+  const handleFinalRoundQuestionMediaUpload = async (
+    event: ChangeEvent<HTMLInputElement>,
+    questionIndex: number,
+  ) => {
+    const file = event.currentTarget.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      setMediaMessage("Sadece görsel veya video dosyası seçilebilir.");
+      event.currentTarget.value = "";
+      return;
+    }
+
+    setMediaMessage(null);
+    try {
+      const uploaded = await uploadMediaFile(file);
+      patchFinalRoundQuestion(questionIndex, {
+        mediaUrl: uploaded.path,
+        mediaType: uploaded.mediaType,
+        mediaSource: "upload",
+      });
+      setMediaMessage(null);
+    } catch (error) {
+      setMediaMessage(error instanceof Error ? error.message : "Dosya yüklenemedi.");
+    } finally {
+      event.currentTarget.value = "";
+    }
+  };
+
   const setFinalRoundOptionText = (questionIndex: number, optionId: AnswerId, text: string) => {
     setActiveFinalRoundDraft((current) => {
       if (!current) {
@@ -1415,26 +1447,37 @@ export function AdminPageClient() {
                             ))}
                           </div>
                         </div>
-                        <label className="block md:col-span-2">
-                          <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Medya linki</span>
-                          <input
-                            type="text"
-                            value={question.mediaUrl ?? ""}
-                            onChange={(event) => {
-                              const mediaUrl = event.target.value;
-                              patchFinalRoundQuestion(questionIndex, {
-                                mediaUrl: mediaUrl || undefined,
-                                mediaType: inferMediaType(mediaUrl),
-                                mediaSource: inferMediaSource(mediaUrl),
-                              });
-                            }}
-                            placeholder="/api/media/uploads/gorsel.jpg veya https://youtu.be/..."
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                          />
-                          <span className="mt-1 block text-xs font-semibold text-slate-500">
+                        <div className="grid gap-3 md:col-span-2 md:grid-cols-2">
+                          <label className="block">
+                            <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Medya linki</span>
+                            <input
+                              type="text"
+                              value={question.mediaUrl ?? ""}
+                              onChange={(event) => {
+                                const mediaUrl = event.target.value;
+                                patchFinalRoundQuestion(questionIndex, {
+                                  mediaUrl: mediaUrl || undefined,
+                                  mediaType: inferMediaType(mediaUrl),
+                                  mediaSource: inferMediaSource(mediaUrl),
+                                });
+                              }}
+                              placeholder="/api/media/uploads/gorsel.jpg veya https://youtu.be/..."
+                              className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Medya Yükle</span>
+                            <input
+                              type="file"
+                              accept="image/*,video/*"
+                              onChange={(event) => void handleFinalRoundQuestionMediaUpload(event, questionIndex)}
+                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none transition file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1 file:text-sm file:font-bold file:text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            />
+                          </label>
+                          <span className="text-xs font-semibold text-slate-500 md:col-span-2">
                             Tür: {question.mediaType === "none" || !question.mediaType ? "medya yok" : question.mediaType}
                           </span>
-                        </label>
+                        </div>
                       </div>
                     </section>
                   ))}

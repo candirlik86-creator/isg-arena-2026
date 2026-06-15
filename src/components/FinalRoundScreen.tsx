@@ -73,7 +73,6 @@ export function FinalRoundScreen({ item, settings, runtime, now = Date.now() }: 
       {step === "intro" ? (
         <section className="relative mx-auto flex h-full max-w-[1720px] items-center justify-center overflow-hidden rounded-[clamp(1rem,2.5vw,2.5rem)] border border-amber-200/35 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.34),rgba(127,29,29,0.52)_42%,rgba(15,23,42,0.88)_78%)] p-6 text-center shadow-2xl shadow-red-950/40">
           <div className="relative max-w-7xl rounded-[clamp(1.25rem,3vw,3rem)] border border-white/20 bg-slate-950/30 px-6 py-10 shadow-[0_0_90px_rgba(245,158,11,0.28)] backdrop-blur md:px-12 md:py-14">
-            <p className="text-sm font-black uppercase tracking-[0.5em] text-amber-200 md:text-xl">İSG Arena</p>
             <h1 className="mt-5 font-black leading-none text-white drop-shadow-2xl" style={{ fontSize: "clamp(4rem, 12vw, 12rem)" }}>
               {item.introTitle || "FINAL ROUND"}
             </h1>
@@ -98,15 +97,21 @@ export function FinalRoundScreen({ item, settings, runtime, now = Date.now() }: 
       ) : null}
 
       {step === "question" ? (
-        <section className="mx-auto flex h-full max-w-[1720px] flex-col gap-2 overflow-hidden pt-7">
-          <header className="shrink-0 rounded-2xl border border-white/25 bg-white/[0.16] px-4 py-3 shadow-2xl backdrop-blur">
-            <div className="flex items-center justify-between gap-4">
+        <section className="mx-auto flex h-full max-w-[1720px] flex-col gap-2 overflow-hidden pt-9 md:pt-10">
+          <header className="shrink-0 rounded-2xl border border-white/25 bg-white/[0.16] px-3 py-2 shadow-2xl backdrop-blur md:px-4">
+            <div className="flex items-center justify-between gap-3">
               <StageBadge label={`Final Soru ${questionIndex + 1} / 3`} tone="red" />
-              <p className="rounded-xl border border-white/20 bg-white/[0.12] px-4 py-2 text-xl font-black tabular-nums text-white">
+              <p
+                className={
+                  hasMedia
+                    ? "flex h-16 w-32 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/[0.12] text-3xl font-black tabular-nums text-white shadow-lg md:h-[4.5rem] md:w-36 md:text-4xl"
+                    : "rounded-xl border border-white/20 bg-white/[0.12] px-3 py-1.5 text-lg font-black tabular-nums text-white md:text-xl"
+                }
+              >
                 {remainingSeconds} sn
               </p>
             </div>
-            <h1 className="mt-2 line-clamp-2 font-black leading-tight text-white" style={{ fontSize: "clamp(1.35rem, 2.7vw, 3.25rem)" }}>
+            <h1 className="mt-1 line-clamp-2 font-black leading-tight text-white" style={{ fontSize: "clamp(1.2rem, 2.35vw, 2.8rem)" }}>
               {question.questionText}
             </h1>
           </header>
