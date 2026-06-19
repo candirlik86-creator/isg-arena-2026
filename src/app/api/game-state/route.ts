@@ -39,6 +39,7 @@ function isPublicGameAction(action: GameAction) {
   return (
     action.type === "joinTeam" ||
     action.type === "submitQuizAnswer" ||
+    action.type === "submitFinalRoundAnswer" ||
     action.type === "submitForkliftRun" ||
     action.type === "advanceQuizIntro" ||
     action.type === "advanceFinalRoundTimedStep"

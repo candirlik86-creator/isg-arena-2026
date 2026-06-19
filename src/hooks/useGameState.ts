@@ -302,6 +302,35 @@ export function useGameState() {
     [runAction],
   );
 
+  const submitFinalRoundAnswer = useCallback(
+    async (optionId: AnswerId): Promise<SubmitResult> => {
+      const session = getTeamSession();
+
+      if (!session) {
+        return { ok: false, message: "Takım oturumu bulunamadı." };
+      }
+
+      const runtime = state.finalRoundRuntime;
+      if (state.phase !== "finalRound" || activeItem.type !== "finalRound" || runtime?.itemId !== activeItem.id) {
+        return { ok: false, message: "Aktif final sorusu yok." };
+      }
+
+      const question = activeItem.questions[runtime.questionIndex];
+      const result = await runAction({
+        type: "submitFinalRoundAnswer",
+        teamId: session.teamId,
+        gamePin: session.gamePin,
+        itemId: activeItem.id,
+        questionId: question.id,
+        questionIndex: runtime.questionIndex,
+        optionId,
+      });
+
+      return { ok: result.ok, message: result.message };
+    },
+    [activeItem, runAction, state.finalRoundRuntime, state.phase],
+  );
+
   const submitForkliftRun = useCallback(
     async (run: Omit<ForkliftRun, "submittedAt">): Promise<SubmitResult> => {
       const session = getTeamSession();
@@ -354,6 +383,7 @@ export function useGameState() {
     saveCompetitionToLibrary,
     openSavedCompetition,
     submitQuizAnswer,
+    submitFinalRoundAnswer,
     submitForkliftRun,
   };
 }

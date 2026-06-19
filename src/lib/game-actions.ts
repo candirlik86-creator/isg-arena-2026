@@ -12,6 +12,7 @@ import {
   QUIZ_INTRO_SECONDS,
   type AnswerId,
   type ContentFlowItem,
+  type FinalRoundRiskLevel,
   type ForkliftRun,
   type FinalRoundRuntime,
   type GameSettings,
@@ -46,6 +47,15 @@ export type GameAction =
   | { type: "advanceFinalRoundTimedStep"; itemId: string; expectedStep: "scenario" | "question"; questionIndex: 0 | 1 | 2 }
   | { type: "joinTeam"; pin: string; teamName: string }
   | { type: "submitQuizAnswer"; teamId: string; gamePin: string; optionId: AnswerId }
+  | {
+      type: "submitFinalRoundAnswer";
+      teamId: string;
+      gamePin: string;
+      itemId: string;
+      questionId: string;
+      questionIndex: 0 | 1 | 2;
+      optionId: AnswerId;
+    }
   | { type: "submitForkliftRun"; teamId: string; gamePin: string; run: Omit<ForkliftRun, "submittedAt"> };
 
 export type GameActionResult = {
@@ -55,7 +65,24 @@ export type GameActionResult = {
   teamSession?: GameTeamSession;
 };
 
-function getStartedItemState(item: ContentFlowItem, now: number) {
+const finalRoundRiskLevels = [70, 50, 25, 0] as const;
+
+function getNextFinalRoundRiskLevel(riskLevel: FinalRoundRiskLevel): FinalRoundRiskLevel {
+  const currentIndex = finalRoundRiskLevels.indexOf(riskLevel);
+  return finalRoundRiskLevels[Math.min(currentIndex + 1, finalRoundRiskLevels.length - 1)] ?? riskLevel;
+}
+
+function getFinalRoundParticipantTeamIds(state: GameState, runtime: FinalRoundRuntime) {
+  const registeredTeamIds = new Set(state.teams.map((team) => team.id));
+
+  if (Array.isArray(runtime.participantTeamIds)) {
+    return runtime.participantTeamIds.filter((teamId) => registeredTeamIds.has(teamId));
+  }
+
+  return state.teams.map((team) => team.id);
+}
+
+function getStartedItemState(item: ContentFlowItem, now: number, participantTeamIds: string[] = []) {
   const phase = getItemStartPhase(item);
   const finalRoundRuntime: FinalRoundRuntime | null =
     item.type === "finalRound"
@@ -65,6 +92,8 @@ function getStartedItemState(item: ContentFlowItem, now: number) {
           questionIndex: 0,
           stepStartedAt: now,
           riskLevel: 70,
+          participantTeamIds,
+          riskHistory: [],
         }
       : null;
 
@@ -133,6 +162,10 @@ function failure(state: GameState, message: string): GameActionResult {
   return { ok: false, state, message };
 }
 
+function getParticipantTeamIdsSnapshot(state: GameState) {
+  return state.teams.map((team) => team.id);
+}
+
 export function applyGameAction(currentState: GameState, action: GameAction, now = Date.now()): GameActionResult {
   if (action.type === "resetGame") {
     return success(
@@ -185,7 +218,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
     const currentItem = getActiveItem(currentState);
     return success({
       ...currentState,
-      ...getStartedItemState(currentItem, now),
+      ...getStartedItemState(currentItem, now, getParticipantTeamIdsSnapshot(currentState)),
     });
   }
 
@@ -209,7 +242,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
     return success({
       ...currentState,
       activeItemIndex: safeIndex,
-      ...getStartedItemState(nextItem, now),
+      ...getStartedItemState(nextItem, now, getParticipantTeamIdsSnapshot(currentState)),
     });
   }
 
@@ -262,7 +295,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
     return success({
       ...currentState,
       activeItemIndex: nextIndex,
-      ...getStartedItemState(nextFlowItem, now),
+      ...getStartedItemState(nextFlowItem, now, getParticipantTeamIdsSnapshot(currentState)),
     });
   }
 
@@ -466,11 +499,41 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
       });
     }
 
+    const participantTeamIds = getFinalRoundParticipantTeamIds(currentState, runtime);
+    const correctTeamCount = participantTeamIds.filter((teamId) => {
+      const answer = getTeamResponses(currentState, teamId).finalAnswers[item.id]?.[question.id];
+      return Boolean(answer?.isCorrect);
+    }).length;
+    const activeTeamCount = participantTeamIds.length;
+    const majorityRequired = Math.floor(activeTeamCount / 2) + 1;
+    const riskDropped = correctTeamCount >= majorityRequired;
+    const nextRiskLevel = riskDropped ? getNextFinalRoundRiskLevel(runtime.riskLevel) : runtime.riskLevel;
+
     return success({
       ...currentState,
       activeItemStartedAt: null,
       answersLocked: true,
-      finalRoundRuntime: { ...runtime, step: "risk", stepStartedAt: now },
+      finalRoundRuntime: {
+        ...runtime,
+        step: "risk",
+        stepStartedAt: now,
+        riskLevel: nextRiskLevel,
+        riskHistory: [
+          ...runtime.riskHistory,
+          {
+            questionIndex: runtime.questionIndex,
+            questionId: question.id,
+            correctOptionId: question.correctOptionId,
+            correctTeamCount,
+            activeTeamCount,
+            majorityRequired,
+            previousRiskLevel: runtime.riskLevel,
+            nextRiskLevel,
+            riskDropped,
+            evaluatedAt: now,
+          },
+        ],
+      },
     });
   }
 
@@ -515,7 +578,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
       teams: [...currentState.teams, newTeam],
       responses: {
         ...currentState.responses,
-        [newTeam.id]: { answers: {}, forkliftRuns: {} },
+        [newTeam.id]: { answers: {}, finalAnswers: {}, forkliftRuns: {} },
       },
     };
 
@@ -578,6 +641,89 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
               submittedAt: now,
             },
           },
+          finalAnswers: responses.finalAnswers,
+          forkliftRuns: responses.forkliftRuns,
+        },
+      },
+    });
+  }
+
+  if (action.type === "submitFinalRoundAnswer") {
+    const item = getActiveItem(currentState);
+    const runtime = currentState.finalRoundRuntime;
+
+    if (action.gamePin !== currentState.settings.gamePin) {
+      return failure(currentState, "Takım oturumu bulunamadı.");
+    }
+
+    if (
+      currentState.phase !== "finalRound" ||
+      item.type !== "finalRound" ||
+      runtime?.itemId !== item.id ||
+      runtime.step !== "question"
+    ) {
+      return failure(currentState, "Aktif final sorusu yok.");
+    }
+
+    const question = item.questions[runtime.questionIndex];
+    if (action.itemId !== item.id || action.questionIndex !== runtime.questionIndex || action.questionId !== question.id) {
+      return failure(currentState, "Final sorusu eşleşmedi.");
+    }
+
+    if (currentState.answersLocked) {
+      return failure(currentState, "Cevaplar kilitlendi.");
+    }
+
+    const team = currentState.teams.find((entry) => entry.id === action.teamId);
+    if (!team) {
+      return failure(currentState, "Takım bu oyunda kayıtlı değil.");
+    }
+
+    const participantTeamIds = getFinalRoundParticipantTeamIds(currentState, runtime);
+    if (!participantTeamIds.includes(team.id)) {
+      return failure(currentState, "Bu takım Final Round katılımcıları arasında değil.");
+    }
+
+    const responses = getTeamResponses(currentState, team.id);
+    const finalAnswersByItem = responses.finalAnswers[item.id] ?? {};
+    if (finalAnswersByItem[question.id]) {
+      return failure(currentState, "Bu final sorusu için cevap zaten gönderildi.");
+    }
+
+    const answerTimeMs = runtime.stepStartedAt ? now - runtime.stepStartedAt : 0;
+    if (!runtime.stepStartedAt || answerTimeMs >= question.timeLimitSeconds * 1000) {
+      return failure(currentState, "Cevap süresi doldu.");
+    }
+
+    const isCorrect = action.optionId === question.correctOptionId;
+    const scoreResult = calculateQuestionScore({
+      isCorrect,
+      answerTimeMs,
+      timeLimitMs: question.timeLimitSeconds * 1000,
+    });
+
+    return success({
+      ...currentState,
+      responses: {
+        ...currentState.responses,
+        [team.id]: {
+          answers: responses.answers,
+          finalAnswers: {
+            ...responses.finalAnswers,
+            [item.id]: {
+              ...finalAnswersByItem,
+              [question.id]: {
+                itemId: item.id,
+                questionId: question.id,
+                questionIndex: runtime.questionIndex,
+                optionId: action.optionId,
+                isCorrect,
+                score: scoreResult.totalScore,
+                answerTimeMs,
+                submittedAt: now,
+              },
+            },
+          },
           forkliftRuns: responses.forkliftRuns,
         },
       },
@@ -611,6 +757,7 @@ export function applyGameAction(currentState: GameState, action: GameAction, now
         ...currentState.responses,
         [team.id]: {
           answers: responses.answers,
+          finalAnswers: responses.finalAnswers,
           forkliftRuns: {
             ...responses.forkliftRuns,
             [item.id]: {

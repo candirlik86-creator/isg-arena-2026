@@ -54,6 +54,7 @@ export default function PlayPage() {
     leaderboard,
     currentTeam,
     submitQuizAnswer,
+    submitFinalRoundAnswer,
     submitForkliftRun,
   } = useGameState();
   const [selectedOptionId, setSelectedOptionId] = useState<AnswerId>();
@@ -62,18 +63,32 @@ export default function PlayPage() {
   useEffect(() => {
     setSelectedOptionId(undefined);
     setMessage("");
-  }, [activeItem.id, state.phase]);
+  }, [activeItem.id, state.finalRoundRuntime?.questionIndex, state.finalRoundRuntime?.step, state.phase]);
 
   const responses = useMemo(() => (currentTeam ? getTeamResponses(state, currentTeam.id) : null), [currentTeam, state]);
   const currentAnswer = activeItem.type === "quiz" ? responses?.answers[activeItem.id] : undefined;
+  const finalRuntime = state.finalRoundRuntime;
+  const activeFinalQuestion =
+    state.phase === "finalRound" && activeItem.type === "finalRound" && finalRuntime?.itemId === activeItem.id
+      ? activeItem.questions[finalRuntime.questionIndex]
+      : null;
+  const currentFinalAnswer =
+    activeItem.type === "finalRound" && activeFinalQuestion
+      ? responses?.finalAnswers[activeItem.id]?.[activeFinalQuestion.id]
+      : undefined;
   const currentForkliftRun = activeItem.type === "forkliftChallenge" ? responses?.forkliftRuns[activeItem.id] : undefined;
   const remainingSeconds = calculateRemainingSeconds(state, activeItem, now);
+  const finalRemainingSeconds =
+    finalRuntime?.step === "question" && activeFinalQuestion && finalRuntime.stepStartedAt
+      ? Math.max(0, activeFinalQuestion.timeLimitSeconds - Math.floor((now - finalRuntime.stepStartedAt) / 1000))
+      : null;
   const introRemainingSeconds = calculateQuizIntroRemainingSeconds(state, activeItem, now);
   const ownRank = currentTeam ? leaderboard.findIndex((entry) => entry.id === currentTeam.id) + 1 : 0;
   const currentTeamTotalScore = currentTeam ? getTeamTotalScore(state, currentTeam.id) : 0;
   const activeQuizPosition = getQuizPosition(state, activeItem);
   const quizTimeExpired = activeItem.type === "quiz" && remainingSeconds !== null && remainingSeconds <= 0;
   const shouldShowQuizResult = activeItem.type === "quiz" && (state.showCorrectAnswer || quizTimeExpired);
+  const finalQuestionExpired = finalRemainingSeconds !== null && finalRemainingSeconds <= 0;
 
   if (!currentTeam) {
     return (
@@ -97,6 +112,30 @@ export default function PlayPage() {
 
     setSelectedOptionId(optionId);
     const result = await submitQuizAnswer(optionId);
+
+    if (!result.ok) {
+      setSelectedOptionId(undefined);
+    }
+
+    setMessage(result.ok ? "Cevabın alındı. Sonuç bekleniyor." : result.message ?? "Cevap gönderilemedi.");
+  };
+
+  const finalAnswerDisabled =
+    state.phase !== "finalRound" ||
+    activeItem.type !== "finalRound" ||
+    finalRuntime?.step !== "question" ||
+    Boolean(currentFinalAnswer) ||
+    Boolean(selectedOptionId) ||
+    state.answersLocked ||
+    finalQuestionExpired;
+
+  const submitFinalAnswer = async (optionId: AnswerId) => {
+    if (finalAnswerDisabled) {
+      return;
+    }
+
+    setSelectedOptionId(optionId);
+    const result = await submitFinalRoundAnswer(optionId);
 
     if (!result.ok) {
       setSelectedOptionId(undefined);
@@ -136,6 +175,7 @@ export default function PlayPage() {
   );
 
   const isQuizPhase = state.phase === "quiz" && activeItem.type === "quiz";
+  const isFinalRoundPhase = state.phase === "finalRound" && activeItem.type === "finalRound" && finalRuntime?.itemId === activeItem.id;
   const isPassiveContentPhase =
     (state.phase === "infoSlide" || state.phase === "mediaSlide") &&
     (activeItem.type === "infoSlide" || activeItem.type === "mediaSlide");
@@ -214,6 +254,169 @@ export default function PlayPage() {
           <footer className="shrink-0 rounded-2xl border border-white/20 bg-white/[0.15] px-4 py-3 shadow-lg shadow-blue-950/10 backdrop-blur">
             {statusMessage ? (
               <p className="mb-2 rounded-xl border border-emerald-100/30 bg-emerald-400/20 px-3 py-2 text-center text-sm font-black text-emerald-50">{statusMessage}</p>
+            ) : null}
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-cyan-100">Takım</p>
+                <p className="truncate text-xl font-black text-white">{currentTeam.name}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-amber-100">Toplam puan</p>
+                <p className="text-2xl font-black tabular-nums text-white">{currentTeamTotalScore.toLocaleString("tr-TR")}</p>
+              </div>
+            </div>
+          </footer>
+        </div>
+      </main>
+    );
+  }
+
+  if (isFinalRoundPhase && activeFinalQuestion && finalRuntime) {
+    const selectedAnswerId = currentFinalAnswer?.optionId ?? selectedOptionId;
+    const isWaitingForFinalResult = Boolean(currentFinalAnswer || selectedOptionId) && finalRuntime.step === "question";
+    const correctOption = activeFinalQuestion.options.find((option) => option.id === activeFinalQuestion.correctOptionId);
+
+    if (finalRuntime.step === "intro") {
+      return (
+        <main className="arena-play-bg min-h-[100svh] p-3 text-white">
+          <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
+            <section className="rounded-[1.75rem] border border-amber-100/40 bg-amber-300/20 p-7 text-center shadow-lg shadow-blue-950/10">
+              <p className="text-sm font-black uppercase tracking-[0.3em] text-amber-100">Final Round</p>
+              <h2 className="mt-4 text-4xl font-black text-white">Final Round başlıyor</h2>
+              <p className="mt-4 text-xl font-black text-blue-50">Ana ekranı takip edin.</p>
+            </section>
+          </div>
+        </main>
+      );
+    }
+
+    if (finalRuntime.step === "scenario") {
+      return (
+        <main className="arena-play-bg min-h-[100svh] p-3 text-white">
+          <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
+            <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.15] p-7 text-center shadow-lg shadow-blue-950/10">
+              <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-100">
+                Final Senaryo {finalRuntime.questionIndex + 1} / 3
+              </p>
+              <h2 className="mt-4 text-4xl font-black text-white">Senaryoyu ana ekrandan takip edin</h2>
+              <p className="mt-4 text-xl font-black text-blue-50">Cevap seçenekleri birazdan açılacak.</p>
+            </section>
+          </div>
+        </main>
+      );
+    }
+
+    if (finalRuntime.step === "risk") {
+      return (
+        <main className="arena-play-bg min-h-[100svh] p-3 text-white">
+          <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
+            <section
+              className={`rounded-[1.75rem] border p-6 text-center shadow-lg ${
+                currentFinalAnswer?.isCorrect
+                  ? "border-emerald-100/50 bg-emerald-400/25 shadow-blue-950/10"
+                  : "border-red-100/50 bg-red-400/25 shadow-blue-950/10"
+              }`}
+            >
+              <div
+                className={`mx-auto flex h-24 w-24 items-center justify-center rounded-[1.5rem] text-6xl font-black shadow-md ${
+                  currentFinalAnswer?.isCorrect ? "bg-emerald-300 text-slate-950" : "bg-red-400 text-white"
+                }`}
+              >
+                {currentFinalAnswer?.isCorrect ? "✓" : "!"}
+              </div>
+              <p className={`mt-5 text-5xl font-black ${currentFinalAnswer?.isCorrect ? "text-emerald-100" : "text-red-100"}`}>
+                {currentFinalAnswer ? (currentFinalAnswer.isCorrect ? "Doğru" : "Yanlış") : "Cevap verilmedi"}
+              </p>
+              <p className="mt-5 text-lg font-black leading-tight text-white">
+                Doğru cevap: {activeFinalQuestion.correctOptionId}
+                {correctOption ? ` - ${correctOption.text}` : ""}
+              </p>
+              <p className="mt-6 text-xs font-black uppercase tracking-[0.24em] text-blue-50">Kazanılan puan</p>
+              <p className="mt-2 text-7xl font-black leading-none tabular-nums text-white">
+                + {(currentFinalAnswer?.score ?? 0).toLocaleString("tr-TR")}
+              </p>
+              <p className="mt-5 text-2xl font-black text-slate-100">Toplam puan: {currentTeamTotalScore.toLocaleString("tr-TR")}</p>
+            </section>
+          </div>
+        </main>
+      );
+    }
+
+    if (finalRuntime.step === "results") {
+      return (
+        <main className="arena-play-bg min-h-[100svh] p-3 text-white">
+          <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
+            <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.15] p-7 text-center shadow-lg shadow-blue-950/10">
+              <p className="text-sm font-black uppercase tracking-[0.3em] text-amber-100">Final Round</p>
+              <h2 className="mt-4 text-4xl font-black text-white">Final Round tamamlandı</h2>
+              <p className="mt-4 text-xl font-black text-blue-50">Sonuçlar ana ekranda açıklanacak.</p>
+            </section>
+          </div>
+        </main>
+      );
+    }
+
+    if (isWaitingForFinalResult) {
+      return (
+        <main className="arena-play-bg min-h-[100svh] overflow-hidden p-3 text-white">
+          <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
+            <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.16] p-7 text-center shadow-lg shadow-blue-950/10 backdrop-blur">
+              <p className="text-3xl font-black leading-tight text-white">Cevabın alındı. Sonuç bekleniyor.</p>
+              <p className="mt-4 text-xl font-black leading-tight text-blue-50">Risk değerlendirmesi ana ekranda açıklanacak.</p>
+            </section>
+          </div>
+        </main>
+      );
+    }
+
+    return (
+      <main className="arena-play-bg arena-play-quiz-active min-h-[100svh] overflow-hidden p-3 text-white">
+        <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col gap-3">
+          <header className="shrink-0 rounded-2xl border border-white/20 bg-white/[0.14] px-4 py-3 shadow-lg shadow-blue-950/10 backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-100">Final Round</p>
+                <p className="mt-1 text-xl font-black leading-none text-white">
+                  Soru {finalRuntime.questionIndex + 1} / 3
+                </p>
+              </div>
+              <div className="shrink-0 rounded-xl border border-white/20 bg-white/[0.14] px-3 py-2 text-right">
+                <p className="text-[0.65rem] font-black uppercase tracking-widest text-blue-100">Süre</p>
+                <p className="text-2xl font-black leading-none tabular-nums text-white">
+                  {finalRemainingSeconds ?? activeFinalQuestion.timeLimitSeconds}
+                </p>
+              </div>
+            </div>
+            <p className="mt-3 text-lg font-black leading-tight text-white">{activeFinalQuestion.questionText}</p>
+          </header>
+
+          <section className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-3" aria-label="Final Round cevap seçenekleri">
+            {activeFinalQuestion.options.map((option) => {
+              const tile = kahootAnswerTiles[option.id];
+              const isSelected = selectedAnswerId === option.id;
+
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-label={`Final cevap ${option.id}`}
+                  disabled={finalAnswerDisabled}
+                  onClick={() => submitFinalAnswer(option.id)}
+                  className={`flex min-h-0 flex-col items-center justify-center rounded-2xl border p-3 text-center text-white shadow-2xl transition duration-150 active:scale-[0.98] ${
+                    tile.buttonClass
+                  } ${isSelected ? `ring-4 ${tile.selectedClass}` : ""} ${finalAnswerDisabled ? "cursor-not-allowed opacity-80" : ""}`}
+                >
+                  <span className="text-4xl font-black leading-none drop-shadow sm:text-5xl">{tile.shape}</span>
+                  <span className="mt-2 text-5xl font-black leading-none drop-shadow sm:text-6xl">{option.id}</span>
+                  <span className="mt-3 line-clamp-3 text-base font-black leading-tight drop-shadow sm:text-lg">{option.text}</span>
+                </button>
+              );
+            })}
+          </section>
+
+          <footer className="shrink-0 rounded-2xl border border-white/20 bg-white/[0.15] px-4 py-3 shadow-lg shadow-blue-950/10 backdrop-blur">
+            {message ? (
+              <p className="mb-2 rounded-xl border border-emerald-100/30 bg-emerald-400/20 px-3 py-2 text-center text-sm font-black text-emerald-50">{message}</p>
             ) : null}
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
