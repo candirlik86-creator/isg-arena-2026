@@ -8,8 +8,11 @@ import {
   pruneResponsesForFlowItems,
   type AnswerId,
   type ContentFlowItem,
+  type FinalRoundAnswer,
   type FinalRoundFlowItem,
   type FinalRoundQuestion,
+  type FinalRoundRiskHistoryEntry,
+  type FinalRoundRiskLevel,
   type FinalRoundRuntime,
   type GamePhase,
   type GameSettings,
@@ -30,6 +33,11 @@ function asString(value: unknown, fallback = "") {
 function asPositiveNumber(value: unknown, fallback: number) {
   const parsedValue = Number(value);
   return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
+}
+
+function asNonNegativeNumber(value: unknown, fallback = 0) {
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) && parsedValue >= 0 ? parsedValue : fallback;
 }
 
 function asOptionalPositiveNumber(value: unknown) {
@@ -70,6 +78,10 @@ function isMediaType(value: unknown): value is MediaType {
 
 function isMediaSource(value: unknown): value is MediaSource {
   return value === "upload" || value === "url" || value === "youtube" || value === "public-path" || value === "none";
+}
+
+function isFinalRoundRiskLevel(value: unknown): value is FinalRoundRiskLevel {
+  return value === 70 || value === 50 || value === 25 || value === 0;
 }
 
 function createDefaultFinalRoundQuestion(index: number): FinalRoundQuestion {
@@ -277,6 +289,43 @@ function isGamePhase(value: unknown): value is GamePhase {
   );
 }
 
+function normalizeFinalRoundRiskHistory(value: unknown): FinalRoundRiskHistoryEntry[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((entry) => {
+    if (!isRecord(entry)) {
+      return [];
+    }
+
+    const questionIndex = entry.questionIndex === 0 || entry.questionIndex === 1 || entry.questionIndex === 2 ? entry.questionIndex : null;
+    const previousRiskLevel = isFinalRoundRiskLevel(entry.previousRiskLevel) ? entry.previousRiskLevel : null;
+    const nextRiskLevel = isFinalRoundRiskLevel(entry.nextRiskLevel) ? entry.nextRiskLevel : null;
+    const correctOptionId = isAnswerId(entry.correctOptionId) ? entry.correctOptionId : null;
+    const questionId = asString(entry.questionId).trim();
+
+    if (questionIndex === null || previousRiskLevel === null || nextRiskLevel === null || !correctOptionId || !questionId) {
+      return [];
+    }
+
+    return [
+      {
+        questionIndex,
+        questionId,
+        correctOptionId,
+        correctTeamCount: Math.round(asNonNegativeNumber(entry.correctTeamCount)),
+        activeTeamCount: Math.round(asNonNegativeNumber(entry.activeTeamCount)),
+        majorityRequired: Math.round(asNonNegativeNumber(entry.majorityRequired)),
+        previousRiskLevel,
+        nextRiskLevel,
+        riskDropped: Boolean(entry.riskDropped),
+        evaluatedAt: asNonNegativeNumber(entry.evaluatedAt),
+      },
+    ];
+  });
+}
+
 function normalizeFinalRoundRuntime(value: unknown, flowItems: ContentFlowItem[]): FinalRoundRuntime | null {
   if (!isRecord(value)) {
     return null;
@@ -305,6 +354,65 @@ function normalizeFinalRoundRuntime(value: unknown, flowItems: ContentFlowItem[]
     questionIndex,
     stepStartedAt: typeof value.stepStartedAt === "number" ? value.stepStartedAt : null,
     riskLevel,
+    participantTeamIds: Array.isArray(value.participantTeamIds)
+      ? value.participantTeamIds.map((teamId) => asString(teamId).trim()).filter(Boolean)
+      : undefined,
+    riskHistory: normalizeFinalRoundRiskHistory(value.riskHistory),
+  };
+}
+
+function normalizeFinalAnswers(value: unknown): TeamResponses["finalAnswers"] {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([itemId, answersByQuestionId]) => {
+      if (!isRecord(answersByQuestionId)) {
+        return [];
+      }
+
+      const normalizedAnswers = Object.fromEntries(
+        Object.entries(answersByQuestionId).flatMap(([questionId, answer]) => {
+          if (!isRecord(answer)) {
+            return [];
+          }
+
+          const questionIndex =
+            answer.questionIndex === 0 || answer.questionIndex === 1 || answer.questionIndex === 2 ? answer.questionIndex : null;
+          const optionId = isAnswerId(answer.optionId) ? answer.optionId : null;
+
+          if (questionIndex === null || !optionId) {
+            return [];
+          }
+
+          const normalizedAnswer: FinalRoundAnswer = {
+            itemId: asString(answer.itemId, itemId),
+            questionId: asString(answer.questionId, questionId),
+            questionIndex,
+            optionId,
+            isCorrect: Boolean(answer.isCorrect),
+            score: Math.round(asNonNegativeNumber(answer.score)),
+            answerTimeMs: asNonNegativeNumber(answer.answerTimeMs),
+            submittedAt: asNonNegativeNumber(answer.submittedAt),
+          };
+
+          return [[questionId, normalizedAnswer]];
+        }),
+      );
+
+      return [[itemId, normalizedAnswers]];
+    }),
+  );
+}
+
+function normalizeTeamResponses(value: unknown): TeamResponses {
+  const responses = isRecord(value) ? value : {};
+
+  return {
+    answers: isRecord(responses.answers) ? (responses.answers as TeamResponses["answers"]) : {},
+    finalAnswers: normalizeFinalAnswers(responses.finalAnswers),
+    forkliftRuns: isRecord(responses.forkliftRuns) ? (responses.forkliftRuns as TeamResponses["forkliftRuns"]) : {},
   };
 }
 
@@ -322,8 +430,9 @@ export function normalizeGameState(value: unknown): GameState {
       ? Math.min(candidate.activeItemIndex, flowItems.length - 1)
       : 0;
   const phase = flowItems.length ? (isGamePhase(candidate.phase) ? candidate.phase : "lobby") : "lobby";
-  const responses =
-    candidate.responses && typeof candidate.responses === "object" ? (candidate.responses as Record<string, TeamResponses>) : {};
+  const responses = isRecord(candidate.responses)
+    ? Object.fromEntries(Object.entries(candidate.responses).map(([teamId, teamResponses]) => [teamId, normalizeTeamResponses(teamResponses)]))
+    : {};
 
   const rawSettings = (candidate.settings ?? {}) as Partial<GameSettings>;
 

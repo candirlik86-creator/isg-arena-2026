@@ -95,12 +95,29 @@ export type GamePhase =
 
 export type FinalRoundStep = "intro" | "scenario" | "question" | "risk" | "results";
 
+export type FinalRoundRiskLevel = 70 | 50 | 25 | 0;
+
+export type FinalRoundRiskHistoryEntry = {
+  questionIndex: 0 | 1 | 2;
+  questionId: string;
+  correctOptionId: AnswerId;
+  correctTeamCount: number;
+  activeTeamCount: number;
+  majorityRequired: number;
+  previousRiskLevel: FinalRoundRiskLevel;
+  nextRiskLevel: FinalRoundRiskLevel;
+  riskDropped: boolean;
+  evaluatedAt: number;
+};
+
 export type FinalRoundRuntime = {
   itemId: string;
   step: FinalRoundStep;
   questionIndex: 0 | 1 | 2;
   stepStartedAt: number | null;
-  riskLevel: 70 | 50 | 25 | 0;
+  riskLevel: FinalRoundRiskLevel;
+  participantTeamIds?: string[];
+  riskHistory: FinalRoundRiskHistoryEntry[];
 };
 
 export type GameSettings = {
@@ -136,6 +153,17 @@ export type QuizAnswer = {
   submittedAt: number;
 };
 
+export type FinalRoundAnswer = {
+  itemId: string;
+  questionId: string;
+  questionIndex: 0 | 1 | 2;
+  optionId: AnswerId;
+  isCorrect: boolean;
+  score: number;
+  answerTimeMs: number;
+  submittedAt: number;
+};
+
 export type ForkliftPenaltyKey = "pedestrian" | "collision" | "speeding" | "horn";
 
 export type ForkliftPenalties = Record<ForkliftPenaltyKey, number>;
@@ -153,6 +181,7 @@ export type ForkliftRun = {
 
 export type TeamResponses = {
   answers: Record<string, QuizAnswer>;
+  finalAnswers: Record<string, Record<string, FinalRoundAnswer>>;
   forkliftRuns: Record<string, ForkliftRun>;
 };
 
@@ -662,7 +691,13 @@ export function shouldRevealLeaderboardAfter(state: Pick<GameState, "flowItems">
 }
 
 export function getTeamResponses(state: GameState, teamId: string): TeamResponses {
-  return state.responses[teamId] ?? { answers: {}, forkliftRuns: {} };
+  const responses = state.responses[teamId];
+
+  return {
+    answers: responses?.answers ?? {},
+    finalAnswers: responses?.finalAnswers ?? {},
+    forkliftRuns: responses?.forkliftRuns ?? {},
+  };
 }
 
 export function pruneResponsesForFlowItems(
@@ -671,16 +706,41 @@ export function pruneResponsesForFlowItems(
 ): Record<string, TeamResponses> {
   const quizIds = new Set(flowItems.filter((item) => item.type === "quiz").map((item) => item.id));
   const forkliftIds = new Set(flowItems.filter((item) => item.type === "forkliftChallenge").map((item) => item.id));
+  const finalQuestionIdsByItemId = new Map(
+    flowItems
+      .filter((item): item is FinalRoundFlowItem => item.type === "finalRound")
+      .map((item) => [item.id, new Set(item.questions.map((question) => question.id))]),
+  );
 
   return Object.fromEntries(
     Object.entries(responses).map(([teamId, teamResponses]) => {
       const safeResponses =
-        teamResponses && typeof teamResponses === "object" ? teamResponses : { answers: {}, forkliftRuns: {} };
+        teamResponses && typeof teamResponses === "object"
+          ? teamResponses
+          : { answers: {}, finalAnswers: {}, forkliftRuns: {} };
+      const finalAnswers = Object.fromEntries(
+        Object.entries(safeResponses.finalAnswers ?? {}).flatMap(([itemId, answersByQuestionId]) => {
+          const validQuestionIds = finalQuestionIdsByItemId.get(itemId);
+          if (!validQuestionIds) {
+            return [];
+          }
+
+          return [
+            [
+              itemId,
+              Object.fromEntries(
+                Object.entries(answersByQuestionId ?? {}).filter(([questionId]) => validQuestionIds.has(questionId)),
+              ),
+            ],
+          ];
+        }),
+      );
 
       return [
         teamId,
         {
           answers: Object.fromEntries(Object.entries(safeResponses.answers ?? {}).filter(([itemId]) => quizIds.has(itemId))),
+          finalAnswers,
           forkliftRuns: Object.fromEntries(
             Object.entries(safeResponses.forkliftRuns ?? {}).filter(([itemId]) => forkliftIds.has(itemId)),
           ),
@@ -746,12 +806,21 @@ export function getQuizAnswerDistribution(state: GameState, item: QuizFlowItem) 
   };
 }
 
+export function getFinalRoundScore(responses: TeamResponses) {
+  return Object.values(responses.finalAnswers).reduce(
+    (itemSum, answersByQuestionId) =>
+      itemSum + Object.values(answersByQuestionId).reduce((questionSum, answer) => questionSum + answer.score, 0),
+    0,
+  );
+}
+
 export function getTeamTotalScore(state: GameState, teamId: string) {
   const responses = getTeamResponses(state, teamId);
   const quizScore = getQuizItems(state).reduce((sum, item) => sum + (responses.answers[item.id]?.score ?? 0), 0);
+  const finalRoundScore = getFinalRoundScore(responses);
   const forkliftScore = Object.values(responses.forkliftRuns).reduce((sum, run) => sum + run.score, 0);
 
-  return quizScore + forkliftScore;
+  return quizScore + finalRoundScore + forkliftScore;
 }
 
 export function getQuizAnswerStatusLabel(status: QuizAnswerRowStatus) {
@@ -845,6 +914,7 @@ export function deriveLeaderboard(state: GameState, options: LeaderboardOptions 
       const answers = quizItems.map((item) => responses.answers[item.id]).filter(Boolean);
       const forkliftRuns = Object.values(responses.forkliftRuns);
       const quizScore = answers.reduce((sum, answer) => sum + answer.score, 0);
+      const finalRoundScore = getFinalRoundScore(responses);
       const forkliftScore = forkliftRuns.reduce((sum, run) => sum + run.score, 0);
       const correctAnswers = answers.filter((answer) => answer.isCorrect).length;
       const wrongAnswers = answers.filter((answer) => !answer.isCorrect).length;
@@ -852,7 +922,7 @@ export function deriveLeaderboard(state: GameState, options: LeaderboardOptions 
       return {
         id: team.id,
         name: team.name,
-        score: quizScore + forkliftScore,
+        score: quizScore + finalRoundScore + forkliftScore,
         correctAnswers,
         wrongAnswers,
         missedQuestions: Math.max(0, quizItems.length - answers.length),
