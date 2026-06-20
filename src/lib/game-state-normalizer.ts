@@ -249,6 +249,8 @@ function normalizeFlowItem(value: unknown, usedIds: Set<string>, quizNumber: num
         value.introMessage,
         "Artık bireysel hız değil, takımların ortak doğru karar alma gücü ölçülüyor.",
       ),
+      finalSuccessMessage: asString(value.finalSuccessMessage, "Çalışma alanınız riskten kurtarıldı."),
+      finalFailureMessage: asString(value.finalFailureMessage, "Çalışma alanında risk devam ediyor."),
       questions: normalizeFinalRoundQuestions(value.questions),
     };
   }
