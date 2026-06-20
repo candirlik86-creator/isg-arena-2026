@@ -72,6 +72,8 @@ export type FinalRoundFlowItem = BaseFlowItem & {
   type: "finalRound";
   introTitle: string;
   introMessage: string;
+  finalSuccessMessage: string;
+  finalFailureMessage: string;
   questions: [FinalRoundQuestion, FinalRoundQuestion, FinalRoundQuestion];
 };
 

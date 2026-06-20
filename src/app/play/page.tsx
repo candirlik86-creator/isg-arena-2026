@@ -274,8 +274,6 @@ export default function PlayPage() {
   if (isFinalRoundPhase && activeFinalQuestion && finalRuntime) {
     const selectedAnswerId = currentFinalAnswer?.optionId ?? selectedOptionId;
     const isWaitingForFinalResult = Boolean(currentFinalAnswer || selectedOptionId) && finalRuntime.step === "question";
-    const correctOption = activeFinalQuestion.options.find((option) => option.id === activeFinalQuestion.correctOptionId);
-
     if (finalRuntime.step === "intro") {
       return (
         <main className="arena-play-bg min-h-[100svh] p-3 text-white">
@@ -328,8 +326,7 @@ export default function PlayPage() {
                 {currentFinalAnswer ? (currentFinalAnswer.isCorrect ? "Doğru" : "Yanlış") : "Cevap verilmedi"}
               </p>
               <p className="mt-5 text-lg font-black leading-tight text-white">
-                Doğru cevap: {activeFinalQuestion.correctOptionId}
-                {correctOption ? ` - ${correctOption.text}` : ""}
+                Doğru cevap: {activeFinalQuestion.correctOptionId} seçeneği
               </p>
               <p className="mt-6 text-xs font-black uppercase tracking-[0.24em] text-blue-50">Kazanılan puan</p>
               <p className="mt-2 text-7xl font-black leading-none tabular-nums text-white">

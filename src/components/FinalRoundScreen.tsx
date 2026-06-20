@@ -57,6 +57,15 @@ export function FinalRoundScreen({ item, settings, runtime, now = Date.now() }: 
   const questionIndex = runtime?.itemId === item.id ? Math.max(0, Math.min(2, runtime.questionIndex)) : 0;
   const question = item.questions[questionIndex];
   const hasMedia = inferMediaType(question.mediaUrl ?? "") !== "none";
+  const riskHistoryEntry = runtime?.riskHistory
+    .slice()
+    .reverse()
+    .find((entry) => entry.questionIndex === questionIndex && entry.questionId === question.id);
+  const isFinalRiskScreen = step === "risk" && questionIndex === 2;
+  const finalResultMessage =
+    (runtime?.riskLevel ?? 70) === 0
+      ? item.finalSuccessMessage || "Çalışma alanınız riskten kurtarıldı."
+      : item.finalFailureMessage || "Çalışma alanında risk devam ediyor.";
   const stepDurationSeconds = step === "scenario" ? question.scenarioDurationSeconds : step === "question" ? question.timeLimitSeconds : null;
   const remainingSeconds =
     stepDurationSeconds !== null && runtime?.stepStartedAt
@@ -153,11 +162,41 @@ export function FinalRoundScreen({ item, settings, runtime, now = Date.now() }: 
       {step === "risk" ? (
         <section className="mx-auto flex h-full max-w-6xl flex-col items-center justify-center text-center">
           <StageBadge label={`Final Soru ${questionIndex + 1} tamamlandı`} tone="red" />
-          <h1 className="mt-7 text-5xl font-black text-white md:text-7xl">Risk Değerlendirmesi</h1>
-          <p className="mt-6 text-3xl font-black text-white md:text-5xl">Mevcut risk seviyesi: %{runtime?.riskLevel ?? 70}</p>
-          <p className="mt-7 rounded-3xl border border-amber-200/35 bg-amber-300/15 px-8 py-6 text-2xl font-black leading-relaxed text-amber-100 shadow-2xl backdrop-blur md:text-4xl">
-            Cevap değerlendirme sistemi sonraki PR&apos;de bağlanacak
-          </p>
+          {riskHistoryEntry ? (
+            <div className="mt-7 w-full rounded-[2rem] border border-amber-200/35 bg-slate-950/35 p-5 shadow-2xl backdrop-blur md:p-7">
+              {isFinalRiskScreen ? (
+                <p className="mx-auto mb-6 max-w-5xl text-3xl font-black leading-tight text-amber-100 md:text-5xl">
+                  {finalResultMessage}
+                </p>
+              ) : null}
+
+              <div className="grid gap-4 text-left md:grid-cols-2">
+                <div className="rounded-2xl border border-white/15 bg-white/[0.12] p-5">
+                  <p className="text-sm font-black uppercase tracking-[0.24em] text-amber-100">Doğru cevap</p>
+                  <p className="mt-3 text-3xl font-black text-white md:text-4xl">
+                    {riskHistoryEntry.correctOptionId} seçeneği
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/[0.12] p-5">
+                  <p className="text-sm font-black uppercase tracking-[0.24em] text-amber-100">Doğru takım</p>
+                  <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">
+                    {riskHistoryEntry.correctTeamCount} / {riskHistoryEntry.activeTeamCount} takım doğru cevap verdi
+                  </p>
+                </div>
+
+                <div className="flex min-h-0 flex-col justify-center rounded-[1.75rem] border border-amber-200/40 bg-amber-300/15 p-6 text-center shadow-[0_0_70px_rgba(245,158,11,0.18)] md:col-span-2">
+                  <p className="text-sm font-black uppercase tracking-[0.28em] text-amber-100">Risk seviyesi</p>
+                  <p className="mt-3 whitespace-nowrap text-5xl font-black tabular-nums text-white drop-shadow-2xl md:text-7xl lg:text-8xl">
+                    %{riskHistoryEntry.previousRiskLevel} → %{riskHistoryEntry.nextRiskLevel}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-7 rounded-3xl border border-amber-200/35 bg-amber-300/15 px-8 py-6 text-2xl font-black leading-relaxed text-amber-100 shadow-2xl backdrop-blur md:text-4xl">
+              Risk sonucu hazırlanıyor...
+            </p>
+          )}
         </section>
       ) : null}
 
@@ -166,7 +205,10 @@ export function FinalRoundScreen({ item, settings, runtime, now = Date.now() }: 
           <StageBadge label="Final Round tamamlandı" tone="red" />
           <h1 className="mt-7 text-5xl font-black text-white md:text-8xl">Final Sonuçları</h1>
           <p className="mt-6 max-w-4xl text-2xl font-black leading-relaxed text-amber-100 md:text-4xl">
-            Final sonuçları sonraki PR&apos;de aktif olacak.
+            {finalResultMessage}
+          </p>
+          <p className="mt-6 rounded-3xl border border-white/20 bg-white/[0.12] px-8 py-5 text-3xl font-black tabular-nums text-white shadow-2xl backdrop-blur md:text-5xl">
+            Kalan risk: %{runtime?.riskLevel ?? 70}
           </p>
         </section>
       ) : null}

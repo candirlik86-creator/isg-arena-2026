@@ -141,6 +141,8 @@ function createDefaultFinalRound(): FinalRoundFlowItem {
     category: "Final",
     introTitle: "FINAL ROUND",
     introMessage: "Artık bireysel hız değil, takımların ortak doğru karar alma gücü ölçülüyor.",
+    finalSuccessMessage: "Çalışma alanınız riskten kurtarıldı.",
+    finalFailureMessage: "Çalışma alanında risk devam ediyor.",
     questions: [0, 1, 2].map((index) => ({
       id: `${itemId}-question-${index + 1}`,
       scenarioText: `Final senaryo ${index + 1}`,
@@ -1358,6 +1360,22 @@ export function AdminPageClient() {
                           value={activeFinalRoundDraft.introMessage}
                           onChange={(event) => patchActiveFinalRound({ introMessage: event.target.value })}
                           className="mt-2 min-h-24 w-full resize-none rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Final başarı mesajı</span>
+                        <textarea
+                          value={activeFinalRoundDraft.finalSuccessMessage}
+                          onChange={(event) => patchActiveFinalRound({ finalSuccessMessage: event.target.value })}
+                          className="mt-2 min-h-20 w-full resize-none rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Final kalan risk mesajı</span>
+                        <textarea
+                          value={activeFinalRoundDraft.finalFailureMessage}
+                          onChange={(event) => patchActiveFinalRound({ finalFailureMessage: event.target.value })}
+                          className="mt-2 min-h-20 w-full resize-none rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
                         />
                       </label>
                     </div>
