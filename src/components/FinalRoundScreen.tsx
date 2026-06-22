@@ -93,12 +93,12 @@ export function FinalRoundScreen({ item, settings, runtime, now = Date.now() }: 
       ) : null}
 
       {step === "scenario" ? (
-        <section className="mx-auto flex h-full max-w-[1500px] flex-col items-center justify-center text-center">
+        <section className="relative mx-auto flex h-full max-w-[1720px] flex-col items-center justify-center overflow-hidden rounded-[clamp(1rem,2.5vw,2.5rem)] border border-amber-200/35 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.26),rgba(127,29,29,0.56)_44%,rgba(15,23,42,0.9)_80%)] p-6 text-center shadow-2xl shadow-red-950/40">
           <StageBadge label={`Final Senaryo ${questionIndex + 1} / 3`} tone="red" />
           <h1 className="mt-7 max-w-6xl font-black leading-tight text-white drop-shadow-2xl" style={{ fontSize: "clamp(2.25rem, 5.5vw, 6rem)" }}>
             {question.scenarioText}
           </h1>
-          <div className="mt-8 rounded-3xl border border-amber-200/40 bg-amber-300/15 px-8 py-5 shadow-2xl backdrop-blur">
+          <div className="mt-8 rounded-3xl border border-amber-200/40 bg-slate-950/35 px-8 py-5 shadow-2xl shadow-red-950/30 backdrop-blur">
             <p className="text-sm font-black uppercase tracking-[0.28em] text-amber-100">Senaryo süresi</p>
             <p className="mt-2 text-6xl font-black tabular-nums text-white md:text-8xl">{remainingSeconds} sn</p>
           </div>
@@ -106,15 +106,15 @@ export function FinalRoundScreen({ item, settings, runtime, now = Date.now() }: 
       ) : null}
 
       {step === "question" ? (
-        <section className="mx-auto flex h-full max-w-[1720px] flex-col gap-2 overflow-hidden pt-9 md:pt-10">
-          <header className="shrink-0 rounded-2xl border border-white/25 bg-white/[0.16] px-3 py-2 shadow-2xl backdrop-blur md:px-4">
+        <section className="mx-auto flex h-full max-w-[1720px] flex-col gap-2 overflow-hidden rounded-[clamp(1rem,2.5vw,2.5rem)] border border-amber-200/35 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.2),rgba(127,29,29,0.56)_45%,rgba(15,23,42,0.92)_82%)] px-2 pb-2 pt-9 shadow-2xl shadow-red-950/40 md:px-3 md:pb-3 md:pt-10">
+          <header className="shrink-0 rounded-2xl border border-amber-200/30 bg-slate-950/35 px-3 py-2 shadow-2xl shadow-red-950/30 backdrop-blur md:px-4">
             <div className="flex items-center justify-between gap-3">
               <StageBadge label={`Final Soru ${questionIndex + 1} / 3`} tone="red" />
               <p
                 className={
                   hasMedia
-                    ? "flex h-16 w-32 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/[0.12] text-3xl font-black tabular-nums text-white shadow-lg md:h-[4.5rem] md:w-36 md:text-4xl"
-                    : "rounded-xl border border-white/20 bg-white/[0.12] px-3 py-1.5 text-lg font-black tabular-nums text-white md:text-xl"
+                    ? "flex h-16 w-32 shrink-0 items-center justify-center rounded-2xl border border-amber-200/35 bg-amber-300/15 text-3xl font-black tabular-nums text-white shadow-lg md:h-[4.5rem] md:w-36 md:text-4xl"
+                    : "rounded-xl border border-amber-200/35 bg-amber-300/15 px-3 py-1.5 text-lg font-black tabular-nums text-white md:text-xl"
                 }
               >
                 {remainingSeconds} sn
@@ -127,7 +127,7 @@ export function FinalRoundScreen({ item, settings, runtime, now = Date.now() }: 
 
           {hasMedia ? (
             <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.72fr)] gap-2 overflow-hidden lg:grid-cols-[minmax(0,1.6fr)_minmax(23rem,0.72fr)]">
-              <div className="flex min-h-0 overflow-hidden rounded-2xl border border-white/25 bg-slate-950/55 p-2 shadow-2xl shadow-blue-950/30 backdrop-blur">
+              <div className="flex min-h-0 overflow-hidden rounded-2xl border border-amber-200/30 bg-slate-950/60 p-2 shadow-2xl shadow-red-950/30 backdrop-blur">
                 <div className="flex min-h-0 w-full overflow-hidden rounded-xl border border-white/10 bg-black/30">
                   <FinalRoundMedia mediaUrl={question.mediaUrl} title={question.questionText} />
                 </div>
@@ -160,10 +160,10 @@ export function FinalRoundScreen({ item, settings, runtime, now = Date.now() }: 
       ) : null}
 
       {step === "risk" ? (
-        <section className="mx-auto flex h-full max-w-6xl flex-col items-center justify-center text-center">
+        <section className="mx-auto flex h-full max-w-[1720px] flex-col items-center justify-center overflow-hidden rounded-[clamp(1rem,2.5vw,2.5rem)] border border-amber-200/35 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.22),rgba(127,29,29,0.58)_44%,rgba(15,23,42,0.92)_82%)] p-6 text-center shadow-2xl shadow-red-950/40">
           <StageBadge label={`Final Soru ${questionIndex + 1} tamamlandı`} tone="red" />
           {riskHistoryEntry ? (
-            <div className="mt-7 w-full rounded-[2rem] border border-amber-200/35 bg-slate-950/35 p-5 shadow-2xl backdrop-blur md:p-7">
+            <div className="mt-7 w-full max-w-6xl rounded-[2rem] border border-amber-200/35 bg-slate-950/35 p-5 shadow-2xl shadow-red-950/30 backdrop-blur md:p-7">
               {isFinalRiskScreen ? (
                 <p className="mx-auto mb-6 max-w-5xl text-3xl font-black leading-tight text-amber-100 md:text-5xl">
                   {finalResultMessage}
@@ -184,7 +184,7 @@ export function FinalRoundScreen({ item, settings, runtime, now = Date.now() }: 
                   </p>
                 </div>
 
-                <div className="flex min-h-0 flex-col justify-center rounded-[1.75rem] border border-amber-200/40 bg-amber-300/15 p-6 text-center shadow-[0_0_70px_rgba(245,158,11,0.18)] md:col-span-2">
+                <div className="flex min-h-0 flex-col justify-center rounded-[1.75rem] border border-amber-200/40 bg-amber-300/15 p-6 text-center shadow-[0_0_70px_rgba(245,158,11,0.2)] md:col-span-2">
                   <p className="text-sm font-black uppercase tracking-[0.28em] text-amber-100">Risk seviyesi</p>
                   <p className="mt-3 whitespace-nowrap text-5xl font-black tabular-nums text-white drop-shadow-2xl md:text-7xl lg:text-8xl">
                     %{riskHistoryEntry.previousRiskLevel} → %{riskHistoryEntry.nextRiskLevel}
@@ -201,7 +201,7 @@ export function FinalRoundScreen({ item, settings, runtime, now = Date.now() }: 
       ) : null}
 
       {step === "results" ? (
-        <section className="mx-auto flex h-full max-w-6xl flex-col items-center justify-center text-center">
+        <section className="mx-auto flex h-full max-w-[1720px] flex-col items-center justify-center overflow-hidden rounded-[clamp(1rem,2.5vw,2.5rem)] border border-amber-200/35 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.28),rgba(127,29,29,0.58)_42%,rgba(15,23,42,0.9)_78%)] p-6 text-center shadow-2xl shadow-red-950/40">
           <StageBadge label="Final Round tamamlandı" tone="red" />
           <h1 className="mt-7 text-5xl font-black text-white md:text-8xl">Final Sonuçları</h1>
           <p className="mt-6 max-w-4xl text-2xl font-black leading-relaxed text-amber-100 md:text-4xl">
