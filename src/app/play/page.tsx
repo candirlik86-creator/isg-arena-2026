@@ -5,6 +5,7 @@ import { ForkliftChallenge } from "@/components/ForkliftChallenge";
 import { Leaderboard } from "@/components/Leaderboard";
 import { StageBadge } from "@/components/StageBadge";
 import { TeamJoinPanel } from "@/components/TeamJoinPanel";
+import { getPlaySurfaceAttributes } from "@/lib/brand-theme";
 import { useGameState } from "@/hooks/useGameState";
 import {
   QUIZ_INTRO_SECONDS,
@@ -59,6 +60,7 @@ export default function PlayPage() {
   } = useGameState();
   const [selectedOptionId, setSelectedOptionId] = useState<AnswerId>();
   const [message, setMessage] = useState("");
+  const playSurface = getPlaySurfaceAttributes(state.settings);
 
   useEffect(() => {
     setSelectedOptionId(undefined);
@@ -92,7 +94,7 @@ export default function PlayPage() {
 
   if (!currentTeam) {
     return (
-      <main className="arena-play-bg min-h-screen p-4 text-white">
+      <main {...playSurface} className="arena-play-bg min-h-screen p-4 text-white">
         <TeamJoinPanel title="Telefon Ekranına Bağlan" />
       </main>
     );
@@ -189,7 +191,7 @@ export default function PlayPage() {
 
     if (shouldShowQuizResult) {
       return (
-        <main className="arena-play-bg min-h-[100svh] p-3 text-white">
+        <main {...playSurface} className="arena-play-bg min-h-[100svh] p-3 text-white">
           <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
             {quizResultCard}
           </div>
@@ -199,7 +201,7 @@ export default function PlayPage() {
 
     if (isWaitingForQuizResult) {
       return (
-        <main className="arena-play-bg min-h-[100svh] overflow-hidden p-3 text-white">
+        <main {...playSurface} className="arena-play-bg min-h-[100svh] overflow-hidden p-3 text-white">
           <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
             <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.16] p-7 text-center shadow-lg shadow-blue-950/10 backdrop-blur">
               <p className="text-3xl font-black leading-tight text-white">Cevabın alındı. Sonuç bekleniyor.</p>
@@ -211,7 +213,7 @@ export default function PlayPage() {
     }
 
     return (
-      <main className="arena-play-bg arena-play-quiz-active min-h-[100svh] overflow-hidden p-3 text-white">
+      <main {...playSurface} className="arena-play-bg arena-play-quiz-active min-h-[100svh] overflow-hidden p-3 text-white">
         <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col gap-3">
           <header className="shrink-0 rounded-2xl border border-white/20 bg-white/[0.14] px-4 py-3 shadow-lg shadow-blue-950/10 backdrop-blur">
             <div className="flex items-center justify-between gap-3">
@@ -276,7 +278,7 @@ export default function PlayPage() {
     const isWaitingForFinalResult = Boolean(currentFinalAnswer || selectedOptionId) && finalRuntime.step === "question";
     if (finalRuntime.step === "intro") {
       return (
-        <main className="arena-play-bg min-h-[100svh] p-3 text-white">
+        <main {...playSurface} className="arena-play-bg min-h-[100svh] p-3 text-white">
           <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
             <section className="rounded-[1.75rem] border border-amber-100/40 bg-amber-300/20 p-7 text-center shadow-lg shadow-blue-950/10">
               <p className="text-sm font-black uppercase tracking-[0.3em] text-amber-100">Final Round</p>
@@ -290,7 +292,7 @@ export default function PlayPage() {
 
     if (finalRuntime.step === "scenario") {
       return (
-        <main className="arena-play-bg min-h-[100svh] p-3 text-white">
+        <main {...playSurface} className="arena-play-bg min-h-[100svh] p-3 text-white">
           <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
             <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.15] p-7 text-center shadow-lg shadow-blue-950/10">
               <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-100">
@@ -306,7 +308,7 @@ export default function PlayPage() {
 
     if (finalRuntime.step === "risk") {
       return (
-        <main className="arena-play-bg min-h-[100svh] p-3 text-white">
+        <main {...playSurface} className="arena-play-bg min-h-[100svh] p-3 text-white">
           <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
             <section
               className={`rounded-[1.75rem] border p-6 text-center shadow-lg ${
@@ -341,7 +343,7 @@ export default function PlayPage() {
 
     if (finalRuntime.step === "results") {
       return (
-        <main className="arena-play-bg min-h-[100svh] p-3 text-white">
+        <main {...playSurface} className="arena-play-bg min-h-[100svh] p-3 text-white">
           <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
             <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.15] p-7 text-center shadow-lg shadow-blue-950/10">
               <p className="text-sm font-black uppercase tracking-[0.3em] text-amber-100">Final Round</p>
@@ -355,7 +357,7 @@ export default function PlayPage() {
 
     if (isWaitingForFinalResult) {
       return (
-        <main className="arena-play-bg min-h-[100svh] overflow-hidden p-3 text-white">
+        <main {...playSurface} className="arena-play-bg min-h-[100svh] overflow-hidden p-3 text-white">
           <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
             <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.16] p-7 text-center shadow-lg shadow-blue-950/10 backdrop-blur">
               <p className="text-3xl font-black leading-tight text-white">Cevabın alındı. Sonuç bekleniyor.</p>
@@ -367,7 +369,7 @@ export default function PlayPage() {
     }
 
     return (
-      <main className="arena-play-bg arena-play-quiz-active min-h-[100svh] overflow-hidden p-3 text-white">
+      <main {...playSurface} className="arena-play-bg arena-play-quiz-active min-h-[100svh] overflow-hidden p-3 text-white">
         <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col gap-3">
           <header className="shrink-0 rounded-2xl border border-white/20 bg-white/[0.14] px-4 py-3 shadow-lg shadow-blue-950/10 backdrop-blur">
             <div className="flex items-start justify-between gap-3">
@@ -433,7 +435,7 @@ export default function PlayPage() {
 
   if (isPassiveContentPhase) {
     return (
-      <main className="arena-play-bg min-h-[100svh] p-3 text-white">
+      <main {...playSurface} className="arena-play-bg min-h-[100svh] p-3 text-white">
         <div className="mx-auto flex min-h-[calc(100svh-1.5rem)] max-w-2xl flex-col justify-center">
           <section className="rounded-[1.75rem] border border-white/25 bg-white/[0.15] p-7 text-center shadow-lg shadow-blue-950/10">
             <h2 className="text-4xl font-black text-white">Ekrana bak</h2>
@@ -445,7 +447,7 @@ export default function PlayPage() {
   }
 
   return (
-    <main className="arena-play-bg min-h-screen p-3 text-white sm:p-4">
+    <main {...playSurface} className="arena-play-bg min-h-screen p-3 text-white sm:p-4">
       <div className="mx-auto max-w-2xl space-y-5">
         <header className="rounded-[1.75rem] border border-white/25 bg-white/[0.16] p-5 shadow-lg shadow-blue-950/10">
           <StageBadge label="Mobil cevap ekranı" />

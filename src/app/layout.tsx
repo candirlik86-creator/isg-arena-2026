@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ConnectionStatusBadge } from "@/components/ConnectionStatusBadge";
 
 export const metadata: Metadata = {
   title: "İSG Arena 2026",
@@ -9,7 +10,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="tr">
-      <body>{children}</body>
+      <body>
+        <ConnectionStatusBadge />
+        {children}
+      </body>
     </html>
   );
 }

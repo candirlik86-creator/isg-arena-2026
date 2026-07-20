@@ -43,6 +43,15 @@ export function getScreenSurfaceAttributes(settings: Partial<GameSettings>) {
   } as const;
 }
 
+export function getPlaySurfaceAttributes(settings: Partial<GameSettings>) {
+  const brand = resolveBrandSettings(settings);
+
+  return {
+    "data-watermark-text": brand.watermarkText.toUpperCase(),
+    "data-customer-name": brand.customerName,
+  } as const;
+}
+
 export function getProductBrandInitials(productBrandName: string) {
   const parts = productBrandName.trim().split(/\s+/).filter(Boolean);
   if (!parts.length) {
