@@ -5,6 +5,7 @@ import { ForkliftChallenge } from "@/components/ForkliftChallenge";
 import { Leaderboard } from "@/components/Leaderboard";
 import { StageBadge } from "@/components/StageBadge";
 import { TeamJoinPanel } from "@/components/TeamJoinPanel";
+import { ANSWER_SHAPES } from "@/lib/answer-visuals";
 import { getPlaySurfaceAttributes } from "@/lib/brand-theme";
 import { useGameState } from "@/hooks/useGameState";
 import {
@@ -26,22 +27,22 @@ const kahootAnswerTiles: Record<
   }
 > = {
   A: {
-    shape: "▲",
+    shape: ANSWER_SHAPES.A,
     buttonClass: "border-yellow-100/65 bg-gradient-to-br from-amber-400 via-orange-400 to-yellow-500 shadow-amber-950/30",
     selectedClass: "ring-yellow-100/80",
   },
   B: {
-    shape: "◆",
+    shape: ANSWER_SHAPES.B,
     buttonClass: "border-sky-100/65 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 shadow-blue-950/30",
     selectedClass: "ring-sky-100/80",
   },
   C: {
-    shape: "●",
+    shape: ANSWER_SHAPES.C,
     buttonClass: "border-emerald-100/65 bg-gradient-to-br from-emerald-400 via-teal-500 to-green-600 shadow-emerald-950/30",
     selectedClass: "ring-emerald-100/80",
   },
   D: {
-    shape: "■",
+    shape: ANSWER_SHAPES.D,
     buttonClass: "border-rose-100/65 bg-gradient-to-br from-rose-400 via-red-500 to-pink-600 shadow-rose-950/30",
     selectedClass: "ring-rose-100/80",
   },

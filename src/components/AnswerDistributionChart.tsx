@@ -1,4 +1,5 @@
 import { getQuizAnswerDistribution, type AnswerId, type GameState, type QuizFlowItem } from "@/lib/game-state";
+import { ANSWER_SHAPES } from "@/lib/answer-visuals";
 
 type AnswerDistributionChartProps = {
   state: GameState;
@@ -52,6 +53,12 @@ export function AnswerDistributionChart({ state, question }: AnswerDistributionC
 
   return (
     <section className="relative flex h-full max-h-full min-h-0 overflow-hidden rounded-[clamp(0.875rem,1.6vw,1.5rem)] border border-white/25 bg-gradient-to-br from-[#172554] via-[#2636a7] to-[#6d28d9] p-2 text-white shadow-2xl shadow-blue-950/30 md:p-3 lg:p-4">
+      <style>{`
+        @keyframes answer-bar-grow {
+          from { transform: scaleX(0); }
+          to { transform: scaleX(1); }
+        }
+      `}</style>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_12%,rgba(125,211,252,0.35),transparent_28%),radial-gradient(circle_at_84%_18%,rgba(216,180,254,0.32),transparent_30%),radial-gradient(circle_at_50%_105%,rgba(59,130,246,0.30),transparent_32%)]" />
       <div className="relative flex h-full min-h-0 w-full flex-col gap-2 overflow-hidden md:gap-3">
         <header className="flex shrink-0 items-center justify-between gap-3 rounded-2xl border border-white/16 bg-white/[0.10] px-3 py-2 shadow-xl shadow-blue-950/20 backdrop-blur md:px-4">
@@ -81,19 +88,24 @@ export function AnswerDistributionChart({ state, question }: AnswerDistributionC
                   key={option.id}
                   className={`relative flex min-h-0 overflow-hidden rounded-[clamp(0.875rem,1.5vw,1.5rem)] border-[3px] p-3 transition md:p-4 lg:p-5 ${
                     styles.card
-                  } ${isCorrect ? `${styles.glow} scale-[1.015]` : "opacity-50 saturate-[0.7] shadow-lg"}`}
+                  } ${isCorrect ? `${styles.glow} scale-[1.015]` : "shadow-lg"}`}
                 >
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/30 to-transparent" />
                   {isCorrect ? (
                     <div className="absolute right-3 top-3 rounded-full border-2 border-white bg-white px-2.5 py-1 text-xs font-black text-slate-950 shadow-lg md:right-4 md:top-4 md:text-sm">
                       ✓ DOĞRU
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/45 bg-black/25 text-sm font-black text-white/80 shadow-lg backdrop-blur md:right-4 md:top-4 md:h-8 md:w-8">
+                      ✕
+                    </div>
+                  )}
 
                   <div className={`relative flex h-full min-h-0 w-full flex-col justify-between ${styles.correctText}`}>
-                    <div className="flex min-h-0 items-start gap-2.5 pr-14 md:gap-3 md:pr-20">
-                      <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-3xl font-black shadow-xl md:h-16 md:w-16 md:text-4xl lg:h-20 lg:w-20 ${styles.badge}`}>
-                        {option.id}
+                    <div className="flex min-h-0 items-start gap-2.5 pr-12 md:gap-3 md:pr-16">
+                      <div className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl leading-none shadow-xl md:h-16 md:w-16 lg:h-20 lg:w-20 ${styles.badge}`}>
+                        <span className="text-lg md:text-xl lg:text-2xl">{ANSWER_SHAPES[option.id]}</span>
+                        <span className="text-2xl font-black md:text-3xl lg:text-4xl">{option.id}</span>
                       </div>
                       <div className="min-w-0">
                         <p className="line-clamp-3 break-words text-xl font-black leading-tight drop-shadow-lg md:text-2xl lg:text-3xl">
@@ -102,14 +114,22 @@ export function AnswerDistributionChart({ state, question }: AnswerDistributionC
                       </div>
                     </div>
 
-                    <div className="mt-2 flex shrink-0 items-end justify-between gap-3">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.22em] opacity-80 md:text-xs">Oy</p>
-                        <p className="text-4xl font-black tabular-nums leading-none drop-shadow-lg md:text-5xl lg:text-6xl">{count}</p>
+                    <div className="mt-2 shrink-0 space-y-1.5">
+                      <div className="flex items-end justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-[0.22em] opacity-80 md:text-xs">Oy</p>
+                          <p className="text-3xl font-black tabular-nums leading-none drop-shadow-lg md:text-4xl lg:text-5xl">{count}</p>
+                        </div>
+                        <p className="text-3xl font-black tabular-nums leading-none drop-shadow-lg md:text-4xl lg:text-5xl">
+                          {formatPercent(percent)}
+                        </p>
                       </div>
-                      <p className="text-4xl font-black tabular-nums leading-none drop-shadow-lg md:text-5xl lg:text-6xl">
-                        {formatPercent(percent)}
-                      </p>
+                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-black/30 md:h-3">
+                        <div
+                          className="h-full origin-left rounded-full bg-white/90 shadow-sm animate-[answer-bar-grow_0.9s_cubic-bezier(0.16,1,0.3,1)_both]"
+                          style={{ width: `${Math.max(percent, count > 0 ? 6 : 0)}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </article>
