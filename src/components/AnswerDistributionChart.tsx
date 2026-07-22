@@ -82,13 +82,21 @@ export function AnswerDistributionChart({ state, question }: AnswerDistributionC
               const percent = totalAnswers ? (count / totalAnswers) * 100 : 0;
               const isCorrect = option.id === question.correctOptionId;
               const styles = optionStyles[option.id];
+              // Reveal anında yalnızca doğru cevap tam renkli kalır; kaybeden
+              // şıklar temiz nötr griye düşer (çamur değil) ki doğru öne çıksın.
+              const cardClass = isCorrect
+                ? styles.card
+                : "border-white/15 bg-gradient-to-br from-slate-500 via-slate-600 to-slate-700 shadow-black/25";
+              const badgeClass = isCorrect ? styles.badge : "bg-white text-slate-500";
+              const textClass = isCorrect ? styles.correctText : "text-white";
+              const barFillClass = isCorrect ? "bg-white/90" : "bg-white/35";
 
               return (
                 <article
                   key={option.id}
-                  className={`relative flex min-h-0 overflow-hidden rounded-[clamp(0.875rem,1.5vw,1.5rem)] border-[3px] p-3 transition md:p-4 lg:p-5 ${
-                    styles.card
-                  } ${isCorrect ? `${styles.glow} scale-[1.015]` : "shadow-lg"}`}
+                  className={`relative flex min-h-0 overflow-hidden rounded-[clamp(0.875rem,1.5vw,1.5rem)] border-[3px] p-3 transition md:p-4 lg:p-5 ${cardClass} ${
+                    isCorrect ? `${styles.glow} scale-[1.015]` : "shadow-lg"
+                  }`}
                 >
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/30 to-transparent" />
                   {isCorrect ? (
@@ -101,9 +109,9 @@ export function AnswerDistributionChart({ state, question }: AnswerDistributionC
                     </div>
                   )}
 
-                  <div className={`relative flex h-full min-h-0 w-full flex-col justify-between ${styles.correctText}`}>
+                  <div className={`relative flex h-full min-h-0 w-full flex-col justify-between ${textClass}`}>
                     <div className="flex min-h-0 items-start gap-2.5 pr-12 md:gap-3 md:pr-16">
-                      <div className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl leading-none shadow-xl md:h-16 md:w-16 lg:h-20 lg:w-20 ${styles.badge}`}>
+                      <div className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl leading-none shadow-xl md:h-16 md:w-16 lg:h-20 lg:w-20 ${badgeClass}`}>
                         <span className="text-lg md:text-xl lg:text-2xl">{ANSWER_SHAPES[option.id]}</span>
                         <span className="text-2xl font-black md:text-3xl lg:text-4xl">{option.id}</span>
                       </div>
@@ -126,7 +134,7 @@ export function AnswerDistributionChart({ state, question }: AnswerDistributionC
                       </div>
                       <div className="h-2.5 w-full overflow-hidden rounded-full bg-black/30 md:h-3">
                         <div
-                          className="h-full origin-left rounded-full bg-white/90 shadow-sm animate-[answer-bar-grow_0.9s_cubic-bezier(0.16,1,0.3,1)_both]"
+                          className={`h-full origin-left rounded-full shadow-sm animate-[answer-bar-grow_0.9s_cubic-bezier(0.16,1,0.3,1)_both] ${barFillClass}`}
                           style={{ width: `${Math.max(percent, count > 0 ? 6 : 0)}%` }}
                         />
                       </div>
