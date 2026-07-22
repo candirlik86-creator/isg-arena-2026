@@ -321,7 +321,7 @@ export default function ScreenPage() {
     <ProjectionFrame compactScreen screenSettings={state.settings}>
       {state.phase === "lobby" ? (
         <section className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden md:gap-4">
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 rounded-[clamp(1rem,2vw,2rem)] border border-amber-300/40 bg-amber-300/15 px-5 py-3 shadow-2xl shadow-amber-900/20 backdrop-blur md:px-7 md:py-4">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 rounded-[clamp(1rem,2vw,2rem)] border border-white/15 border-t-white/25 bg-gradient-to-b from-white/[0.14] to-white/[0.05] px-5 py-3 shadow-2xl shadow-black/30 backdrop-blur md:px-7 md:py-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <StageBadge label="Lobi açık" tone="green" />
@@ -333,21 +333,22 @@ export default function ScreenPage() {
                 {state.settings.welcomeTitle}
               </h2>
               <p className="mt-1 text-sm font-black text-white/90 md:text-lg">
-                <span className="text-amber-100">/join</span> adresinden PIN ile katıl
+                <span className="text-amber-300">/join</span> adresinden PIN ile katıl
               </p>
             </div>
             <div className="shrink-0 text-right">
-              <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-100 md:text-sm">Oyun PIN'i</p>
+              <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-300 md:text-sm">Oyun PIN'i</p>
               <p
-                className="font-black leading-none tracking-[0.14em] text-white"
+                className="font-black leading-none tracking-[0.14em] text-white drop-shadow-2xl"
                 style={{ fontSize: "clamp(2.5rem, 7vw, 5rem)" }}
               >
                 {state.settings.gamePin}
               </p>
+              <div className="ml-auto mt-2 h-1 w-3/5 rounded-full bg-gradient-to-r from-transparent to-amber-500" />
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[clamp(1rem,2.5vw,2.5rem)] border border-white/25 bg-white/[0.12] p-4 shadow-2xl shadow-blue-950/20 backdrop-blur md:p-5">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[clamp(1rem,2.5vw,2.5rem)] border border-white/15 border-t-white/25 bg-gradient-to-b from-white/[0.12] to-white/[0.045] p-4 shadow-2xl shadow-black/30 backdrop-blur md:p-5">
             <div className="flex shrink-0 items-center justify-between gap-3">
               <h3 className="text-xl font-black text-white md:text-3xl">Katılan Takımlar</h3>
               <p className="rounded-xl border border-emerald-300/30 bg-emerald-400/10 px-3 py-2 text-base font-black text-emerald-100 md:rounded-2xl md:px-4 md:py-3 md:text-lg">

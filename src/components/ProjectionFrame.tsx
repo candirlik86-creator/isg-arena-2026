@@ -27,7 +27,7 @@ export function ProjectionFrame({
         {...surface}
         className={`${surface.className} box-border h-[100dvh] max-h-[100dvh] overflow-hidden p-1.5 text-white sm:p-2 md:p-3`}
       >
-        <div className="relative mx-auto flex h-full max-h-full min-h-0 w-full max-w-[1600px] flex-col overflow-hidden rounded-[clamp(1rem,2.5vw,2rem)] border border-white/25 bg-white/[0.12] p-3 shadow-2xl shadow-blue-950/25 backdrop-blur md:p-4">
+        <div className="relative mx-auto flex h-full max-h-full min-h-0 w-full max-w-[1680px] flex-col overflow-hidden p-2 md:p-3">
           <ScreenProductMark productBrandName={brand.productBrandName} />
           <header className="mb-2 h-4 shrink-0 md:mb-2 md:h-5" aria-hidden />
           <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
