@@ -319,44 +319,61 @@ export default function ScreenPage() {
   return (
     <ProjectionFrame compactScreen screenSettings={state.settings}>
       {state.phase === "lobby" ? (
-        <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden xl:grid xl:grid-cols-[1fr_0.9fr] xl:items-center xl:gap-6">
-          <div className="min-h-0 shrink-0 xl:min-h-0">
-            <StageBadge label="Lobi açık" tone="green" />
-            <h2
-              className="mt-3 font-black leading-tight text-white md:mt-4"
-              style={{ fontSize: "clamp(1.5rem, 3.8vw, 4.25rem)" }}
-            >
-              {state.settings.welcomeTitle}
-            </h2>
-            <p className="mt-3 text-lg font-bold text-amber-200 md:mt-4 md:text-2xl">{state.settings.subtitle}</p>
-            <div className="mt-4 rounded-[clamp(1.25rem,3vw,3rem)] border border-amber-300/40 bg-amber-300/15 p-4 text-center shadow-2xl shadow-amber-900/20 md:mt-6 md:p-6">
-              <p className="text-base font-black uppercase tracking-[0.35em] text-amber-100 md:text-lg">Oyun PIN'i</p>
+        <section className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden md:gap-4">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 rounded-[clamp(1rem,2vw,2rem)] border border-amber-300/40 bg-amber-300/15 px-5 py-3 shadow-2xl shadow-amber-900/20 backdrop-blur md:px-7 md:py-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <StageBadge label="Lobi açık" tone="green" />
+              </div>
+              <h2
+                className="mt-2 truncate font-black leading-tight text-white"
+                style={{ fontSize: "clamp(1.25rem, 2.8vw, 3rem)" }}
+              >
+                {state.settings.welcomeTitle}
+              </h2>
+              <p className="mt-1 text-sm font-black text-white/90 md:text-lg">
+                <span className="text-amber-100">/join</span> adresinden PIN ile katıl
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-100 md:text-sm">Oyun PIN'i</p>
               <p
-                className="mt-2 font-black leading-none tracking-[0.12em] text-white md:mt-4"
-                style={{ fontSize: "clamp(2.75rem, 14vw, 7rem)" }}
+                className="font-black leading-none tracking-[0.14em] text-white"
+                style={{ fontSize: "clamp(2.5rem, 7vw, 5rem)" }}
               >
                 {state.settings.gamePin}
               </p>
-              <p className="mt-3 text-lg font-black text-white md:mt-4 md:text-2xl">Katılım adresi: /join</p>
             </div>
           </div>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[clamp(1rem,2.5vw,2.5rem)] border border-white/25 bg-white/[0.14] p-4 shadow-2xl shadow-blue-950/20 backdrop-blur md:p-5">
+
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[clamp(1rem,2.5vw,2.5rem)] border border-white/25 bg-white/[0.12] p-4 shadow-2xl shadow-blue-950/20 backdrop-blur md:p-5">
             <div className="flex shrink-0 items-center justify-between gap-3">
               <h3 className="text-xl font-black text-white md:text-3xl">Katılan Takımlar</h3>
               <p className="rounded-xl border border-emerald-300/30 bg-emerald-400/10 px-3 py-2 text-base font-black text-emerald-100 md:rounded-2xl md:px-4 md:py-3 md:text-lg">
                 {state.teams.length}/{state.settings.maxTeams}
               </p>
             </div>
-            <div className="mt-3 grid min-h-0 flex-1 auto-rows-fr gap-2 overflow-y-auto overflow-x-hidden sm:grid-cols-2 md:mt-4 md:gap-3">
+            <div
+              className="mt-3 grid min-h-0 flex-1 content-center gap-2 overflow-y-auto overflow-x-hidden md:mt-4 md:gap-3"
+              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(12rem, 1fr))" }}
+            >
               {state.teams.length ? (
                 state.teams.map((team, index) => (
-                  <div key={team.id} className="rounded-xl border border-white/20 bg-white/[0.12] p-3 md:rounded-2xl md:p-4">
-                    <p className="text-xs font-black uppercase tracking-widest text-amber-200 md:text-sm">Takım {index + 1}</p>
-                    <p className="mt-1 text-lg font-black text-white md:text-xl">{team.name}</p>
+                  <div
+                    key={team.id}
+                    className="flex items-center gap-2.5 rounded-2xl border border-white/20 bg-white/[0.12] px-3 py-2.5 shadow-lg shadow-blue-950/10 md:px-4 md:py-3"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-300/90 text-sm font-black tabular-nums text-slate-950 md:h-9 md:w-9">
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-base font-black text-white md:text-lg">{team.name}</span>
                   </div>
                 ))
               ) : (
-                <p className="rounded-xl border border-white/20 bg-white/[0.10] p-4 text-center text-base font-bold text-slate-200 sm:col-span-2 md:p-6 md:text-lg">
+                <p
+                  className="rounded-2xl border border-white/20 bg-white/[0.10] p-6 text-center text-base font-bold text-slate-200 md:text-lg"
+                  style={{ gridColumn: "1 / -1" }}
+                >
                   Takımlar PIN ile bağlanmayı bekliyor.
                 </p>
               )}
