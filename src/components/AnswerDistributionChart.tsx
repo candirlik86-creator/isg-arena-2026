@@ -19,25 +19,25 @@ const optionStyles: Record<
     card: "border-amber-100 bg-gradient-to-br from-amber-300 via-orange-400 to-yellow-500 shadow-amber-950/35",
     badge: "bg-white text-amber-600",
     correctText: "text-slate-950",
-    glow: "shadow-[0_0_46px_rgba(251,191,36,0.78)] ring-4 ring-white/80",
+    glow: "shadow-[0_0_46px_rgba(251,191,36,0.78)] ring-4 ring-inset ring-white/80",
   },
   B: {
     card: "border-sky-100 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 shadow-blue-950/35",
     badge: "bg-white text-blue-600",
     correctText: "text-white",
-    glow: "shadow-[0_0_46px_rgba(59,130,246,0.78)] ring-4 ring-white/80",
+    glow: "shadow-[0_0_46px_rgba(59,130,246,0.78)] ring-4 ring-inset ring-white/80",
   },
   C: {
     card: "border-emerald-100 bg-gradient-to-br from-emerald-400 via-teal-500 to-green-600 shadow-emerald-950/35",
     badge: "bg-white text-emerald-600",
     correctText: "text-slate-950",
-    glow: "shadow-[0_0_46px_rgba(16,185,129,0.78)] ring-4 ring-white/80",
+    glow: "shadow-[0_0_46px_rgba(16,185,129,0.78)] ring-4 ring-inset ring-white/80",
   },
   D: {
     card: "border-rose-100 bg-gradient-to-br from-rose-400 via-red-500 to-pink-600 shadow-rose-950/35",
     badge: "bg-white text-rose-600",
     correctText: "text-white",
-    glow: "shadow-[0_0_46px_rgba(244,63,94,0.78)] ring-4 ring-white/80",
+    glow: "shadow-[0_0_46px_rgba(244,63,94,0.78)] ring-4 ring-inset ring-white/80",
   },
 };
 
@@ -95,7 +95,7 @@ export function AnswerDistributionChart({ state, question }: AnswerDistributionC
                 <article
                   key={option.id}
                   className={`relative flex min-h-0 overflow-hidden rounded-[clamp(0.875rem,1.5vw,1.5rem)] border-[3px] p-3 transition md:p-4 lg:p-5 ${cardClass} ${
-                    isCorrect ? `${styles.glow} scale-[1.015]` : "shadow-lg"
+                    isCorrect ? styles.glow : "shadow-lg"
                   }`}
                 >
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/30 to-transparent" />
