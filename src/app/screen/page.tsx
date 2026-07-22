@@ -354,19 +354,19 @@ export default function ScreenPage() {
               </p>
             </div>
             <div
-              className="mt-3 grid min-h-0 flex-1 content-center gap-2 overflow-y-auto overflow-x-hidden md:mt-4 md:gap-3"
-              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(12rem, 1fr))" }}
+              className="mt-3 grid min-h-0 flex-1 content-center gap-1.5 overflow-y-auto overflow-x-hidden md:mt-4 md:gap-2"
+              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(9.75rem, 1fr))" }}
             >
               {state.teams.length ? (
                 state.teams.map((team, index) => (
                   <div
                     key={team.id}
-                    className="flex items-center gap-2.5 rounded-2xl border border-white/20 bg-white/[0.12] px-3 py-2.5 shadow-lg shadow-blue-950/10 md:px-4 md:py-3"
+                    className="flex items-center gap-2 rounded-xl border border-white/15 bg-gradient-to-br from-white/[0.16] to-white/[0.06] px-2.5 py-1.5 shadow-lg shadow-blue-950/20 md:py-2"
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-300/90 text-sm font-black tabular-nums text-slate-950 md:h-9 md:w-9">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-amber-200 to-amber-400 text-xs font-black tabular-nums text-slate-950 shadow md:h-7 md:w-7 md:text-sm">
                       {index + 1}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-base font-black text-white md:text-lg">{team.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-black text-white md:text-base">{team.name}</span>
                   </div>
                 ))
               ) : (
