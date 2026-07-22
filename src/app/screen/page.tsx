@@ -3,6 +3,7 @@
 import { AnswerDistributionChart } from "@/components/AnswerDistributionChart";
 import { FinalRoundScreen } from "@/components/FinalRoundScreen";
 import { Leaderboard } from "@/components/Leaderboard";
+import { LobbyTeamGrid } from "@/components/LobbyTeamGrid";
 import { Podium } from "@/components/Podium";
 import { ProjectionFrame } from "@/components/ProjectionFrame";
 import { ScreenProductMark } from "@/components/ScreenProductMark";
@@ -353,31 +354,7 @@ export default function ScreenPage() {
                 {state.teams.length}/{state.settings.maxTeams}
               </p>
             </div>
-            <div
-              className="mt-3 grid min-h-0 flex-1 content-center gap-1.5 overflow-y-auto overflow-x-hidden md:mt-4 md:gap-2"
-              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(9.75rem, 1fr))" }}
-            >
-              {state.teams.length ? (
-                state.teams.map((team, index) => (
-                  <div
-                    key={team.id}
-                    className="flex items-center gap-2 rounded-xl border border-white/15 bg-gradient-to-br from-white/[0.16] to-white/[0.06] px-2.5 py-1.5 shadow-lg shadow-blue-950/20 md:py-2"
-                  >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-amber-200 to-amber-400 text-xs font-black tabular-nums text-slate-950 shadow md:h-7 md:w-7 md:text-sm">
-                      {index + 1}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-black text-white md:text-base">{team.name}</span>
-                  </div>
-                ))
-              ) : (
-                <p
-                  className="rounded-2xl border border-white/20 bg-white/[0.10] p-6 text-center text-base font-bold text-slate-200 md:text-lg"
-                  style={{ gridColumn: "1 / -1" }}
-                >
-                  Takımlar PIN ile bağlanmayı bekliyor.
-                </p>
-              )}
-            </div>
+            <LobbyTeamGrid teams={state.teams} />
           </div>
         </section>
       ) : null}
