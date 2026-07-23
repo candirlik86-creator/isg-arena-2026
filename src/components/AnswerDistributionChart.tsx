@@ -52,7 +52,7 @@ export function AnswerDistributionChart({ state, question }: AnswerDistributionC
   const correctOption = question.options.find((option) => option.id === question.correctOptionId);
 
   return (
-    <section className="relative flex h-full max-h-full min-h-0 overflow-hidden rounded-[clamp(0.875rem,1.6vw,1.5rem)] border border-white/25 bg-gradient-to-br from-[#172554] via-[#2636a7] to-[#6d28d9] p-2 text-white shadow-2xl shadow-blue-950/30 md:p-3 lg:p-4">
+    <section className="relative flex h-full max-h-full min-h-0 overflow-hidden rounded-[clamp(0.875rem,1.6vw,1.5rem)] border border-white/25 bg-gradient-to-br from-[#1c4fb2] via-[#2f5fd8] to-[#5b45c6] p-2 text-white shadow-2xl shadow-blue-950/30 md:p-3 lg:p-4">
       <style>{`
         @keyframes answer-bar-grow {
           from { transform: scaleX(0); }

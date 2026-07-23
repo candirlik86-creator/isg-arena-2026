@@ -39,11 +39,11 @@ a {
     position: relative;
     isolation: isolate;
     background:
-      radial-gradient(ellipse 90% 55% at 50% -15%, rgba(142, 201, 255, 0.20), transparent 60%),
-      radial-gradient(ellipse 60% 45% at 88% 6%, rgba(99, 102, 241, 0.18), transparent 55%),
-      radial-gradient(ellipse 40% 40% at 50% 120%, rgba(245, 130, 31, 0.10), transparent 50%),
-      radial-gradient(ellipse 140% 120% at 50% 42%, transparent 46%, rgba(3, 10, 30, 0.66) 100%),
-      linear-gradient(162deg, #0b2a6b 0%, #123f9e 40%, #123b8e 66%, #0a1c4c 100%);
+      radial-gradient(ellipse 88% 55% at 50% -12%, rgba(150, 205, 255, 0.40), transparent 60%),
+      radial-gradient(ellipse 55% 48% at 90% 8%, rgba(129, 140, 248, 0.30), transparent 52%),
+      radial-gradient(ellipse 55% 48% at 10% 12%, rgba(56, 189, 248, 0.32), transparent 52%),
+      radial-gradient(ellipse 65% 45% at 50% 116%, rgba(34, 211, 238, 0.20), transparent 46%),
+      linear-gradient(152deg, #0d5fd6 0%, #1866d9 50%, #2c48c2 100%);
   }
 
   .arena-screen-bg[data-theme-id="warehouse"] {
