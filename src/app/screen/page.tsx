@@ -6,6 +6,7 @@ import { Leaderboard } from "@/components/Leaderboard";
 import { LobbyTeamGrid } from "@/components/LobbyTeamGrid";
 import { Podium } from "@/components/Podium";
 import { ProjectionFrame } from "@/components/ProjectionFrame";
+import { ScreenDepth } from "@/components/ScreenDepth";
 import { ScreenProductMark } from "@/components/ScreenProductMark";
 import { StageBadge } from "@/components/StageBadge";
 import { useGameState } from "@/hooks/useGameState";
@@ -267,8 +268,9 @@ export default function ScreenPage() {
         {...screenSurface}
         className={`${screenSurface.className} relative box-border h-[100dvh] max-h-[100dvh] overflow-hidden p-2 text-white md:p-4`}
       >
+        <ScreenDepth />
         <ScreenProductMark productBrandName={brand.productBrandName} />
-        <section className="relative mx-auto flex h-full max-h-full min-h-0 max-w-7xl flex-col justify-center md:py-1">
+        <section className="relative z-10 mx-auto flex h-full max-h-full min-h-0 max-w-7xl flex-col justify-center md:py-1">
           <div className="shrink-0 text-center">
             <p className="text-xs font-black uppercase tracking-[0.34em] text-amber-100 md:text-sm">Ara Skor</p>
             <h1
