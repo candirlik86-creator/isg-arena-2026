@@ -36,12 +36,6 @@ const liveOptionBadgeStyles = {
   D: "bg-white text-slate-950",
 } as const;
 
-const scoreRowStyles = [
-  "border-amber-100/65 bg-gradient-to-r from-amber-300/30 via-white/[0.18] to-white/[0.14] shadow-blue-900/20",
-  "border-cyan-100/45 bg-gradient-to-r from-white/[0.22] via-cyan-100/15 to-white/[0.12] shadow-blue-900/20",
-  "border-orange-100/50 bg-gradient-to-r from-orange-300/25 via-white/[0.16] to-white/[0.12] shadow-blue-900/20",
-] as const;
-
 function ScreenMedia({ mediaUrl, title }: { mediaUrl: string; title: string }) {
   const [imageError, setImageError] = useState(false);
   const mediaType = inferMediaType(mediaUrl);
@@ -289,20 +283,39 @@ export default function ScreenPage() {
             {rankedTeams.length ? (
               rankedTeams.map((team, index) => {
                 const rank = index + 1;
-                const rowStyle = scoreRowStyles[index] ?? "border-white/25 bg-white/[0.14] shadow-blue-900/20";
+                const rankClass =
+                  rank === 1
+                    ? "bg-gradient-to-br from-[#ffd977] to-[#f5b52e] text-[#4a3200]"
+                    : rank === 2
+                      ? "bg-gradient-to-br from-[#e6edfb] to-[#b9c7e6] text-[#25324f]"
+                      : rank === 3
+                        ? "bg-gradient-to-br from-[#e6a86a] to-[#c47c3f] text-[#3a2205]"
+                        : "bg-white/85 text-slate-900";
+                const rowClass =
+                  rank === 1
+                    ? "border-amber-300/40 bg-gradient-to-r from-amber-300/20 to-white/[0.06]"
+                    : "border-white/15 border-t-white/25 bg-gradient-to-b from-white/[0.12] to-white/[0.045]";
 
                 return (
                   <article
                     key={team.id}
-                    className={`grid grid-cols-[minmax(3.5rem,1fr)_minmax(0,3fr)_minmax(5rem,1.1fr)] items-center gap-2 rounded-[1.25rem] border px-3 py-2 shadow-2xl backdrop-blur sm:gap-3 sm:rounded-[1.5rem] sm:px-5 sm:py-3 md:gap-4 md:px-6 md:py-4 ${rowStyle}`}
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-2.5 shadow-2xl shadow-black/30 backdrop-blur sm:gap-4 sm:px-5 sm:py-3.5 ${rowClass}`}
                   >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-2xl font-black tabular-nums text-slate-950 shadow-xl sm:h-14 sm:w-14 sm:rounded-2xl sm:text-3xl md:h-16 md:w-16 md:text-4xl">
+                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl font-black tabular-nums shadow-lg sm:h-14 sm:w-14 sm:rounded-2xl sm:text-3xl md:h-16 md:w-16 md:text-4xl ${rankClass}`}>
                       {rank}
                     </div>
-                    <h2 className="min-w-0 truncate text-xl font-black leading-tight text-white sm:text-3xl md:text-4xl lg:text-5xl">{team.name}</h2>
-                    <p className="text-right text-lg font-black tabular-nums text-amber-100 sm:text-2xl md:text-3xl lg:text-4xl">
-                      {team.score.toLocaleString("tr-TR")}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="truncate text-xl font-black leading-tight text-white sm:text-3xl md:text-4xl lg:text-5xl">{team.name}</h2>
+                      <p className="mt-0.5 text-xs font-bold text-slate-300 sm:text-sm md:text-base">
+                        {team.correctAnswers} doğru · {team.wrongAnswers} yanlış
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-lg font-black tabular-nums text-amber-200 sm:text-2xl md:text-3xl lg:text-4xl">
+                        {team.score.toLocaleString("tr-TR")}
+                      </p>
+                      <p className="text-[0.6rem] font-black uppercase tracking-widest text-slate-300 sm:text-xs">puan</p>
+                    </div>
                   </article>
                 );
               })
